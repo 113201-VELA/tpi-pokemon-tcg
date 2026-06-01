@@ -50,6 +50,12 @@
       <artifactId>spring-boot-starter-websocket</artifactId>
     </dependency>
 
+    <!-- ===== WebClient (HTTP calls) ===== -->
+    <dependency>
+      <groupId>org.springframework.boot</groupId>
+      <artifactId>spring-boot-starter-webflux</artifactId>
+    </dependency>
+
     <!-- ===== BASE DE DATOS ===== -->
     <dependency>
       <groupId>org.postgresql</groupId>

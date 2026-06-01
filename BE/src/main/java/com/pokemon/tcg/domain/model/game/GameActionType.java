@@ -1,0 +1,18 @@
+package com.pokemon.tcg.domain.model.game;
+
+public enum GameActionType {
+    JOIN_GAME,
+    DRAW_CARD,
+    PLACE_BASIC_POKEMON,
+    ATTACH_ENERGY,
+    PLAY_TRAINER,
+    EVOLVE_POKEMON,
+    RETREAT,
+    USE_ABILITY,
+    DECLARE_ATTACK,
+    END_TURN,
+    CHOOSE_BENCH_POKEMON,
+    MULLIGAN_CONFIRM,
+    SETUP_PLACE_ACTIVE,
+    SETUP_PLACE_BENCH
+}
