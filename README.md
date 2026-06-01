@@ -26,3 +26,16 @@ conocimientos adquiridos en un entorno práctico y motivador.
 <p align="center"> <img src="./BE/docs/assets/images/UTN-FRC_logo.png" alt="UTN - FRC"/> </p>
 
 <p align="center"> <img src="./BE/docs/assets/images/Tup_completo_negro_transparente.png" alt="TUP"/> </p>
+
+PARA CORRER EL PROYECTO
+# 1. Base de datos
+docker compose up -d
+
+# 2. Backend
+cd BE
+mvn clean spring-boot:run (Si no tiene lógica va a compilar y cerrar)
+
+# 3. Frontend (en otra terminal)
+cd FE
+npm install
+ng serve

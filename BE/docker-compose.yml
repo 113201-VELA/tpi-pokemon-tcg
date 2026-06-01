@@ -1,0 +1,11 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: pokemon-tcg-db
+    environment:
+      POSTGRES_DB: pokemon_tcg
+      POSTGRES_USER: pokemon_user
+      POSTGRES_PASSWORD: pokemon_pass
+    ports:
+      - "5432:5432"
+    restart: unless-stopped
