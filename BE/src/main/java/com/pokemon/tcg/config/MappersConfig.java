@@ -7,6 +7,7 @@ import org.modelmapper.ModelMapper;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.reactive.function.client.WebClient;
+import org.springframework.web.reactive.function.client.ExchangeStrategies;
 
 @Configuration
 public class MappersConfig {
@@ -30,8 +31,17 @@ public class MappersConfig {
         return objectMapper;
     }
 
+    /**
+     * Increases the default WebClient buffer size because some API responses
+     * exceed the default 256 KB in-memory limit.
+     */
     @Bean
     public WebClient.Builder webClientBuilder() {
-        return WebClient.builder();
+        return WebClient.builder()
+                .exchangeStrategies(ExchangeStrategies.builder()
+                        .codecs(config -> config
+                                .defaultCodecs()
+                                .maxInMemorySize(10 * 1024 * 1024)) // 10 MB
+                        .build());
     }
 }

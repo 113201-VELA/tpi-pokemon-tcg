@@ -34,14 +34,12 @@ public class Card {
     private CardType supertype;
 
     @Type(ListArrayType.class)
-    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "text[]")
     private List<String> subtypes = new ArrayList<>();
 
     private Integer hp;
 
     @Type(ListArrayType.class)
-    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "text[]")
     private List<String> types = new ArrayList<>();
 
@@ -49,26 +47,24 @@ public class Card {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private List<Attack> attacks = new ArrayList<>();
+    private String attacks;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private List<TypeModifier> weaknesses = new ArrayList<>();
+    private String weaknesses;
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private List<TypeModifier> resistances = new ArrayList<>();
+    private String resistances;
 
     @Type(ListArrayType.class)
-    @JdbcTypeCode(SqlTypes.ARRAY)
     @Column(columnDefinition = "text[]")
     private List<String> retreatCost = new ArrayList<>();
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private List<Ability> abilities = new ArrayList<>();
+    private String abilities;
 
-    // Renombrado para evitar conflicto Lombok/JPA con "is" prefix
     @Column(name = "is_basic_energy", nullable = false)
     private boolean basicEnergy = false;
 
@@ -82,6 +78,7 @@ public class Card {
     private String rawData;
 
     @Column(nullable = false)
+    @Builder.Default
     private Instant cachedAt = Instant.now();
 
     public boolean isPokemon()  { return supertype == CardType.POKEMON; }
@@ -92,6 +89,6 @@ public class Card {
     public boolean isEX()           { return false; }
     public boolean isMega()         { return false; }
 
-    public PokemonPhase getPhase()             { return null; }
-    public TrainerSubtype getTrainerSubtype()   { return null; }
+    public PokemonPhase getPhase()           { return null; }
+    public TrainerSubtype getTrainerSubtype() { return null; }
 }

@@ -1,5 +1,7 @@
 package com.pokemon.tcg.domain.model.card;
 
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -11,6 +13,8 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 @NoArgsConstructor
+@JsonSerialize
+@JsonDeserialize
 public class Attack {
     private String name;
     private List<EnergyType> cost;

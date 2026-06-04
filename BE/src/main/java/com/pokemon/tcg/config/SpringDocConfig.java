@@ -7,6 +7,8 @@ import io.swagger.v3.oas.models.OpenAPI;
 import io.swagger.v3.oas.models.info.Contact;
 import io.swagger.v3.oas.models.info.Info;
 import io.swagger.v3.oas.models.servers.Server;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -20,8 +22,8 @@ public class SpringDocConfig {
 
     @Bean
     public OpenAPI openApi(@Value("${app.name}") String appName,
-                            @Value("${app.desc}") String appDescription,
-                            @Value("${app.version}") String appVersion) {
+                           @Value("${app.desc}") String appDescription,
+                           @Value("${app.version}") String appVersion) {
         Info info = new Info()
                 .title(appName)
                 .version(appVersion)
@@ -30,7 +32,20 @@ public class SpringDocConfig {
 
         Server server = new Server().url(url).description(appDescription);
 
-        return new OpenAPI().components(new Components()).info(info).addServersItem(server);
+        SecurityScheme securityScheme = new SecurityScheme()
+                .name("bearerAuth")
+                .type(SecurityScheme.Type.HTTP)
+                .scheme("bearer")
+                .bearerFormat("JWT");
+
+        SecurityRequirement securityRequirement = new SecurityRequirement()
+                .addList("bearerAuth");
+
+        return new OpenAPI()
+                .info(info)
+                .addServersItem(server)
+                .components(new Components().addSecuritySchemes("bearerAuth", securityScheme))
+                .addSecurityItem(securityRequirement);
     }
 
     @Bean
