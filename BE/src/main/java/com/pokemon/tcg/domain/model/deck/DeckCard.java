@@ -1,5 +1,6 @@
 package com.pokemon.tcg.domain.model.deck;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.pokemon.tcg.domain.model.card.Card;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -24,6 +25,7 @@ public class DeckCard {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @JsonIgnore//To avoid a circular reference, which causes an infinite loop during JSON serialization
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "deck_id", nullable = false)
     private Deck deck;
@@ -33,5 +35,7 @@ public class DeckCard {
     private Card card;
 
     @Column(nullable = false)
+    @jakarta.validation.constraints.Min(1)
+    @jakarta.validation.constraints.Max(60)
     private int quantity;
 }

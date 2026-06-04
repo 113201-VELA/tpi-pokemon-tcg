@@ -1,6 +1,8 @@
 package com.pokemon.tcg.config;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
+import com.fasterxml.jackson.datatype.hibernate6.Hibernate6Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.modelmapper.Conditions;
 import org.modelmapper.ModelMapper;
@@ -24,10 +26,17 @@ public class MappersConfig {
         return mapper;
     }
 
+    /**
+     * Registers the Hibernate6Module so Jackson can handle lazy-loaded
+     * Hibernate proxies without throwing serialization errors.
+     * FAIL_ON_EMPTY_BEANS is disabled to avoid exceptions on uninitialized proxies.
+     */
     @Bean
     public ObjectMapper objectMapper() {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
+        objectMapper.registerModule(new Hibernate6Module());
+        objectMapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
         return objectMapper;
     }
 

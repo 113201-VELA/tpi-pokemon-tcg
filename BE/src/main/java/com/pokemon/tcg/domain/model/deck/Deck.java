@@ -1,12 +1,9 @@
 package com.pokemon.tcg.domain.model.deck;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.pokemon.tcg.domain.model.player.Player;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.time.Instant;
 import java.util.ArrayList;
@@ -26,6 +23,7 @@ public class Deck {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "player_id", nullable = false)
     private Player player;
@@ -35,16 +33,19 @@ public class Deck {
 
     private String description;
 
-    @Column(nullable = false)
-    private boolean isValid = false;
+    @Column(name = "is_valid", nullable = false)
+    private boolean valid = false;
 
     @OneToMany(mappedBy = "deck", cascade = CascadeType.ALL, orphanRemoval = true)
+    @Builder.Default
     private List<DeckCard> cards = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 
     @Column(nullable = false)
+    @Builder.Default
     private Instant updatedAt = Instant.now();
 
     @PreUpdate
