@@ -29,6 +29,8 @@ public class CardController {
 
     @GetMapping("/{id}")
     public ResponseEntity<Card> getCard(@PathVariable String id) {
-        return ResponseEntity.notFound().build();
+        return cardCacheService.findById(id)
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.notFound().build());
     }
 }

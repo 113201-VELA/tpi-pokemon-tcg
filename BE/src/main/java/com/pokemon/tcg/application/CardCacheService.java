@@ -55,6 +55,10 @@ public class CardCacheService {
         }
     }
 
+    public java.util.Optional<Card> findById(String id) {
+        return cardRepository.findById(id);
+    }
+
     public Page<Card> searchCards(String setId, String name,
                                   CardType supertype, Pageable pageable) {
         if (name != null && !name.isBlank()) {
