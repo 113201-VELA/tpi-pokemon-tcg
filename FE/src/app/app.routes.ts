@@ -1,13 +1,25 @@
 import { Routes } from '@angular/router';
-import { PokedexPage } from './features/pokedex/pages/pokedex-page/pokedex-page';
+import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
   {
     path: '',
-    component: PokedexPage
+    redirectTo: 'decks',
+    pathMatch: 'full'
+  },
+  {
+    path: 'auth',
+    loadChildren: () =>
+      import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES)
+  },
+  {
+    path: 'decks',
+    canActivate: [authGuard],
+    loadChildren: () =>
+      import('./features/deck-builder/deck-builder.routes').then(m => m.DECK_BUILDER_ROUTES)
   },
   {
     path: '**',
-    redirectTo: ''
+    redirectTo: 'decks'
   }
 ];
