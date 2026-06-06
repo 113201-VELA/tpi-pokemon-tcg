@@ -1,7 +1,7 @@
 package com.pokemon.tcg.api.rest;
 
+import com.pokemon.tcg.api.dto.response.CardResponseDTO;
 import com.pokemon.tcg.application.CardCacheService;
-import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.domain.model.card.CardType;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -19,7 +19,7 @@ public class CardController {
     }
 
     @GetMapping
-    public ResponseEntity<Page<Card>> searchCards(
+    public ResponseEntity<Page<CardResponseDTO>> searchCards(
             @RequestParam(defaultValue = "xy1") String set,
             @RequestParam(required = false) String name,
             @RequestParam(required = false) CardType type,
@@ -28,7 +28,7 @@ public class CardController {
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<Card> getCard(@PathVariable String id) {
+    public ResponseEntity<CardResponseDTO> getCard(@PathVariable String id) {
         return cardCacheService.findById(id)
                 .map(ResponseEntity::ok)
                 .orElse(ResponseEntity.notFound().build());

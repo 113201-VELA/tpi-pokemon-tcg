@@ -1,4 +1,4 @@
-package com.pokemon.tcg.api.dto;
+package com.pokemon.tcg.api.dto.response;
 
 import java.util.UUID;
 

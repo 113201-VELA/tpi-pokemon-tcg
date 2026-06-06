@@ -1,4 +1,4 @@
-package com.pokemon.tcg.api.dto;
+package com.pokemon.tcg.api.dto.response;
 
 public record DeckValidationResult(
         boolean valid,

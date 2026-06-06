@@ -1,6 +1,10 @@
 package com.pokemon.tcg.application;
 
-import com.pokemon.tcg.api.dto.DeckValidationResult;
+import com.pokemon.tcg.api.dto.request.AddCardRequest;
+import com.pokemon.tcg.api.dto.request.UpdateCardQuantityRequest;
+import com.pokemon.tcg.api.mapper.DeckMapper;
+import com.pokemon.tcg.api.dto.response.DeckResponseDTO;
+import com.pokemon.tcg.api.dto.response.DeckValidationResult;
 import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.domain.model.deck.Deck;
 import com.pokemon.tcg.domain.model.deck.DeckCard;
@@ -21,16 +25,19 @@ public class DeckService {
     private final DeckRepository deckRepository;
     private final CardRepository cardRepository;
     private final PlayerRepository playerRepository;
+    private final DeckMapper deckMapper;
 
     public DeckService(DeckRepository deckRepository,
                        CardRepository cardRepository,
-                       PlayerRepository playerRepository) {
+                       PlayerRepository playerRepository,
+                       DeckMapper deckMapper) {
         this.deckRepository   = deckRepository;
         this.cardRepository   = cardRepository;
         this.playerRepository = playerRepository;
+        this.deckMapper       = deckMapper;
     }
 
-    public Deck createDeck(UUID playerId, String name, String description) {
+    public DeckResponseDTO createDeck(UUID playerId, String name, String description) {
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new IllegalArgumentException("Player not found"));
 
@@ -40,10 +47,10 @@ public class DeckService {
                 .description(description)
                 .build();
 
-        return deckRepository.save(deck);
+        return deckMapper.toResponseDTO(deckRepository.save(deck));
     }
 
-    public Deck addCard(UUID deckId, UUID playerId, String cardId, int quantity) {
+    public DeckResponseDTO addCard(UUID deckId, UUID playerId, String cardId, int quantity) {
         Deck deck = deckRepository.findWithCardsById(deckId)
                 .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
 
@@ -67,7 +74,7 @@ public class DeckService {
                 );
 
         deck.setValid(isValidDeck(deck));
-        return deckRepository.save(deck);
+        return deckMapper.toResponseDTO(deckRepository.save(deck));
     }
 
     public DeckValidationResult validate(UUID deckId) {
@@ -77,11 +84,12 @@ public class DeckService {
         return buildValidationResult(deck);
     }
 
-    public List<Deck> listByPlayer(UUID playerId) {
-        return deckRepository.findByPlayerIdOrderByCreatedAtDesc(playerId);
+    public List<DeckResponseDTO> listByPlayer(UUID playerId) {
+        return deckMapper.toResponseDTOList(
+                deckRepository.findByPlayerIdOrderByCreatedAtDesc(playerId));
     }
 
-    public Deck updateCardQuantity(UUID deckId, UUID playerId, String cardId, int quantity) {
+    public DeckResponseDTO updateCardQuantity(UUID deckId, UUID playerId, String cardId, int quantity) {
         Deck deck = deckRepository.findWithCardsById(deckId)
                 .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
 
@@ -96,7 +104,7 @@ public class DeckService {
 
         deckCard.setQuantity(quantity);
         deck.setValid(isValidDeck(deck));
-        return deckRepository.save(deck);
+        return deckMapper.toResponseDTO(deckRepository.save(deck));
     }
 
     public void deleteDeck(UUID deckId, UUID playerId) {
@@ -110,7 +118,7 @@ public class DeckService {
         deckRepository.delete(deck);
     }
 
-    public Deck removeCard(UUID deckId, UUID playerId, String cardId) {
+    public DeckResponseDTO removeCard(UUID deckId, UUID playerId, String cardId) {
         Deck deck = deckRepository.findWithCardsById(deckId)
                 .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
 
@@ -120,14 +128,13 @@ public class DeckService {
 
         deck.getCards().removeIf(dc -> dc.getCard().getId().equals(cardId));
         deck.setValid(isValidDeck(deck));
-        return deckRepository.save(deck);
+        return deckMapper.toResponseDTO(deckRepository.save(deck));
     }
 
     private boolean isValidDeck(Deck deck) {
         int total = deck.getTotalCardCount();
         if (total != 60) return false;
 
-        // max 4 copies of same name (except basic energy)
         java.util.Map<String, Integer> nameCounts = new java.util.HashMap<>();
         for (DeckCard dc : deck.getCards()) {
             Card card = dc.getCard();
@@ -137,7 +144,6 @@ public class DeckService {
         }
         if (nameCounts.values().stream().anyMatch(count -> count > 4)) return false;
 
-        // at least 1 basic pokemon
         boolean hasBasic = deck.getCards().stream()
                 .anyMatch(dc -> dc.getCard().isPokemon()
                         && dc.getCard().getSubtypes().contains("Basic"));

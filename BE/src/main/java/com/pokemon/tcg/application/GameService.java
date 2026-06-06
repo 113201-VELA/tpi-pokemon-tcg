@@ -1,14 +1,19 @@
 package com.pokemon.tcg.application;
 
-import com.pokemon.tcg.api.websocket.GameEventPublisher;
+import com.pokemon.tcg.api.mapper.GameStateMapper;
+import com.pokemon.tcg.api.dto.response.GameStateResponseDTO;
 import com.pokemon.tcg.domain.engine.GameEngineFacade;
+import com.pokemon.tcg.domain.model.card.Card;
+import com.pokemon.tcg.domain.model.deck.Deck;
 import com.pokemon.tcg.domain.model.game.*;
+import com.pokemon.tcg.domain.model.player.Player;
 import com.pokemon.tcg.infrastructure.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -18,37 +23,140 @@ public class GameService {
     private final GameRepository gameRepository;
     private final GameStateRepository stateRepository;
     private final GameLogRepository logRepository;
-    private final GameEventPublisher eventPublisher;
     private final CardRepository cardRepository;
+    private final PlayerRepository playerRepository;
+    private final DeckRepository deckRepository;
+    private final GameStateMapper gameStateMapper;
 
     public GameService(GameEngineFacade engine,
                        GameRepository gameRepository,
                        GameStateRepository stateRepository,
                        GameLogRepository logRepository,
-                       GameEventPublisher eventPublisher,
-                       CardRepository cardRepository) {
+                       CardRepository cardRepository,
+                       PlayerRepository playerRepository,
+                       DeckRepository deckRepository,
+                       GameStateMapper gameStateMapper) {
         this.engine           = engine;
         this.gameRepository   = gameRepository;
         this.stateRepository  = stateRepository;
         this.logRepository    = logRepository;
-        this.eventPublisher   = eventPublisher;
         this.cardRepository   = cardRepository;
+        this.playerRepository = playerRepository;
+        this.deckRepository   = deckRepository;
+        this.gameStateMapper  = gameStateMapper;
     }
 
     public Game createGame(UUID playerId, UUID deckId) {
-        return null;
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("Player not found"));
+        Deck deck = deckRepository.findById(deckId)
+                .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
+
+        Game game = Game.builder()
+                .state(GameState.WAITING)
+                .build();
+        game = gameRepository.save(game);
+
+        GamePlayer gamePlayer = GamePlayer.builder()
+                .game(game)
+                .player(player)
+                .deck(deck)
+                .playerNumber(1)
+                .build();
+        game.getPlayers().add(gamePlayer);
+
+        return gameRepository.save(game);
     }
 
     public Game joinGame(UUID gameId, UUID playerId, UUID deckId) {
-        return null;
+        Game game = gameRepository.findByIdAndState(gameId, GameState.WAITING)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found or not joinable"));
+
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("Player not found"));
+        Deck deck = deckRepository.findById(deckId)
+                .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
+
+        GamePlayer gamePlayer = GamePlayer.builder()
+                .game(game)
+                .player(player)
+                .deck(deck)
+                .playerNumber(2)
+                .build();
+        game.getPlayers().add(gamePlayer);
+
+        game.setState(GameState.SETUP);
+
+        GamePlayer player1 = game.getPlayers().stream()
+                .filter(gp -> gp.getPlayerNumber() == 1)
+                .findFirst().orElseThrow();
+
+        PlayerState ps1 = PlayerState.builder()
+                .playerId(player1.getPlayer().getId().toString())
+                .build();
+        PlayerState ps2 = PlayerState.builder()
+                .playerId(player.getId().toString())
+                .build();
+
+        EngineResult result = engine.initializeGame(game.getId().toString(), ps1, ps2);
+        if (result != null && result.newState() != null) {
+            game.setState(GameState.ACTIVE);
+            GameStateSnapshot snapshot = GameStateSnapshot.builder()
+                    .game(game)
+                    .turnNumber(result.newState().getTurnNumber())
+                    .turnPhase(result.newState().getTurnPhase())
+                    .currentPlayer(player)
+                    .boardState(result.newState())
+                    .build();
+            stateRepository.save(snapshot);
+        }
+
+        return gameRepository.save(game);
+    }
+
+    @Transactional(readOnly = true)
+    public GameStateResponseDTO getCurrentState(UUID gameId, UUID requestingPlayerId) {
+        GameStateSnapshot snapshot = stateRepository.findTopByGameIdOrderByCreatedAtDesc(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("No state found for game: " + gameId));
+
+        BoardState boardState = snapshot.getBoardState();
+        PlayerState ownState = boardState.getStateFor(requestingPlayerId.toString());
+        PlayerState opponentState = boardState.getOpponentState(requestingPlayerId.toString());
+
+        Set<String> allCardIds = collectVisibleCardIds(ownState);
+        allCardIds.addAll(collectVisibleCardIds(opponentState));
+
+        Map<String, Card> cardCache = cardRepository.findAllById(allCardIds).stream()
+                .collect(Collectors.toMap(Card::getId, Function.identity()));
+
+        String requestingPlayerName = playerRepository.findById(requestingPlayerId)
+                .map(Player::getUsername)
+                .orElse("Unknown");
+
+        UUID opponentPlayerId = UUID.fromString(opponentState.getPlayerId());
+        String opponentPlayerName = playerRepository.findById(opponentPlayerId)
+                .map(Player::getUsername)
+                .orElse("Unknown");
+
+        return gameStateMapper.toGameStateResponse(
+                boardState,
+                requestingPlayerId.toString(),
+                requestingPlayerName,
+                opponentPlayerName,
+                cardCache
+        );
+    }
+
+    @Transactional(readOnly = true)
+    public BoardState getCurrentState(UUID gameId) {
+        GameStateSnapshot snapshot = stateRepository.findTopByGameIdOrderByCreatedAtDesc(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("No state found for game: " + gameId));
+        return snapshot.getBoardState();
     }
 
     public EngineResult processAction(UUID gameId, UUID playerId, GameAction action) {
-        return null;
-    }
-
-    public BoardState getCurrentState(UUID gameId) {
-        return null;
+        BoardState currentState = getCurrentState(gameId);
+        return engine.processAction(currentState, action);
     }
 
     public List<GameLogEntry> getLog(UUID gameId) {
@@ -57,5 +165,33 @@ public class GameService {
 
     public List<Game> listOpenGames() {
         return gameRepository.findByStateOrderByCreatedAtDesc(GameState.WAITING);
+    }
+
+    private Set<String> collectVisibleCardIds(PlayerState ps) {
+        Set<String> ids = new HashSet<>();
+        if (ps.getHand() != null) ids.addAll(ps.getHand());
+        if (ps.getPrizes() != null) ids.addAll(ps.getPrizes());
+        if (ps.getDiscard() != null) ids.addAll(ps.getDiscard());
+        addPokemonCardIds(ids, ps.getActivePokemon());
+        if (ps.getBench() != null) {
+            ps.getBench().forEach(bp -> addPokemonCardIds(ids, bp));
+        }
+        return ids;
+    }
+
+    private void addPokemonCardIds(Set<String> ids, ActivePokemon ap) {
+        if (ap == null) return;
+        if (ap.getCardId() != null) ids.add(ap.getCardId());
+        if (ap.getAttachedEnergyIds() != null) ids.addAll(ap.getAttachedEnergyIds());
+        if (ap.getAttachedToolId() != null) ids.add(ap.getAttachedToolId());
+        if (ap.getEvolutionStack() != null) ids.addAll(ap.getEvolutionStack());
+    }
+
+    private void addPokemonCardIds(Set<String> ids, BenchPokemon bp) {
+        if (bp == null) return;
+        if (bp.getCardId() != null) ids.add(bp.getCardId());
+        if (bp.getAttachedEnergyIds() != null) ids.addAll(bp.getAttachedEnergyIds());
+        if (bp.getAttachedToolId() != null) ids.add(bp.getAttachedToolId());
+        if (bp.getEvolutionStack() != null) ids.addAll(bp.getEvolutionStack());
     }
 }

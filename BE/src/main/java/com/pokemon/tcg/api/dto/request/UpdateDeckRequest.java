@@ -1,4 +1,4 @@
-package com.pokemon.tcg.api.dto;
+package com.pokemon.tcg.api.dto.request;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

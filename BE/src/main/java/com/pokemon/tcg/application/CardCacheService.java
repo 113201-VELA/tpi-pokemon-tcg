@@ -1,19 +1,21 @@
 package com.pokemon.tcg.application;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.pokemon.tcg.api.mapper.CardMapper;
+import com.pokemon.tcg.api.dto.response.CardResponseDTO;
 import com.pokemon.tcg.domain.model.card.*;
 import com.pokemon.tcg.infrastructure.cache.PokemonTcgApiClient;
 import com.pokemon.tcg.infrastructure.repository.CardRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.data.domain.Page;
-import org.springframework.data.domain.Pageable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 @Service
 public class CardCacheService {
@@ -21,22 +23,25 @@ public class CardCacheService {
     private final CardRepository cardRepository;
     private final PokemonTcgApiClient apiClient;
     private final ObjectMapper objectMapper;
+    private final CardMapper cardMapper;
 
     @Value("${pokemon-tcg.cache.set-id:xy1}")
     private String defaultSetId;
 
     public CardCacheService(CardRepository cardRepository,
                             PokemonTcgApiClient apiClient,
-                            ObjectMapper objectMapper) {
+                            ObjectMapper objectMapper,
+                            CardMapper cardMapper) {
         this.cardRepository = cardRepository;
         this.apiClient      = apiClient;
         this.objectMapper   = objectMapper;
+        this.cardMapper     = cardMapper;
     }
 
     @PostConstruct
     public void initCache() {
         long count = cardRepository.countBySetId(defaultSetId);
-        if (count < 100) {// XY1 contains 146 cards; reload if fewer than 100 are cached
+        if (count < 100) {
             cardRepository.deleteAll(cardRepository.findBySetId(defaultSetId));
             loadSet(defaultSetId);
         }
@@ -51,26 +56,26 @@ public class CardCacheService {
                 cardRepository.save(card);
             } catch (Exception e) {
                 System.err.println("Error saving card: " + raw.get("id") + " — " + e.getMessage());
-                //BORRAR LAS 2 SIG LINEAS SI YA NO LAS NECESITO
-                //System.err.println("Error saving card: " + raw.get("id"));
-                //e.printStackTrace();
             }
         }
     }
 
-    public java.util.Optional<Card> findById(String id) {
-        return cardRepository.findById(id);
+    public Optional<CardResponseDTO> findById(String id) {
+        return cardRepository.findById(id).map(cardMapper::toResponseDTO);
     }
 
-    public Page<Card> searchCards(String setId, String name,
-                                  CardType supertype, Pageable pageable) {
+    public Page<CardResponseDTO> searchCards(String setId, String name,
+                                             CardType supertype,
+                                             org.springframework.data.domain.Pageable pageable) {
+        Page<Card> cardPage;
         if (name != null && !name.isBlank()) {
-            return cardRepository.findBySetIdAndNameContainingIgnoreCase(setId, name, pageable);
+            cardPage = cardRepository.findBySetIdAndNameContainingIgnoreCase(setId, name, pageable);
+        } else if (supertype != null) {
+            cardPage = cardRepository.findBySetIdAndSupertype(setId, supertype, pageable);
+        } else {
+            cardPage = cardRepository.findBySetIdAndNameContainingIgnoreCase(setId, "", pageable);
         }
-        if (supertype != null) {
-            return cardRepository.findBySetIdAndSupertype(setId, supertype, pageable);
-        }
-        return cardRepository.findBySetIdAndNameContainingIgnoreCase(setId, "", pageable);
+        return cardPage.map(cardMapper::toResponseDTO);
     }
 
     @SuppressWarnings("unchecked")
@@ -83,17 +88,16 @@ public class CardCacheService {
         String rarity      = (String) raw.get("rarity");
         String evolvesFrom = (String) raw.get("evolvesFrom");
 
-        // subtypes, types, retreatCost
         List<String> subtypes    = toStringList(raw.get("subtypes"));
         List<String> types       = toStringList(raw.get("types"));
         List<String> retreatCost = toStringList(raw.get("retreatCost"));
-        // hp
+
         Integer hp = null;
         Object hpObj = raw.get("hp");
         if (hpObj instanceof String s && !s.isBlank()) {
             try { hp = Integer.parseInt(s); } catch (NumberFormatException ignored) {}
         }
-        // images
+
         String imageSmall = null;
         String imageLarge = null;
         Object imagesObj = raw.get("images");
@@ -102,7 +106,6 @@ public class CardCacheService {
             imageLarge = (String) images.get("large");
         }
 
-        // attacks
         List<Attack> attacks = new ArrayList<>();
         Object attacksObj = raw.get("attacks");
         if (attacksObj instanceof List<?> list) {
@@ -123,13 +126,9 @@ public class CardCacheService {
             }
         }
 
-        // weaknesses
         List<TypeModifier> weaknesses = parseTypeModifiers(raw.get("weaknesses"));
-
-        // resistances
         List<TypeModifier> resistances = parseTypeModifiers(raw.get("resistances"));
 
-        // abilities
         List<Ability> abilities = new ArrayList<>();
         Object abilitiesObj = raw.get("abilities");
         if (abilitiesObj instanceof List<?> list) {
@@ -143,9 +142,9 @@ public class CardCacheService {
                 }
             }
         }
-        // basicEnergy
+
         boolean basicEnergy = "Energy".equals(supertype) && subtypes.contains("Basic");
-        // rawData
+
         String rawJson;
         try {
             rawJson = objectMapper.writeValueAsString(raw);

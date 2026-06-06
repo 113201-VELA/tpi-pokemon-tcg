@@ -1,8 +1,8 @@
 package com.pokemon.tcg.api.rest;
 
-import com.pokemon.tcg.api.dto.AuthResponse;
-import com.pokemon.tcg.api.dto.LoginRequest;
-import com.pokemon.tcg.api.dto.RegisterRequest;
+import com.pokemon.tcg.api.dto.request.LoginRequest;
+import com.pokemon.tcg.api.dto.request.RegisterRequest;
+import com.pokemon.tcg.api.dto.response.AuthResponse;
 import com.pokemon.tcg.application.AuthService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;

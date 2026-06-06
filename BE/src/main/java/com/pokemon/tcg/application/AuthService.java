@@ -1,8 +1,8 @@
 package com.pokemon.tcg.application;
 
-import com.pokemon.tcg.api.dto.AuthResponse;
-import com.pokemon.tcg.api.dto.LoginRequest;
-import com.pokemon.tcg.api.dto.RegisterRequest;
+import com.pokemon.tcg.api.dto.request.LoginRequest;
+import com.pokemon.tcg.api.dto.request.RegisterRequest;
+import com.pokemon.tcg.api.dto.response.AuthResponse;
 import com.pokemon.tcg.domain.model.player.Player;
 import com.pokemon.tcg.infrastructure.repository.PlayerRepository;
 import com.pokemon.tcg.infrastructure.security.JwtService;

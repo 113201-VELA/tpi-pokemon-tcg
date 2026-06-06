@@ -1,4 +1,4 @@
-package com.pokemon.tcg.api.dto;
+package com.pokemon.tcg.api.dto.request;
 
 import jakarta.validation.constraints.Max;
 import jakarta.validation.constraints.Min;
