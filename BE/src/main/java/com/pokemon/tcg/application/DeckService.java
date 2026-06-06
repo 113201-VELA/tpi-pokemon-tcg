@@ -44,7 +44,7 @@ public class DeckService {
     }
 
     public Deck addCard(UUID deckId, UUID playerId, String cardId, int quantity) {
-        Deck deck = deckRepository.findById(deckId)
+        Deck deck = deckRepository.findWithCardsById(deckId)
                 .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
 
         if (!deck.getPlayer().getId().equals(playerId)) {
@@ -71,7 +71,7 @@ public class DeckService {
     }
 
     public DeckValidationResult validate(UUID deckId) {
-        Deck deck = deckRepository.findById(deckId)
+        Deck deck = deckRepository.findWithCardsById(deckId)
                 .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
 
         return buildValidationResult(deck);
@@ -79,6 +79,24 @@ public class DeckService {
 
     public List<Deck> listByPlayer(UUID playerId) {
         return deckRepository.findByPlayerIdOrderByCreatedAtDesc(playerId);
+    }
+
+    public Deck updateCardQuantity(UUID deckId, UUID playerId, String cardId, int quantity) {
+        Deck deck = deckRepository.findWithCardsById(deckId)
+                .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
+
+        if (!deck.getPlayer().getId().equals(playerId)) {
+            throw new IllegalArgumentException("Deck does not belong to player");
+        }
+
+        DeckCard deckCard = deck.getCards().stream()
+                .filter(dc -> dc.getCard().getId().equals(cardId))
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Card not found in deck"));
+
+        deckCard.setQuantity(quantity);
+        deck.setValid(isValidDeck(deck));
+        return deckRepository.save(deck);
     }
 
     public void deleteDeck(UUID deckId, UUID playerId) {
@@ -90,6 +108,19 @@ public class DeckService {
         }
 
         deckRepository.delete(deck);
+    }
+
+    public Deck removeCard(UUID deckId, UUID playerId, String cardId) {
+        Deck deck = deckRepository.findWithCardsById(deckId)
+                .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
+
+        if (!deck.getPlayer().getId().equals(playerId)) {
+            throw new IllegalArgumentException("Deck does not belong to player");
+        }
+
+        deck.getCards().removeIf(dc -> dc.getCard().getId().equals(cardId));
+        deck.setValid(isValidDeck(deck));
+        return deckRepository.save(deck);
     }
 
     private boolean isValidDeck(Deck deck) {
