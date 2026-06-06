@@ -47,15 +47,15 @@ public class Card {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String attacks;
+    private List<Attack> attacks = new ArrayList<>();
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String weaknesses;
+    private List<TypeModifier> weaknesses = new ArrayList<>();
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String resistances;
+    private List<TypeModifier> resistances = new ArrayList<>();
 
     @Type(ListArrayType.class)
     @Column(columnDefinition = "text[]")
@@ -63,7 +63,7 @@ public class Card {
 
     @JdbcTypeCode(SqlTypes.JSON)
     @Column(columnDefinition = "jsonb")
-    private String abilities;
+    private List<Ability> abilities = new ArrayList<>();
 
     @Column(name = "is_basic_energy", nullable = false)
     private boolean basicEnergy = false;

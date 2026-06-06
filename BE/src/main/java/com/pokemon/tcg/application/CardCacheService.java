@@ -51,6 +51,9 @@ public class CardCacheService {
                 cardRepository.save(card);
             } catch (Exception e) {
                 System.err.println("Error saving card: " + raw.get("id") + " — " + e.getMessage());
+                //BORRAR LAS 2 SIG LINEAS SI YA NO LAS NECESITO
+                //System.err.println("Error saving card: " + raw.get("id"));
+                //e.printStackTrace();
             }
         }
     }
@@ -150,22 +153,6 @@ public class CardCacheService {
             rawJson = "{}";
         }
 
-        String attacksJson;
-        String weaknessesJson;
-        String resistancesJson;
-        String abilitiesJson;
-        try {
-            attacksJson    = objectMapper.writeValueAsString(attacks);
-            weaknessesJson  = objectMapper.writeValueAsString(weaknesses);
-            resistancesJson = objectMapper.writeValueAsString(resistances);
-            abilitiesJson   = objectMapper.writeValueAsString(abilities);
-        } catch (Exception e) {
-            attacksJson    = "[]";
-            weaknessesJson  = "[]";
-            resistancesJson = "[]";
-            abilitiesJson   = "[]";
-        }
-
         return Card.builder()
                 .id(id)
                 .setId(setId)
@@ -175,11 +162,11 @@ public class CardCacheService {
                 .hp(hp)
                 .types(types)
                 .evolvesFrom(evolvesFrom)
-                .attacks(attacksJson)
-                .weaknesses(weaknessesJson)
-                .resistances(resistancesJson)
+                .attacks(attacks)
+                .weaknesses(weaknesses)
+                .resistances(resistances)
                 .retreatCost(retreatCost)
-                .abilities(abilitiesJson)
+                .abilities(abilities)
                 .basicEnergy(basicEnergy)
                 .imageSmall(imageSmall)
                 .imageLarge(imageLarge)
