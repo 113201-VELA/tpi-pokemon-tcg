@@ -1,0 +1,129 @@
+:host {
+  display: block;
+}
+
+.deck-list-page {
+  max-width: 900px;
+  margin: 0 auto;
+  padding: 2rem 1.5rem;
+}
+
+.deck-list-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+}
+
+.btn-create {
+  width: auto;
+  padding: 0.5rem 1.25rem;
+}
+
+.state-msg {
+  text-align: center;
+  color: var(--gray-600);
+  padding: 2rem 0;
+}
+
+.state-msg.error {
+  color: var(--error);
+}
+
+.empty-state {
+  text-align: center;
+  color: var(--gray-600);
+  padding: 3rem 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.deck-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.deck-card {
+  background: white;
+  border: 2px solid var(--gray-200);
+  border-radius: var(--radius-md);
+  padding: 1.25rem;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.deck-card:hover {
+  border-color: var(--pokemon-red);
+  box-shadow: var(--shadow-sm);
+}
+
+.deck-card-info {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.deck-name {
+  font-weight: 700;
+  font-size: 1rem;
+  color: var(--gray-900);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.deck-count {
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--gray-600);
+  white-space: nowrap;
+}
+
+.deck-count--full {
+  color: var(--pokemon-red);
+}
+
+.deck-card-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.badge {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.25rem 0.625rem;
+  border-radius: 999px;
+}
+
+.badge--valid {
+  background-color: #dcfce7;
+  color: #166534;
+}
+
+.badge--invalid {
+  background-color: #fee2e2;
+  color: #991b1b;
+}
+
+.btn-delete {
+  background: none;
+  border: none;
+  color: var(--gray-400);
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--radius-sm);
+  transition: color 0.2s ease, background-color 0.2s ease;
+}
+
+.btn-delete:hover {
+  color: var(--error);
+  background-color: #fee2e2;
+}

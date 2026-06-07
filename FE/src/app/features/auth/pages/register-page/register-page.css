@@ -1,3 +1,56 @@
 :host {
   display: block;
+  height: 100vh;
+}
+
+.auth-bg {
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--pokemon-red) 0%, #990000 60%, var(--pokemon-blue) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem;
+}
+
+.auth-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-lg);
+  padding: 2.5rem 2rem;
+  width: 100%;
+  max-width: 400px;
+  display: flex;
+  flex-direction: column;
+  gap: 1.75rem;
+}
+
+.auth-header {
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.auth-logo {
+  font-size: 1.75rem;
+  font-weight: 800;
+  color: var(--pokemon-red);
+  letter-spacing: -0.5px;
+}
+
+.auth-subtitle {
+  font-size: 0.9375rem;
+  color: var(--gray-600);
+}
+
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.auth-footer {
+  text-align: center;
+  font-size: 0.9375rem;
+  color: var(--gray-600);
 }

@@ -1,0 +1,46 @@
+<div class="deck-list-page">
+  <div class="deck-list-header">
+    <h1>Mis mazos</h1>
+    <button class="btn-primary btn-create" (click)="createDeck()">+ Nuevo mazo</button>
+  </div>
+
+  @if (loading()) {
+    <p class="state-msg">Cargando mazos...</p>
+  }
+
+  @if (error()) {
+    <p class="state-msg error">{{ error() }}</p>
+  }
+
+  @if (!loading() && decks().length === 0) {
+    <div class="empty-state">
+      <p>No tenés ningún mazo todavía.</p>
+      <p>¡Creá tu primer mazo con el botón de arriba!</p>
+    </div>
+  }
+
+  <div class="deck-grid">
+    @for (deck of decks(); track deck.id) {
+      <div class="deck-card" (click)="openDeck(deck)">
+        <div class="deck-card-info">
+          <span class="deck-name">{{ deck.name }}</span>
+          <span class="deck-count" [class.deck-count--full]="deck.totalCardCount === 60">
+            {{ deck.totalCardCount }}/60
+          </span>
+        </div>
+        <div class="deck-card-meta">
+          @if (deck.valid) {
+            <span class="badge badge--valid">Válido</span>
+          } @else {
+            <span class="badge badge--invalid">Incompleto</span>
+          }
+          <button
+            class="btn-delete"
+            (click)="deleteDeck($event, deck)"
+            title="Eliminar mazo"
+          >✕</button>
+        </div>
+      </div>
+    }
+  </div>
+</div>

@@ -1,0 +1,184 @@
+<div class="editor-page">
+
+  <!-- Header -->
+  <div class="editor-header">
+    @if (deckNameEditing()) {
+      <input
+        class="deck-name-input"
+        type="text"
+        [ngModel]="deckName()"
+        (ngModelChange)="deckName.set($event)"
+        (blur)="saveDeckName()"
+        (keydown.enter)="saveDeckName()"
+        autofocus
+      />
+    } @else {
+      <h1 class="deck-title" (click)="startEditingName()">
+        {{ deckName() }} <span class="edit-hint">✏️</span>
+      </h1>
+    }
+
+    <div class="header-actions">
+      <span class="card-counter" [class.card-counter--full]="isCounterFull()">
+        {{ totalCardCount() }}/60
+      </span>
+      <button class="btn-secondary btn-validate" (click)="validateDeck()">
+        Validar mazo
+      </button>
+    </div>
+  </div>
+
+  <!-- Resultado de validación -->
+  @if (validationResult()) {
+    <div class="validation-result" [class.validation-result--valid]="validationResult()!.valid">
+      @if (validationResult()!.valid) {
+        <p>✅ El mazo es válido y está listo para jugar.</p>
+      } @else {
+        <ul class="validation-errors">
+          @if (!validationResult()!.exactly60) {
+            <li>❌ El mazo debe tener exactamente 60 cartas (tiene {{ validationResult()!.totalCards }}).</li>
+          }
+          @if (!validationResult()!.noExcessCopies) {
+            <li>❌ Hay cartas con más de 4 copias.</li>
+          }
+          @if (!validationResult()!.hasBasicPokemon) {
+            <li>❌ El mazo debe tener al menos 1 Pokémon Básico.</li>
+          }
+        </ul>
+      }
+    </div>
+  }
+
+  <!-- Layout principal -->
+  <div class="editor-layout">
+
+    <!-- Panel izquierdo: mazo actual -->
+    <aside class="deck-panel">
+      <h2>Mazo actual</h2>
+
+      @if (loadingDeck()) {
+        <p class="state-msg">Cargando...</p>
+      }
+
+      @if (!loadingDeck() && (deck()?.cards?.length ?? 0) === 0) {
+        <p class="state-msg">El mazo está vacío. Agregá cartas desde el catálogo.</p>
+      }
+
+      <ul class="deck-card-list">
+        @for (entry of deck()?.cards ?? []; track entry.id) {
+          <li class="deck-entry">
+            <span class="deck-entry-name">{{ entry.card.name }}</span>
+            <div class="deck-entry-controls">
+              <button class="qty-btn" (click)="removeCard(entry.card)">−</button>
+              <span class="qty-value">{{ entry.quantity }}</span>
+              <button class="qty-btn" (click)="addCard(entry.card)">+</button>
+            </div>
+          </li>
+        }
+      </ul>
+    </aside>
+
+    <!-- Panel derecho: catálogo -->
+    <section class="catalog-panel">
+
+      <!-- Filtros -->
+      <div class="filters">
+        <input
+          class="filter-search"
+          type="text"
+          placeholder="Buscar por nombre..."
+          [ngModel]="filters().name ?? ''"
+          (ngModelChange)="applyFilters({ ...filters(), name: $event || undefined })"
+        />
+
+        <div class="filter-row">
+          <select
+            class="filter-select"
+            [ngModel]="filters().type ?? ''"
+            (ngModelChange)="applyFilters({ ...filters(), type: $event || undefined, energyType: undefined, pokemonSubtype: undefined })"
+          >
+            <option value="">Todos los tipos</option>
+            @for (st of supertypes; track st) {
+              <option [value]="st">{{ st }}</option>
+            }
+          </select>
+
+          @if (filters().type === 'POKEMON') {
+            <select
+              class="filter-select"
+              [ngModel]="filters().energyType ?? ''"
+              (ngModelChange)="applyFilters({ ...filters(), energyType: $event || undefined })"
+            >
+              <option value="">Todos los elementos</option>
+              @for (et of energyTypes; track et) {
+                <option [value]="et">{{ et }}</option>
+              }
+            </select>
+
+            <select
+              class="filter-select"
+              [ngModel]="filters().pokemonSubtype ?? ''"
+              (ngModelChange)="applyFilters({ ...filters(), pokemonSubtype: $event || undefined })"
+            >
+              <option value="">Básico / EX / Mega</option>
+              @for (sub of pokemonSubtypes; track sub) {
+                <option [value]="sub">{{ sub }}</option>
+              }
+            </select>
+          }
+        </div>
+      </div>
+
+      <!-- Grilla de cartas (usando filteredCards para aplicar filtros cliente) -->
+      @if (loadingCards() && cards().length === 0) {
+        <p class="state-msg">Cargando cartas...</p>
+      }
+
+      <div class="card-grid">
+        @for (card of filteredCards(); track card.id) {
+          <div class="catalog-card">
+            <img
+              class="catalog-card-img"
+              [src]="card.imageSmall"
+              [alt]="card.name"
+              (click)="openCardDetail(card)"
+            />
+            <div class="catalog-card-footer">
+              <span class="catalog-card-name">{{ card.name }}</span>
+              <div class="catalog-card-controls">
+                <button class="qty-btn" (click)="removeCard(card)">−</button>
+                <span class="qty-value">{{ getQuantityInDeck(card.id) }}</span>
+                <button class="qty-btn" (click)="addCard(card)">+</button>
+              </div>
+            </div>
+          </div>
+        }
+      </div>
+
+      <!-- Cargar más -->
+      @if (cardPage() + 1 < totalPages()) {
+        <div class="load-more">
+          <button class="btn-secondary" (click)="loadMoreCards()" [disabled]="loadingCards()">
+            {{ loadingCards() ? 'Cargando...' : 'Cargar más cartas' }}
+          </button>
+        </div>
+      }
+
+    </section>
+  </div>
+
+  <!-- Modal de detalle de carta -->
+  @if (selectedCard()) {
+    <div class="modal-overlay" (click)="closeCardDetail()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <img
+          class="modal-card-img"
+          [src]="selectedCard()!.imageLarge"
+          [alt]="selectedCard()!.name"
+        />
+        <button class="modal-close" (click)="closeCardDetail()">✕</button>
+      </div>
+    </div>
+  }
+
+</div>
