@@ -5,6 +5,7 @@ import com.pokemon.tcg.api.dto.response.GameStateResponseDTO;
 import com.pokemon.tcg.domain.engine.GameEngineFacade;
 import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.domain.model.deck.Deck;
+import com.pokemon.tcg.domain.model.deck.DeckCard;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.model.player.Player;
 import com.pokemon.tcg.infrastructure.repository.*;
@@ -74,7 +75,7 @@ public class GameService {
 
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new IllegalArgumentException("Player not found"));
-        Deck deck = deckRepository.findById(deckId)
+        Deck deck = deckRepository.findWithCardsById(deckId)
                 .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
 
         GamePlayer gamePlayer = GamePlayer.builder()
@@ -84,18 +85,34 @@ public class GameService {
                 .playerNumber(2)
                 .build();
         game.getPlayers().add(gamePlayer);
-
         game.setState(GameState.SETUP);
 
-        GamePlayer player1 = game.getPlayers().stream()
+        GamePlayer player1GamePlayer = game.getPlayers().stream()
                 .filter(gp -> gp.getPlayerNumber() == 1)
                 .findFirst().orElseThrow();
 
+        Deck deck1 = deckRepository.findWithCardsById(player1GamePlayer.getDeck().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Deck 1 not found"));
+
+        List<String> deck1CardIds = buildDeckCardIds(deck1);
+        List<String> deck2CardIds = buildDeckCardIds(deck);
+
         PlayerState ps1 = PlayerState.builder()
-                .playerId(player1.getPlayer().getId().toString())
+                .playerId(player1GamePlayer.getPlayer().getId().toString())
+                .deck(deck1CardIds)
+                .hand(new ArrayList<>())
+                .discard(new ArrayList<>())
+                .prizes(new ArrayList<>())
+                .bench(new ArrayList<>())
                 .build();
+
         PlayerState ps2 = PlayerState.builder()
                 .playerId(player.getId().toString())
+                .deck(deck2CardIds)
+                .hand(new ArrayList<>())
+                .discard(new ArrayList<>())
+                .prizes(new ArrayList<>())
+                .bench(new ArrayList<>())
                 .build();
 
         EngineResult result = engine.initializeGame(game.getId().toString(), ps1, ps2);
@@ -165,6 +182,17 @@ public class GameService {
 
     public List<Game> listOpenGames() {
         return gameRepository.findByStateOrderByCreatedAtDesc(GameState.WAITING);
+    }
+
+    /** Expands deck cards into a list of card IDs respecting quantity. */
+    private List<String> buildDeckCardIds(Deck deck) {
+        List<String> cardIds = new ArrayList<>();
+        for (DeckCard dc : deck.getCards()) {
+            for (int i = 0; i < dc.getQuantity(); i++) {
+                cardIds.add(dc.getCard().getId());
+            }
+        }
+        return cardIds;
     }
 
     private Set<String> collectVisibleCardIds(PlayerState ps) {

@@ -46,5 +46,6 @@ public class GameStateSnapshot {
     private BoardState boardState;
 
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 }
