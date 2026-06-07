@@ -1,5 +1,6 @@
 package com.pokemon.tcg.domain.model.game;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.pokemon.tcg.domain.model.deck.Deck;
 import com.pokemon.tcg.domain.model.player.Player;
 import jakarta.persistence.*;
@@ -24,10 +25,12 @@ public class GamePlayer {
     @GeneratedValue(strategy = GenerationType.UUID)
     private UUID id;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "game_id", nullable = false)
     private Game game;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "player_id", nullable = false)
     private Player player;

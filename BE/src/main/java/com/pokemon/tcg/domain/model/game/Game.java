@@ -1,5 +1,6 @@
 package com.pokemon.tcg.domain.model.game;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.pokemon.tcg.domain.model.player.Player;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
@@ -30,6 +31,7 @@ public class Game {
     @Column(nullable = false)
     private GameState state = GameState.WAITING;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "winner_id")
     private Player winner;
@@ -37,17 +39,21 @@ public class Game {
     @Enumerated(EnumType.STRING)
     private FinishReason finishReason;
 
-    @Column(nullable = false)
-    private boolean isSuddenDeath = false;
+    @Column(name = "is_sudden_death", nullable = false)
+    private boolean suddenDeath = false;
 
+    @JsonIgnore
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "parent_game_id")
     private Game parentGame;
 
+    @JsonIgnore
     @OneToMany(mappedBy = "game", cascade = CascadeType.ALL)
+    @Builder.Default
     private List<GamePlayer> players = new ArrayList<>();
 
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 
     private Instant finishedAt;
