@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>WebSocket Test — Pokémon TCG</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #eee; }
+        h2 { color: #e94560; }
+        input, textarea, select { width: 100%; padding: 8px; margin: 4px 0 10px; background: #16213e; color: #eee; border: 1px solid #0f3460; border-radius: 4px; }
+        button { padding: 8px 16px; background: #e94560; color: white; border: none; border-radius: 4px; cursor: pointer; margin: 4px; }
+        button:hover { background: #c73652; }
+        button:disabled { background: #555; cursor: not-allowed; }
+        #log { background: #0f3460; padding: 10px; border-radius: 4px; height: 300px; overflow-y: auto; font-size: 12px; }
+        .log-entry { margin: 4px 0; padding: 4px; border-left: 3px solid #e94560; }
+        .log-ok { border-color: #4caf50; }
+        .log-err { border-color: #f44336; }
+        .section { background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+<h2>🎴 Pokémon TCG — WebSocket Tester</h2>
+
+<div class="section">
+    <h3>1. Connect</h3>
+    <label>JWT Token</label>
+    <input id="token" type="text" placeholder="Paste your Bearer token here (without 'Bearer ')"/>
+    <label>Game ID</label>
+    <input id="gameId" type="text" placeholder="e.g. c956c305-0d1a-4ca4-b296-23201e9752e7"/>
+    <button id="btnConnect" onclick="connect()">Connect</button>
+    <button id="btnDisconnect" onclick="disconnect()" disabled>Disconnect</button>
+</div>
+
+<div class="section">
+    <h3>2. Send Action</h3>
+    <label>Action Type</label>
+    <select id="actionType">
+        <option value="DRAW_CARD">DRAW_CARD</option>
+        <option value="PLACE_BASIC_POKEMON">PLACE_BASIC_POKEMON</option>
+        <option value="ATTACH_ENERGY">ATTACH_ENERGY</option>
+        <option value="PLAY_TRAINER">PLAY_TRAINER</option>
+        <option value="EVOLVE_POKEMON">EVOLVE_POKEMON</option>
+        <option value="RETREAT">RETREAT</option>
+        <option value="USE_ABILITY">USE_ABILITY</option>
+        <option value="DECLARE_ATTACK">DECLARE_ATTACK</option>
+        <option value="END_TURN">END_TURN</option>
+        <option value="SETUP_PLACE_ACTIVE">SETUP_PLACE_ACTIVE</option>
+        <option value="SETUP_PLACE_BENCH">SETUP_PLACE_BENCH</option>
+        <option value="MULLIGAN_CONFIRM">MULLIGAN_CONFIRM</option>
+        <option value="CHOOSE_BENCH_POKEMON">CHOOSE_BENCH_POKEMON</option>
+    </select>
+    <label>Payload (JSON)</label>
+    <textarea id="payload" rows="4">{}</textarea>
+    <button id="btnSend" onclick="sendAction()" disabled>Send Action</button>
+</div>
+
+<div class="section">
+    <h3>Log</h3>
+    <button onclick="clearLog()">Clear</button>
+    <div id="log"></div>
+</div>
+
+<script>
+    let stompClient = null;
+
+    function log(msg, type = '') {
+        const div = document.getElementById('log');
+        const entry = document.createElement('div');
+        entry.className = 'log-entry ' + (type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : '');
+        entry.textContent = new Date().toISOString().slice(11, 23) + ' | ' + msg;
+        div.appendChild(entry);
+        div.scrollTop = div.scrollHeight;
+    }
+
+    function clearLog() {
+        document.getElementById('log').innerHTML = '';
+    }
+
+    function connect() {
+        const token  = document.getElementById('token').value.trim();
+        const gameId = document.getElementById('gameId').value.trim();
+
+        if (!token || !gameId) {
+            log('Token and Game ID are required', 'err');
+            return;
+        }
+
+        const socket = new SockJS('http://localhost:8080/ws');
+        stompClient  = Stomp.over(socket);
+        stompClient.debug = null; // silence debug noise
+
+        stompClient.connect(
+            { Authorization: 'Bearer ' + token },
+            function () {
+                log('Connected!', 'ok');
+                document.getElementById('btnConnect').disabled    = true;
+                document.getElementById('btnDisconnect').disabled = false;
+                document.getElementById('btnSend').disabled       = false;
+
+                // Subscribe to public board state
+                stompClient.subscribe('/topic/game/' + gameId + '/state', function (msg) {
+                    log('[BOARD STATE] ' + msg.body, 'ok');
+                });
+
+                // Subscribe to public events
+                stompClient.subscribe('/topic/game/' + gameId + '/events', function (msg) {
+                    log('[EVENT] ' + msg.body, 'ok');
+                });
+
+                // Subscribe to private player state
+                stompClient.subscribe('/user/queue/game/' + gameId + '/player', function (msg) {
+                    log('[PRIVATE STATE] ' + msg.body, 'ok');
+                });
+
+                log('Subscribed to game: ' + gameId);
+            },
+            function (err) {
+                log('Connection error: ' + err, 'err');
+            }
+        );
+    }
+
+    function disconnect() {
+        if (stompClient) {
+            stompClient.disconnect();
+            stompClient = null;
+        }
+        document.getElementById('btnConnect').disabled    = false;
+        document.getElementById('btnDisconnect').disabled = true;
+        document.getElementById('btnSend').disabled       = true;
+        log('Disconnected');
+    }
+
+    function sendAction() {
+        const gameId      = document.getElementById('gameId').value.trim();
+        const actionType  = document.getElementById('actionType').value;
+        const payloadText = document.getElementById('payload').value.trim();
+
+        let payload;
+        try {
+            payload = JSON.parse(payloadText);
+        } catch (e) {
+            log('Invalid JSON payload', 'err');
+            return;
+        }
+
+        const action = { type: actionType, payload: payload };
+        stompClient.send('/app/game/' + gameId + '/action', {}, JSON.stringify(action));
+        log('[SENT] ' + JSON.stringify(action));
+    }
+</script>
+</body>
+</html>
