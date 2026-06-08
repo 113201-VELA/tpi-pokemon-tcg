@@ -2,15 +2,17 @@ import { Routes } from '@angular/router';
 import { authGuard } from './core/guards/auth.guard';
 
 export const routes: Routes = [
-  {
-    path: '',
-    redirectTo: 'decks',
-    pathMatch: 'full'
-  },
+  { path: '', redirectTo: 'home', pathMatch: 'full' },
   {
     path: 'auth',
     loadChildren: () =>
       import('./features/auth/auth.routes').then(m => m.AUTH_ROUTES)
+  },
+  {
+    path: 'home',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/home/pages/home-page/home-page').then(m => m.HomePage)
   },
   {
     path: 'decks',
@@ -19,7 +21,10 @@ export const routes: Routes = [
       import('./features/deck-builder/deck-builder.routes').then(m => m.DECK_BUILDER_ROUTES)
   },
   {
-    path: '**',
-    redirectTo: 'decks'
-  }
+    path: 'lobby',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/lobby/pages/lobby-page/lobby-page').then(m => m.LobbyPage)
+  },
+  { path: '**', redirectTo: 'home' }
 ];

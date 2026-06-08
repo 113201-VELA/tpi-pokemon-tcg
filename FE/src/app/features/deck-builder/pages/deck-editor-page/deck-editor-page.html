@@ -1,53 +1,41 @@
 <div class="editor-page">
 
-  <!-- Header -->
+  <!-- Sticky bar -->
+  <div class="sticky-bar">
+    <button class="back-btn" (click)="goBackToDecks()">⬅ Volver a mis mazos</button>
+    <div class="status-indicators">
+      <span class="indicator" [class.indicator--ok]="totalCardCount() === 60" [class.indicator--fail]="totalCardCount() !== 60">
+        {{ totalCardCount() }}/60 cartas
+      </span>
+      <span class="indicator" [class.indicator--ok]="hasNoExcessCopies()" [class.indicator--fail]="!hasNoExcessCopies()">
+        {{ hasNoExcessCopies() ? 'Sin exceso de copias' : 'Límite superado (Max 4)' }}
+      </span>
+      <span class="indicator" [class.indicator--ok]="hasBasicPokemon()" [class.indicator--fail]="!hasBasicPokemon()">
+        {{ hasBasicPokemon() ? 'Tiene Pokémon Básico' : 'Falta Pokémon Básico' }}
+      </span>
+    </div>
+  </div>
+
+  <!-- Deck name header -->
   <div class="editor-header">
     @if (deckNameEditing()) {
-      <input
-        class="deck-name-input"
-        type="text"
-        [ngModel]="deckName()"
-        (ngModelChange)="deckName.set($event)"
-        (blur)="saveDeckName()"
-        (keydown.enter)="saveDeckName()"
-        autofocus
-      />
+      <div class="deck-name-edit">
+        <input
+          class="deck-name-input"
+          type="text"
+          [ngModel]="deckName()"
+          (ngModelChange)="deckName.set($event)"
+          autofocus
+        />
+        <button class="btn-primary btn-sm" (click)="saveDeckName()">Guardar</button>
+        <button class="btn-secondary btn-sm" (click)="cancelEditingName()">Cancelar</button>
+      </div>
     } @else {
       <h1 class="deck-title" (click)="startEditingName()">
         {{ deckName() }} <span class="edit-hint">✏️</span>
       </h1>
     }
-
-    <div class="header-actions">
-      <span class="card-counter" [class.card-counter--full]="isCounterFull()">
-        {{ totalCardCount() }}/60
-      </span>
-      <button class="btn-secondary btn-validate" (click)="validateDeck()">
-        Validar mazo
-      </button>
-    </div>
   </div>
-
-  <!-- Resultado de validación -->
-  @if (validationResult()) {
-    <div class="validation-result" [class.validation-result--valid]="validationResult()!.valid">
-      @if (validationResult()!.valid) {
-        <p>✅ El mazo es válido y está listo para jugar.</p>
-      } @else {
-        <ul class="validation-errors">
-          @if (!validationResult()!.exactly60) {
-            <li>❌ El mazo debe tener exactamente 60 cartas (tiene {{ validationResult()!.totalCards }}).</li>
-          }
-          @if (!validationResult()!.noExcessCopies) {
-            <li>❌ Hay cartas con más de 4 copias.</li>
-          }
-          @if (!validationResult()!.hasBasicPokemon) {
-            <li>❌ El mazo debe tener al menos 1 Pokémon Básico.</li>
-          }
-        </ul>
-      }
-    </div>
-  }
 
   <!-- Layout principal -->
   <div class="editor-layout">
@@ -69,9 +57,13 @@
           <li class="deck-entry">
             <span class="deck-entry-name">{{ entry.card.name }}</span>
             <div class="deck-entry-controls">
-              <button class="qty-btn" (click)="removeCard(entry.card)">−</button>
+              <button class="qty-btn" (click)="removeCard(entry.card)" [disabled]="getQuantityInDeck(entry.card.id) === 0">−</button>
               <span class="qty-value">{{ entry.quantity }}</span>
-              <button class="qty-btn" (click)="addCard(entry.card)">+</button>
+              <button
+                class="qty-btn"
+                (click)="addCard(entry.card)"
+                [disabled]="!canAddCard(entry.card)"
+              >+</button>
             </div>
           </li>
         }
@@ -129,7 +121,7 @@
         </div>
       </div>
 
-      <!-- Grilla de cartas (usando filteredCards para aplicar filtros cliente) -->
+      <!-- Grilla de cartas -->
       @if (loadingCards() && cards().length === 0) {
         <p class="state-msg">Cargando cartas...</p>
       }
@@ -146,9 +138,13 @@
             <div class="catalog-card-footer">
               <span class="catalog-card-name">{{ card.name }}</span>
               <div class="catalog-card-controls">
-                <button class="qty-btn" (click)="removeCard(card)">−</button>
+                <button class="qty-btn" (click)="removeCard(card)" [disabled]="getQuantityInDeck(card.id) === 0">−</button>
                 <span class="qty-value">{{ getQuantityInDeck(card.id) }}</span>
-                <button class="qty-btn" (click)="addCard(card)">+</button>
+                <button
+                  class="qty-btn"
+                  (click)="addCard(card)"
+                  [disabled]="!canAddCard(card)"
+                >+</button>
               </div>
             </div>
           </div>

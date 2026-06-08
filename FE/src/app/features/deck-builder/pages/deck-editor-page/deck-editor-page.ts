@@ -1,16 +1,14 @@
 import {
   ChangeDetectionStrategy, Component, computed, inject, OnInit, signal
 } from '@angular/core';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CardService } from '../../data-access/services/card.service';
 import { DeckService } from '../../data-access/services/deck.service';
 import {
   CardFilters, CardResponse, CardSupertype, EnergyType
 } from '../../domain/models/card.models';
-import {
-  DeckResponse, DeckValidationResult
-} from '../../domain/models/deck.models';
+import { DeckResponse } from '../../domain/models/deck.models';
 
 @Component({
   selector: 'app-deck-editor-page',
@@ -21,6 +19,7 @@ import {
 })
 export class DeckEditorPage implements OnInit {
   private readonly route = inject(ActivatedRoute);
+  private readonly router = inject(Router);
   private readonly cardService = inject(CardService);
   private readonly deckService = inject(DeckService);
 
@@ -33,13 +32,40 @@ export class DeckEditorPage implements OnInit {
   readonly cardPage = signal(0);
   readonly totalPages = signal(0);
   readonly selectedCard = signal<CardResponse | null>(null);
-  readonly validationResult = signal<DeckValidationResult | null>(null);
   readonly deckNameEditing = signal(false);
   readonly deckName = signal('');
   readonly filters = signal<CardFilters>({});
 
   readonly totalCardCount = computed(() => this.deck()?.totalCardCount ?? 0);
   readonly isCounterFull = computed(() => this.totalCardCount() === 60);
+
+  readonly cardNameCounts = computed(() => {
+    const currentDeck = this.deck();
+    const counts: Record<string, number> = {};
+    if (!currentDeck) return counts;
+    for (const entry of currentDeck.cards) {
+      const card = entry.card;
+      const isBasicEnergy = card.supertype === 'ENERGY' && card.subtypes.includes('Basic');
+      if (!isBasicEnergy) {
+        counts[card.name] = (counts[card.name] || 0) + entry.quantity;
+      }
+    }
+    return counts;
+  });
+
+  readonly hasNoExcessCopies = computed(() => {
+    return !Object.values(this.cardNameCounts()).some(count => count > 4);
+  });
+
+  readonly hasBasicPokemon = computed(() => {
+    return this.deck()?.cards.some(entry =>
+      entry.card.supertype === 'POKEMON' && entry.card.subtypes.includes('Basic')
+    ) ?? false;
+  });
+
+  readonly isDeckValidForPlaying = computed(() => {
+    return this.totalCardCount() === 60 && this.hasNoExcessCopies() && this.hasBasicPokemon();
+  });
 
   readonly filteredCards = computed(() => {
     const f = this.filters();
@@ -113,7 +139,19 @@ export class DeckEditorPage implements OnInit {
     return entry?.quantity ?? 0;
   }
 
+  canAddCard(card: CardResponse): boolean {
+    if (this.isCounterFull()) return false;
+
+    const isBasicEnergy = card.supertype === 'ENERGY' && card.subtypes.includes('Basic');
+    if (isBasicEnergy) return true;
+
+    const currentCount = this.cardNameCounts()[card.name] || 0;
+    return currentCount < 4;
+  }
+
   addCard(card: CardResponse): void {
+    if (!this.canAddCard(card)) return;
+
     const current = this.getQuantityInDeck(card.id);
     if (current === 0) {
       this.deckService.addCard(this.deckId, { cardId: card.id, quantity: 1 }).subscribe({
@@ -139,12 +177,6 @@ export class DeckEditorPage implements OnInit {
     }
   }
 
-  validateDeck(): void {
-    this.deckService.validateDeck(this.deckId).subscribe({
-      next: result => this.validationResult.set(result)
-    });
-  }
-
   openCardDetail(card: CardResponse): void {
     this.selectedCard.set(card);
   }
@@ -157,7 +189,32 @@ export class DeckEditorPage implements OnInit {
     this.deckNameEditing.set(true);
   }
 
-  saveDeckName(): void {
+  cancelEditingName(): void {
+    this.deckName.set(this.deck()?.name ?? '');
     this.deckNameEditing.set(false);
+  }
+
+  saveDeckName(): void {
+    const newName = this.deckName().trim();
+    if (!newName || newName === this.deck()?.name) {
+      this.deckNameEditing.set(false);
+      return;
+    }
+
+    this.deckService.updateDeck(this.deckId, { name: newName }).subscribe({
+      next: updatedDeck => {
+        this.deck.set(updatedDeck);
+        this.deckName.set(updatedDeck.name);
+        this.deckNameEditing.set(false);
+      },
+      error: () => {
+        this.deckName.set(this.deck()?.name || '');
+        this.deckNameEditing.set(false);
+      }
+    });
+  }
+
+  goBackToDecks(): void {
+    this.router.navigate(['/decks']);
   }
 }

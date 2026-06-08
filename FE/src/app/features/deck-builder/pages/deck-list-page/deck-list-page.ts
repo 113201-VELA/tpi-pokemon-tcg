@@ -11,7 +11,7 @@ import { DeckResponse } from '../../domain/models/deck.models';
 })
 export class DeckListPage implements OnInit {
   private readonly deckService = inject(DeckService);
-  private readonly router = inject(Router);
+  readonly router = inject(Router);
 
   readonly decks = signal<DeckResponse[]>([]);
   readonly loading = signal(false);

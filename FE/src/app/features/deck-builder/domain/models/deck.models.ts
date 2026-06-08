@@ -1,5 +1,10 @@
 import { CardResponse } from './card.models';
 
+export interface UpdateDeckRequest {
+  name?: string;
+  description?: string;
+}
+
 export interface CreateDeckRequest {
   name: string;
   description?: string;

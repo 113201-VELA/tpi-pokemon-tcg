@@ -21,7 +21,7 @@ public class MatchmakingService {
     }
 
     public Game findAvailableGame() {
-        List<Game> openGames = gameRepository.findByStateOrderByCreatedAtDesc(GameState.WAITING);
+        List<Game> openGames = gameRepository.findByStateWithPlayersOrderByCreatedAtDesc(GameState.WAITING);
         return openGames.isEmpty() ? null : openGames.get(0);
     }
 

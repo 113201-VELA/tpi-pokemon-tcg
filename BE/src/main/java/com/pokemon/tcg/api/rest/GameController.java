@@ -2,6 +2,7 @@ package com.pokemon.tcg.api.rest;
 
 import com.pokemon.tcg.api.dto.request.CreateGameRequest;
 import com.pokemon.tcg.api.dto.request.JoinGameRequest;
+import com.pokemon.tcg.api.dto.response.GameResponseDTO;
 import com.pokemon.tcg.api.dto.response.GameStateResponseDTO;
 import com.pokemon.tcg.application.GameService;
 import com.pokemon.tcg.domain.model.game.Game;
@@ -26,7 +27,7 @@ public class GameController {
     }
 
     @GetMapping
-    public ResponseEntity<List<Game>> listOpenGames() {
+    public ResponseEntity<List<GameResponseDTO>> listOpenGames() {
         return ResponseEntity.ok(gameService.listOpenGames());
     }
 

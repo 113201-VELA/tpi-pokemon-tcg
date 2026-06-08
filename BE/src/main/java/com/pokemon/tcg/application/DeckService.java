@@ -151,6 +151,24 @@ public class DeckService {
         return hasBasic;
     }
 
+    public DeckResponseDTO updateDeck(UUID deckId, UUID playerId, String name, String description) {
+        Deck deck = deckRepository.findWithCardsById(deckId)
+                .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
+
+        if (!deck.getPlayer().getId().equals(playerId)) {
+            throw new IllegalArgumentException("Deck does not belong to player");
+        }
+
+        if (name != null && !name.trim().isEmpty()) {
+            deck.setName(name);
+        }
+        if (description != null) {
+            deck.setDescription(description);
+        }
+
+        return deckMapper.toResponseDTO(deckRepository.save(deck));
+    }
+
     private DeckValidationResult buildValidationResult(Deck deck) {
         int total = deck.getTotalCardCount();
         boolean exactly60 = total == 60;

@@ -11,13 +11,62 @@
   gap: 1.25rem;
 }
 
-/* Header */
-.editor-header {
+/* Sticky bar */
+.sticky-bar {
+  position: sticky;
+  top: 0;
+  z-index: 100;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
   flex-wrap: wrap;
+  background-color: var(--gray-50);
+  padding: 0.75rem 0;
+  border-bottom: 2px solid var(--gray-200);
+}
+
+.back-btn {
+  background: none;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--pokemon-blue);
+  cursor: pointer;
+  padding: 0.25rem 0;
+  transition: opacity 0.2s ease;
+}
+
+.back-btn:hover {
+  opacity: 0.75;
+}
+
+.status-indicators {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.indicator {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--gray-600);
+}
+
+.indicator--ok {
+  color: #166534;
+}
+
+.indicator--fail {
+  color: #991b1b;
+}
+
+/* Header */
+.editor-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
 .deck-title {
@@ -39,6 +88,13 @@
   transition: opacity 0.2s ease;
 }
 
+.deck-name-edit {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .deck-name-input {
   font-family: 'Nunito', sans-serif;
   font-size: 1.5rem;
@@ -47,50 +103,13 @@
   border-radius: var(--radius-sm);
   padding: 0.25rem 0.5rem;
   outline: none;
+  max-width: 300px;
 }
 
-.header-actions {
-  display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.card-counter {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: var(--gray-600);
-}
-
-.card-counter--full {
-  color: var(--pokemon-red);
-}
-
-.btn-validate {
+.btn-sm {
   width: auto;
-  padding: 0.5rem 1.25rem;
-}
-
-/* Validación */
-.validation-result {
-  padding: 1rem 1.25rem;
-  border-radius: var(--radius-md);
-  background-color: #fee2e2;
-  border: 1px solid #fca5a5;
-  color: #991b1b;
-  font-weight: 600;
-}
-
-.validation-result--valid {
-  background-color: #dcfce7;
-  border-color: #86efac;
-  color: #166534;
-}
-
-.validation-errors {
-  list-style: none;
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
+  padding: 0.375rem 1rem;
+  font-size: 0.875rem;
 }
 
 /* Layout principal */
@@ -172,9 +191,14 @@
   line-height: 1;
 }
 
-.qty-btn:hover {
+.qty-btn:hover:not(:disabled) {
   background-color: var(--pokemon-red);
   color: white;
+}
+
+.qty-btn:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
 
 .qty-value {

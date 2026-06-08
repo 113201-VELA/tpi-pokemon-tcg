@@ -127,3 +127,25 @@
   color: var(--error);
   background-color: #fee2e2;
 }
+
+.back-home {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.btn-back-home {
+  background: none;
+  border: none;
+  font-family: 'Nunito', sans-serif;
+  font-size: 0.9375rem;
+  font-weight: 700;
+  color: var(--pokemon-blue);
+  cursor: pointer;
+  padding: 0.5rem 1rem;
+  transition: opacity 0.2s ease;
+}
+
+.btn-back-home:hover {
+  opacity: 0.75;
+}

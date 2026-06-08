@@ -1,6 +1,8 @@
 package com.pokemon.tcg.application;
 
+import com.pokemon.tcg.api.mapper.GameMapper;
 import com.pokemon.tcg.api.mapper.GameStateMapper;
+import com.pokemon.tcg.api.dto.response.GameResponseDTO;
 import com.pokemon.tcg.api.dto.response.GameStateResponseDTO;
 import com.pokemon.tcg.domain.engine.GameEngineFacade;
 import com.pokemon.tcg.domain.model.card.Card;
@@ -28,6 +30,7 @@ public class GameService {
     private final PlayerRepository playerRepository;
     private final DeckRepository deckRepository;
     private final GameStateMapper gameStateMapper;
+    private final GameMapper gameMapper;
 
     public GameService(GameEngineFacade engine,
                        GameRepository gameRepository,
@@ -36,7 +39,8 @@ public class GameService {
                        CardRepository cardRepository,
                        PlayerRepository playerRepository,
                        DeckRepository deckRepository,
-                       GameStateMapper gameStateMapper) {
+                       GameStateMapper gameStateMapper,
+                       GameMapper gameMapper) {
         this.engine           = engine;
         this.gameRepository   = gameRepository;
         this.stateRepository  = stateRepository;
@@ -45,6 +49,7 @@ public class GameService {
         this.playerRepository = playerRepository;
         this.deckRepository   = deckRepository;
         this.gameStateMapper  = gameStateMapper;
+        this.gameMapper       = gameMapper;
     }
 
     public Game createGame(UUID playerId, UUID deckId) {
@@ -180,8 +185,9 @@ public class GameService {
         return logRepository.findByGameIdOrderByCreatedAtAsc(gameId);
     }
 
-    public List<Game> listOpenGames() {
-        return gameRepository.findByStateOrderByCreatedAtDesc(GameState.WAITING);
+    public List<GameResponseDTO> listOpenGames() {
+        List<Game> openGames = gameRepository.findByStateWithPlayersOrderByCreatedAtDesc(GameState.WAITING);
+        return gameMapper.toResponseDTOList(openGames);
     }
 
     /** Expands deck cards into a list of card IDs respecting quantity. */

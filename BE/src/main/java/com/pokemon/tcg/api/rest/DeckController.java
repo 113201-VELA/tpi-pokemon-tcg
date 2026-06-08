@@ -5,6 +5,7 @@ import com.pokemon.tcg.api.dto.request.CreateDeckRequest;
 import com.pokemon.tcg.api.dto.request.UpdateCardQuantityRequest;
 import com.pokemon.tcg.api.dto.response.DeckResponseDTO;
 import com.pokemon.tcg.api.dto.response.DeckValidationResult;
+import com.pokemon.tcg.api.dto.request.UpdateDeckRequest;
 import com.pokemon.tcg.application.DeckService;
 import com.pokemon.tcg.domain.model.player.Player;
 import jakarta.validation.Valid;
@@ -36,6 +37,13 @@ public class DeckController {
                                                        @Valid @RequestBody CreateDeckRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(deckService.createDeck(player.getId(), request.getName(), request.getDescription()));
+    }
+
+    @PutMapping("/{deckId}")
+    public ResponseEntity<DeckResponseDTO> updateDeck(@AuthenticationPrincipal Player player,
+                                                      @PathVariable UUID deckId,
+                                                      @Valid @RequestBody UpdateDeckRequest request) {
+        return ResponseEntity.ok(deckService.updateDeck(deckId, player.getId(), request.getName(), request.getDescription()));
     }
 
     @PostMapping("/{deckId}/cards")

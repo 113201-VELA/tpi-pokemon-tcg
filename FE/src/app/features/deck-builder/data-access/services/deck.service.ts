@@ -6,7 +6,8 @@ import {
   AddCardRequest,
   CreateDeckRequest,
   DeckResponse,
-  DeckValidationResult
+  DeckValidationResult,
+  UpdateDeckRequest
 } from '../../domain/models/deck.models';
 
 @Injectable({ providedIn: 'root' })
@@ -39,6 +40,10 @@ export class DeckService {
 
   deleteDeck(deckId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${deckId}`);
+  }
+
+  updateDeck(deckId: string, request: UpdateDeckRequest): Observable<DeckResponse> {
+    return this.http.put<DeckResponse>(`${this.apiUrl}/${deckId}`, request);
   }
 
   validateDeck(deckId: string): Observable<DeckValidationResult> {

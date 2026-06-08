@@ -1,0 +1,70 @@
+.home-container {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2.5rem;
+  padding: 2rem;
+}
+
+.home-title {
+  font-size: 2.5rem;
+  font-weight: 800;
+  color: var(--pokemon-yellow);
+  text-shadow: 2px 2px 0 var(--pokemon-blue);
+  margin: 0;
+}
+
+.home-nav {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.nav-link {
+  font-size: 1.125rem;
+  font-weight: 700;
+  color: var(--pokemon-blue);
+  cursor: pointer;
+  transition: opacity 0.2s ease;
+}
+
+.nav-link:hover {
+  opacity: 0.75;
+}
+
+.nav-link.disabled-link {
+  color: var(--gray-400);
+  cursor: not-allowed;
+  opacity: 1;
+}
+
+.nav-link.disabled-link:hover {
+  opacity: 1;
+}
+
+.nav-link small {
+  font-weight: 400;
+  font-size: 0.75rem;
+  color: var(--gray-400);
+}
+
+.btn-logout {
+  padding: 0.6rem 2rem;
+  border: 1px solid var(--pokemon-red);
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--pokemon-red);
+  font-family: 'Nunito', sans-serif;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s, color 0.2s;
+}
+
+.btn-logout:hover {
+  background: var(--pokemon-red);
+  color: white;
+}

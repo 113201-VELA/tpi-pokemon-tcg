@@ -32,7 +32,7 @@ export class LoginPage {
     const { username, password } = this.form.value;
 
     this.authService.login({ username: username!, password: password! }).subscribe({
-      next: () => this.router.navigate(['/decks']),
+      next: () => this.router.navigate(['/home']),
       error: (err) => {
         this.errorMessage.set(err.error?.message ?? 'Usuario o contraseña incorrectos');
         this.loading.set(false);
