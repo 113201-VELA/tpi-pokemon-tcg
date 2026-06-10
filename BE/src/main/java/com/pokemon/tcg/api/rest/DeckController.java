@@ -27,11 +27,13 @@ public class DeckController {
         this.deckService = deckService;
     }
 
+    /** Returns all decks belonging to the authenticated player. */
     @GetMapping
     public ResponseEntity<List<DeckResponseDTO>> listDecks(@AuthenticationPrincipal Player player) {
         return ResponseEntity.ok(deckService.listByPlayer(player.getId()));
     }
 
+    /** Creates a new empty deck for the authenticated player. */
     @PostMapping
     public ResponseEntity<DeckResponseDTO> createDeck(@AuthenticationPrincipal Player player,
                                                        @Valid @RequestBody CreateDeckRequest request) {
@@ -39,6 +41,7 @@ public class DeckController {
                 .body(deckService.createDeck(player.getId(), request.getName(), request.getDescription()));
     }
 
+    /** Updates the name and/or description of an existing deck. */
     @PutMapping("/{deckId}")
     public ResponseEntity<DeckResponseDTO> updateDeck(@AuthenticationPrincipal Player player,
                                                       @PathVariable UUID deckId,
@@ -46,6 +49,7 @@ public class DeckController {
         return ResponseEntity.ok(deckService.updateDeck(deckId, player.getId(), request.getName(), request.getDescription()));
     }
 
+    /** Adds a new card to the deck. Fails if the card is already present — use PUT to update quantity. */
     @PostMapping("/{deckId}/cards")
     public ResponseEntity<DeckResponseDTO> addCard(@AuthenticationPrincipal Player player,
                                                     @PathVariable UUID deckId,
@@ -54,6 +58,7 @@ public class DeckController {
                 .body(deckService.addCard(deckId, player.getId(), request.cardId(), request.quantity()));
     }
 
+    /** Updates the quantity of an existing card in the deck. */
     @PutMapping("/{deckId}/cards/{cardId}")
     public ResponseEntity<DeckResponseDTO> updateCardQuantity(@AuthenticationPrincipal Player player,
                                                                @PathVariable UUID deckId,
@@ -62,6 +67,7 @@ public class DeckController {
         return ResponseEntity.ok(deckService.updateCardQuantity(deckId, player.getId(), cardId, request.quantity()));
     }
 
+    /** Removes a card completely from the deck. */
     @DeleteMapping("/{deckId}/cards/{cardId}")
     public ResponseEntity<DeckResponseDTO> removeCard(@AuthenticationPrincipal Player player,
                                                        @PathVariable UUID deckId,
@@ -69,11 +75,13 @@ public class DeckController {
         return ResponseEntity.ok(deckService.removeCard(deckId, player.getId(), cardId));
     }
 
+    /** Validates the deck against all construction rules (60 cards, max 4 copies, at least 1 Basic Pokémon). */
     @PostMapping("/{deckId}/validate")
     public ResponseEntity<DeckValidationResult> validate(@PathVariable UUID deckId) {
         return ResponseEntity.ok(deckService.validate(deckId));
     }
 
+    /** Deletes the entire deck. Only the owner can delete it. */
     @DeleteMapping("/{deckId}")
     public ResponseEntity<Void> deleteDeck(@AuthenticationPrincipal Player player,
                                             @PathVariable UUID deckId) {
