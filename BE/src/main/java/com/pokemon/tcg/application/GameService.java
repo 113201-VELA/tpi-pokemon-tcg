@@ -52,6 +52,10 @@ public class GameService {
         this.gameMapper       = gameMapper;
     }
 
+    /**
+     * Creates a new game in WAITING state with the authenticated player as player 1.
+     * The game waits for a second player to join before initializing.
+     */
     public Game createGame(UUID playerId, UUID deckId) {
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new IllegalArgumentException("Player not found"));
@@ -74,6 +78,11 @@ public class GameService {
         return gameRepository.save(game);
     }
 
+    /**
+     * Joins an existing WAITING game as player 2.
+     * Triggers engine initialization: shuffles decks, deals hands,
+     * sets prizes, determines first player and saves the initial board state.
+     */
     public Game joinGame(UUID gameId, UUID playerId, UUID deckId) {
         Game game = gameRepository.findByIdAndState(gameId, GameState.WAITING)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found or not joinable"));
@@ -136,6 +145,11 @@ public class GameService {
         return gameRepository.save(game);
     }
 
+    /**
+     * Returns the current board state for the requesting player.
+     * Own state is fully visible; opponent state hides hand, deck and prizes.
+     * Card IDs are resolved to full card objects for the frontend.
+     */
     @Transactional(readOnly = true)
     public GameStateResponseDTO getCurrentState(UUID gameId, UUID requestingPlayerId) {
         GameStateSnapshot snapshot = stateRepository.findTopByGameIdOrderByCreatedAtDesc(gameId)
@@ -169,6 +183,10 @@ public class GameService {
         );
     }
 
+    /**
+     * Returns the raw board state for internal engine use.
+     * Always reads the latest snapshot from the database.
+     */
     @Transactional(readOnly = true)
     public BoardState getCurrentState(UUID gameId) {
         GameStateSnapshot snapshot = stateRepository.findTopByGameIdOrderByCreatedAtDesc(gameId)
@@ -176,21 +194,51 @@ public class GameService {
         return snapshot.getBoardState();
     }
 
+    /**
+     * Processes a player action through the game engine and persists
+     * the resulting board state as a new snapshot in the database.
+     */
     public EngineResult processAction(UUID gameId, UUID playerId, GameAction action) {
         BoardState currentState = getCurrentState(gameId);
-        return engine.processAction(currentState, action);
+        EngineResult result = engine.processAction(currentState, action);
+
+        if (result != null && result.newState() != null) {
+            Game game = gameRepository.findById(gameId)
+                    .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+            Player player = playerRepository.findById(playerId)
+                    .orElseThrow(() -> new IllegalArgumentException("Player not found"));
+
+            GameStateSnapshot snapshot = GameStateSnapshot.builder()
+                    .game(game)
+                    .turnNumber(result.newState().getTurnNumber())
+                    .turnPhase(result.newState().getTurnPhase())
+                    .currentPlayer(player)
+                    .boardState(result.newState())
+                    .build();
+
+            stateRepository.save(snapshot);
+        }
+
+        return result;
     }
 
+    /**
+     * Returns the complete action log for the specified game in chronological order.
+     */
     public List<GameLogEntry> getLog(UUID gameId) {
         return logRepository.findByGameIdOrderByCreatedAtAsc(gameId);
     }
 
+    /**
+     * Returns all games currently in WAITING state, available for a second player to join.
+     */
     public List<GameResponseDTO> listOpenGames() {
         List<Game> openGames = gameRepository.findByStateWithPlayersOrderByCreatedAtDesc(GameState.WAITING);
         return gameMapper.toResponseDTOList(openGames);
     }
 
-    /** Expands deck cards into a list of card IDs respecting quantity. */
+    /** Expands deck cards into a flat list of card IDs respecting quantity. */
     private List<String> buildDeckCardIds(Deck deck) {
         List<String> cardIds = new ArrayList<>();
         for (DeckCard dc : deck.getCards()) {
@@ -201,6 +249,7 @@ public class GameService {
         return cardIds;
     }
 
+    /** Collects all card IDs visible to a player for card data resolution. */
     private Set<String> collectVisibleCardIds(PlayerState ps) {
         Set<String> ids = new HashSet<>();
         if (ps.getHand() != null) ids.addAll(ps.getHand());
