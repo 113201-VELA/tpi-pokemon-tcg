@@ -10,6 +10,8 @@ public record RegisterRequest(
         @Size(min = 3, max = 50)
         String username,
 
+        String nickname,
+
         @NotBlank
         @Email
         String email,

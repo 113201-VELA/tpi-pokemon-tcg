@@ -36,6 +36,7 @@ public class AuthService {
 
         Player player = Player.builder()
                 .username(request.username())
+                .nickname(request.nickname() != null ? request.nickname() : request.username())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
                 .build();
@@ -43,7 +44,7 @@ public class AuthService {
         player = playerRepository.save(player);
 
         String token = jwtService.generateToken(player.getId(), player.getUsername());
-        return new AuthResponse(player.getId(), player.getUsername(), player.getEmail(), token);
+        return new AuthResponse(player.getId(), player.getUsername(), player.getNickname(), player.getEmail(), token);
     }
 
     public AuthResponse login(LoginRequest request) {
@@ -55,6 +56,6 @@ public class AuthService {
         }
 
         String token = jwtService.generateToken(player.getId(), player.getUsername());
-        return new AuthResponse(player.getId(), player.getUsername(), player.getEmail(), token);
+        return new AuthResponse(player.getId(), player.getUsername(), player.getNickname(), player.getEmail(), token);
     }
 }

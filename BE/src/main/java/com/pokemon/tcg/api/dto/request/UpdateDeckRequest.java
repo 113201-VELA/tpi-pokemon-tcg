@@ -11,5 +11,6 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class UpdateDeckRequest {
     private String name;
-    private String description;
+    private String cardBack;
+    private String coin;
 }

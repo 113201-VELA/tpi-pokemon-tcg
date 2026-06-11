@@ -27,7 +27,8 @@ public class DeckMapper {
         return new DeckResponseDTO(
                 deck.getId(),
                 deck.getName(),
-                deck.getDescription(),
+                deck.getCardBack(),
+                deck.getCoin(),
                 deck.isValid(),
                 cardDTOs,
                 deck.getTotalCardCount()

@@ -37,14 +37,13 @@ public class DeckService {
         this.deckMapper       = deckMapper;
     }
 
-    public DeckResponseDTO createDeck(UUID playerId, String name, String description) {
+    public DeckResponseDTO createDeck(UUID playerId, String name) {
         Player player = playerRepository.findById(playerId)
                 .orElseThrow(() -> new IllegalArgumentException("Player not found"));
 
         Deck deck = Deck.builder()
                 .player(player)
                 .name(name)
-                .description(description)
                 .build();
 
         return deckMapper.toResponseDTO(deckRepository.save(deck));
@@ -151,7 +150,7 @@ public class DeckService {
         return hasBasic;
     }
 
-    public DeckResponseDTO updateDeck(UUID deckId, UUID playerId, String name, String description) {
+    public DeckResponseDTO updateDeck(UUID deckId, UUID playerId, String name, String cardBack, String coin) {
         Deck deck = deckRepository.findWithCardsById(deckId)
                 .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
 
@@ -162,8 +161,11 @@ public class DeckService {
         if (name != null && !name.trim().isEmpty()) {
             deck.setName(name);
         }
-        if (description != null) {
-            deck.setDescription(description);
+        if (cardBack != null) {
+            deck.setCardBack(cardBack);
+        }
+        if (coin != null) {
+            deck.setCoin(coin);
         }
 
         return deckMapper.toResponseDTO(deckRepository.save(deck));

@@ -38,7 +38,7 @@ public class DeckController {
     public ResponseEntity<DeckResponseDTO> createDeck(@AuthenticationPrincipal Player player,
                                                        @Valid @RequestBody CreateDeckRequest request) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(deckService.createDeck(player.getId(), request.getName(), request.getDescription()));
+                .body(deckService.createDeck(player.getId(), request.getName()));
     }
 
     /** Updates the name and/or description of an existing deck. */
@@ -46,7 +46,7 @@ public class DeckController {
     public ResponseEntity<DeckResponseDTO> updateDeck(@AuthenticationPrincipal Player player,
                                                       @PathVariable UUID deckId,
                                                       @Valid @RequestBody UpdateDeckRequest request) {
-        return ResponseEntity.ok(deckService.updateDeck(deckId, player.getId(), request.getName(), request.getDescription()));
+        return ResponseEntity.ok(deckService.updateDeck(deckId, player.getId(), request.getName(), request.getCardBack(), request.getCoin()));
     }
 
     /** Adds a new card to the deck. Fails if the card is already present — use PUT to update quantity. */

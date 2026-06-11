@@ -10,6 +10,7 @@ import com.pokemon.tcg.domain.model.deck.Deck;
 import com.pokemon.tcg.domain.model.deck.DeckCard;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.model.player.Player;
+import com.pokemon.tcg.domain.model.player.PlayerMatchup;
 import com.pokemon.tcg.infrastructure.repository.*;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -29,6 +30,7 @@ public class GameService {
     private final CardRepository cardRepository;
     private final PlayerRepository playerRepository;
     private final DeckRepository deckRepository;
+    private final PlayerMatchupRepository matchupRepository;
     private final GameStateMapper gameStateMapper;
     private final GameMapper gameMapper;
 
@@ -39,6 +41,7 @@ public class GameService {
                        CardRepository cardRepository,
                        PlayerRepository playerRepository,
                        DeckRepository deckRepository,
+                       PlayerMatchupRepository matchupRepository,
                        GameStateMapper gameStateMapper,
                        GameMapper gameMapper) {
         this.engine           = engine;
@@ -48,6 +51,7 @@ public class GameService {
         this.cardRepository   = cardRepository;
         this.playerRepository = playerRepository;
         this.deckRepository   = deckRepository;
+        this.matchupRepository= matchupRepository;
         this.gameStateMapper  = gameStateMapper;
         this.gameMapper       = gameMapper;
     }
@@ -218,6 +222,11 @@ public class GameService {
                     .build();
 
             stateRepository.save(snapshot);
+
+            if (result.newState().getGameState() == GameState.FINISHED
+                    && game.getWinner() != null) {
+                updateMatchups(game);
+            }
         }
 
         return result;
@@ -236,6 +245,42 @@ public class GameService {
     public List<GameResponseDTO> listOpenGames() {
         List<Game> openGames = gameRepository.findByStateWithPlayersOrderByCreatedAtDesc(GameState.WAITING);
         return gameMapper.toResponseDTOList(openGames);
+    }
+
+    /**
+     * Updates win/loss records for both players after a game finishes.
+     * Uses upsert logic: creates the matchup record if it does not exist yet.
+     */
+    private void updateMatchups(Game game) {
+        UUID winnerId = game.getWinner().getId();
+        UUID loserId = game.getPlayers().stream()
+                .map(gp -> gp.getPlayer().getId())
+                .filter(id -> !id.equals(winnerId))
+                .findFirst()
+                .orElse(null);
+
+        if (loserId == null) return;
+
+        Player winner = playerRepository.findById(winnerId).orElseThrow();
+        Player loser  = playerRepository.findById(loserId).orElseThrow();
+
+        PlayerMatchup winnerRecord = matchupRepository
+                .findByPlayerIdAndOpponentId(winnerId, loserId)
+                .orElseGet(() -> PlayerMatchup.builder()
+                        .player(winner)
+                        .opponent(loser)
+                        .build());
+        winnerRecord.setWins(winnerRecord.getWins() + 1);
+        matchupRepository.save(winnerRecord);
+
+        PlayerMatchup loserRecord = matchupRepository
+                .findByPlayerIdAndOpponentId(loserId, winnerId)
+                .orElseGet(() -> PlayerMatchup.builder()
+                        .player(loser)
+                        .opponent(winner)
+                        .build());
+        loserRecord.setLosses(loserRecord.getLosses() + 1);
+        matchupRepository.save(loserRecord);
     }
 
     /** Expands deck cards into a flat list of card IDs respecting quantity. */

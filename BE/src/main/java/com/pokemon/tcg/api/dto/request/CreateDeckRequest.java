@@ -11,5 +11,4 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class CreateDeckRequest {
     private String name;
-    private String description;
 }

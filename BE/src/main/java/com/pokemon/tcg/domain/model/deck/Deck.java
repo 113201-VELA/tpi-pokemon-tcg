@@ -31,7 +31,13 @@ public class Deck {
     @Column(nullable = false, length = 100)
     private String name;
 
-    private String description;
+    @Column(name = "card_back", nullable = false, length = 50)
+    @Builder.Default
+    private String cardBack = "DEFAULT";
+
+    @Column(name = "coin", nullable = false, length = 50)
+    @Builder.Default
+    private String coin = "DEFAULT";
 
     @Column(name = "is_valid", nullable = false)
     private boolean valid = false;

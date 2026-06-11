@@ -27,6 +27,9 @@ public class Player implements UserDetails {
     @Column(nullable = false, unique = true, length = 50)
     private String username;
 
+    @Column(nullable = false, unique = true, length = 30)
+    private String nickname;
+
     @Column(nullable = false, unique = true)
     private String email;
 
