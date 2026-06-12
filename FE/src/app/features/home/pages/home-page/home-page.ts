@@ -20,6 +20,6 @@ export class HomePage {
   }
 
   goToPrefs(): void {
-    // Placeholder — pendiente de implementación
+    this.router.navigate(['/preferences']);
   }
 }

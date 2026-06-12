@@ -7,13 +7,13 @@ import { AuthResponse, AuthUser, LoginRequest, RegisterRequest } from '../../dom
 
 @Injectable({ providedIn: 'root' })
 export class AuthService {
-  private readonly http = inject(HttpClient);
-  private readonly router = inject(Router);
-  private readonly apiUrl = `${environment.apiUrl}/auth`;
+  private readonly http    = inject(HttpClient);
+  private readonly router  = inject(Router);
+  private readonly apiUrl  = `${environment.apiUrl}/auth`;
 
   private readonly _currentUser = signal<AuthUser | null>(this.loadUserFromStorage());
 
-  readonly currentUser = this._currentUser.asReadonly();
+  readonly currentUser     = this._currentUser.asReadonly();
   readonly isAuthenticated = computed(() => this._currentUser() !== null);
 
   login(request: LoginRequest) {
@@ -39,11 +39,21 @@ export class AuthService {
     return localStorage.getItem('auth_token');
   }
 
+  /** Updates the nickname in the local state and localStorage without re-login. */
+  updateCurrentUserNickname(nickname: string): void {
+    const current = this._currentUser();
+    if (!current) return;
+    const updated: AuthUser = { ...current, nickname };
+    localStorage.setItem('auth_user', JSON.stringify(updated));
+    this._currentUser.set(updated);
+  }
+
   private handleAuthResponse(response: AuthResponse): void {
     const user: AuthUser = {
-      id: response.id,
+      id:       response.id,
       username: response.username,
-      email: response.email
+      nickname: response.nickname,
+      email:    response.email
     };
     localStorage.setItem('auth_token', response.token);
     localStorage.setItem('auth_user', JSON.stringify(user));

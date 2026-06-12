@@ -1,0 +1,101 @@
+<div class="preferences-page">
+
+  <button class="back-btn" (click)="goBack()">⬅ Volver al menú</button>
+
+  <h1 class="preferences-title">Preferencias</h1>
+
+  <p class="preferences-subtitle">
+    Jugando como <strong>{{ currentUser()?.nickname }}</strong>
+  </p>
+
+  <!-- ── Cambiar nickname ──────────────────────────────────────────── -->
+  <section class="pref-section">
+    <h2 class="pref-section-title">Nickname</h2>
+    <p class="pref-section-desc">
+      Este es el nombre que verán tus oponentes durante las partidas.
+    </p>
+
+    <div [formGroup]="nicknameForm" class="pref-form">
+      <div class="form-field">
+        <label class="form-label" for="nicknameInput">Nuevo nickname</label>
+        <input
+          id="nicknameInput"
+          class="form-input"
+          type="text"
+          formControlName="nickname"
+          placeholder="Máximo 30 caracteres"
+          maxlength="30"
+        />
+        @if (nicknameForm.get('nickname')?.errors?.['maxlength']) {
+          <span class="form-error">Máximo 30 caracteres.</span>
+        }
+      </div>
+
+      @if (nicknameError()) {
+        <p class="message message--error">{{ nicknameError() }}</p>
+      }
+      @if (nicknameSuccess()) {
+        <p class="message message--success">{{ nicknameSuccess() }}</p>
+      }
+
+      <button
+        class="btn btn--primary"
+        [disabled]="nicknameForm.invalid || savingNickname()"
+        (click)="saveNickname()"
+      >
+        {{ savingNickname() ? 'Guardando...' : 'Guardar nickname' }}
+      </button>
+    </div>
+  </section>
+
+  <!-- ── Cambiar contraseña ────────────────────────────────────────── -->
+  <section class="pref-section">
+    <h2 class="pref-section-title">Contraseña</h2>
+    <p class="pref-section-desc">
+      Necesitás ingresar tu contraseña actual para poder cambiarla.
+    </p>
+
+    <div [formGroup]="passwordForm" class="pref-form">
+      <div class="form-field">
+        <label class="form-label" for="currentPasswordInput">Contraseña actual</label>
+        <input
+          id="currentPasswordInput"
+          class="form-input"
+          type="password"
+          formControlName="currentPassword"
+          placeholder="Tu contraseña actual"
+        />
+      </div>
+
+      <div class="form-field">
+        <label class="form-label" for="newPasswordInput">Nueva contraseña</label>
+        <input
+          id="newPasswordInput"
+          class="form-input"
+          type="password"
+          formControlName="newPassword"
+          placeholder="Mínimo 8 caracteres"
+        />
+        @if (passwordForm.get('newPassword')?.errors?.['minlength']) {
+          <span class="form-error">Mínimo 8 caracteres.</span>
+        }
+      </div>
+
+      @if (passwordError()) {
+        <p class="message message--error">{{ passwordError() }}</p>
+      }
+      @if (passwordSuccess()) {
+        <p class="message message--success">{{ passwordSuccess() }}</p>
+      }
+
+      <button
+        class="btn btn--primary"
+        [disabled]="passwordForm.invalid || savingPassword()"
+        (click)="savePassword()"
+      >
+        {{ savingPassword() ? 'Guardando...' : 'Cambiar contraseña' }}
+      </button>
+    </div>
+  </section>
+
+</div>

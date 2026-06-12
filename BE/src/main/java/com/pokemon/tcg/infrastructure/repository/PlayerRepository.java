@@ -15,4 +15,6 @@ public interface PlayerRepository extends JpaRepository<Player, UUID> {
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
+
+    boolean existsByNickname(String nickname);
 }

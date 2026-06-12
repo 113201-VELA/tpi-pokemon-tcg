@@ -68,6 +68,48 @@
           </li>
         }
       </ul>
+
+      <!-- Cosmetics -->
+      <div class="cosmetics-section">
+        <h3 class="cosmetics-title">Personalización</h3>
+
+        <div class="cosmetics-field">
+          <label class="cosmetics-label" for="cardBackSelect">Dorso de carta</label>
+          <select
+            id="cardBackSelect"
+            class="cosmetics-select"
+            [ngModel]="selectedCardBack()"
+            (ngModelChange)="selectedCardBack.set($event)"
+          >
+            @for (option of cardBackOptions(); track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+
+        <div class="cosmetics-field">
+          <label class="cosmetics-label" for="coinSelect">Moneda</label>
+          <select
+            id="coinSelect"
+            class="cosmetics-select"
+            [ngModel]="selectedCoin()"
+            (ngModelChange)="selectedCoin.set($event)"
+          >
+            @for (option of coinOptions(); track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+
+        <button
+          class="btn-primary btn-sm cosmetics-save-btn"
+          (click)="saveCosmetics()"
+          [disabled]="savingCosmetics()"
+        >
+          {{ savingCosmetics() ? 'Guardando...' : 'Guardar personalización' }}
+        </button>
+      </div>
+
     </aside>
 
     <!-- Panel derecho: catálogo -->

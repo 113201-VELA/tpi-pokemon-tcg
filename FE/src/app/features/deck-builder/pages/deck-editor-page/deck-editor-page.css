@@ -377,3 +377,54 @@
   justify-content: center;
   font-weight: 700;
 }
+
+/* ── Cosmetics ────────────────────────────────────────────────────────── */
+.cosmetics-section {
+  margin-top: 1.5rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cosmetics-title {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #003A70;
+  margin: 0;
+}
+
+.cosmetics-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.cosmetics-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cosmetics-select {
+  padding: 0.45rem 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  color: #111827;
+  background: #fff;
+  cursor: pointer;
+  transition: border-color 0.15s;
+}
+.cosmetics-select:focus {
+  outline: none;
+  border-color: #CC0000;
+}
+
+.cosmetics-save-btn {
+  align-self: flex-start;
+  margin-top: 0.25rem;
+}

@@ -5,6 +5,7 @@ import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
 import { CardService } from '../../data-access/services/card.service';
 import { DeckService } from '../../data-access/services/deck.service';
+import { CosmeticsService } from '../../data-access/services/cosmetics.service';
 import {
   CardFilters, CardResponse, CardSupertype, EnergyType
 } from '../../domain/models/card.models';
@@ -18,26 +19,34 @@ import { DeckResponse } from '../../domain/models/deck.models';
   changeDetection: ChangeDetectionStrategy.OnPush
 })
 export class DeckEditorPage implements OnInit {
-  private readonly route = inject(ActivatedRoute);
-  private readonly router = inject(Router);
-  private readonly cardService = inject(CardService);
-  private readonly deckService = inject(DeckService);
+  private readonly route          = inject(ActivatedRoute);
+  private readonly router         = inject(Router);
+  private readonly cardService    = inject(CardService);
+  private readonly deckService    = inject(DeckService);
+  private readonly cosmeticsService = inject(CosmeticsService);
 
   private deckId = '';
 
-  readonly deck = signal<DeckResponse | null>(null);
-  readonly cards = signal<CardResponse[]>([]);
-  readonly loadingCards = signal(false);
-  readonly loadingDeck = signal(false);
-  readonly cardPage = signal(0);
-  readonly totalPages = signal(0);
-  readonly selectedCard = signal<CardResponse | null>(null);
+  readonly deck            = signal<DeckResponse | null>(null);
+  readonly cards           = signal<CardResponse[]>([]);
+  readonly loadingCards    = signal(false);
+  readonly loadingDeck     = signal(false);
+  readonly cardPage        = signal(0);
+  readonly totalPages      = signal(0);
+  readonly selectedCard    = signal<CardResponse | null>(null);
   readonly deckNameEditing = signal(false);
-  readonly deckName = signal('');
-  readonly filters = signal<CardFilters>({});
+  readonly deckName        = signal('');
+  readonly filters         = signal<CardFilters>({});
 
-  readonly totalCardCount = computed(() => this.deck()?.totalCardCount ?? 0);
-  readonly isCounterFull = computed(() => this.totalCardCount() === 60);
+  // Cosmetics state
+  readonly cardBackOptions  = signal<string[]>([]);
+  readonly coinOptions      = signal<string[]>([]);
+  readonly selectedCardBack = signal<string>('DEFAULT');
+  readonly selectedCoin     = signal<string>('DEFAULT');
+  readonly savingCosmetics  = signal(false);
+
+  readonly totalCardCount  = computed(() => this.deck()?.totalCardCount ?? 0);
+  readonly isCounterFull   = computed(() => this.totalCardCount() === 60);
 
   readonly cardNameCounts = computed(() => {
     const currentDeck = this.deck();
@@ -68,20 +77,20 @@ export class DeckEditorPage implements OnInit {
   });
 
   readonly filteredCards = computed(() => {
-    const f = this.filters();
+    const f   = this.filters();
     const all = this.cards();
 
     if (!f.energyType && !f.pokemonSubtype) return all;
 
     return all.filter(c => {
-      if (f.energyType && !c.types.includes(f.energyType)) return false;
+      if (f.energyType    && !c.types.includes(f.energyType))       return false;
       if (f.pokemonSubtype && !c.subtypes.includes(f.pokemonSubtype)) return false;
       return true;
     });
   });
 
   readonly supertypes: CardSupertype[] = ['POKEMON', 'ENERGY', 'TRAINER'];
-  readonly energyTypes: EnergyType[] = [
+  readonly energyTypes: EnergyType[]   = [
     'GRASS', 'FIRE', 'WATER', 'LIGHTNING', 'PSYCHIC',
     'FIGHTING', 'DARKNESS', 'METAL', 'FAIRY', 'DRAGON', 'COLORLESS'
   ];
@@ -91,6 +100,7 @@ export class DeckEditorPage implements OnInit {
     this.deckId = this.route.snapshot.paramMap.get('deckId')!;
     this.loadDeck();
     this.loadCards(0);
+    this.loadCosmeticsOptions();
   }
 
   loadDeck(): void {
@@ -100,6 +110,8 @@ export class DeckEditorPage implements OnInit {
         const found = decks.find(d => d.id === this.deckId) ?? null;
         this.deck.set(found);
         this.deckName.set(found?.name ?? '');
+        this.selectedCardBack.set(found?.cardBack ?? 'DEFAULT');
+        this.selectedCoin.set(found?.coin ?? 'DEFAULT');
         this.loadingDeck.set(false);
       },
       error: () => this.loadingDeck.set(false)
@@ -120,6 +132,15 @@ export class DeckEditorPage implements OnInit {
         this.loadingCards.set(false);
       },
       error: () => this.loadingCards.set(false)
+    });
+  }
+
+  private loadCosmeticsOptions(): void {
+    this.cosmeticsService.getCosmeticsOptions().subscribe({
+      next: options => {
+        this.cardBackOptions.set(options.cardBacks);
+        this.coinOptions.set(options.coins);
+      }
     });
   }
 
@@ -211,6 +232,25 @@ export class DeckEditorPage implements OnInit {
         this.deckName.set(this.deck()?.name || '');
         this.deckNameEditing.set(false);
       }
+    });
+  }
+
+  saveCosmetics(): void {
+    const cardBack = this.selectedCardBack();
+    const coin     = this.selectedCoin();
+
+    if (
+      cardBack === this.deck()?.cardBack &&
+      coin     === this.deck()?.coin
+    ) return;
+
+    this.savingCosmetics.set(true);
+    this.deckService.updateDeck(this.deckId, { cardBack, coin }).subscribe({
+      next: updatedDeck => {
+        this.deck.set(updatedDeck);
+        this.savingCosmetics.set(false);
+      },
+      error: () => this.savingCosmetics.set(false)
     });
   }
 

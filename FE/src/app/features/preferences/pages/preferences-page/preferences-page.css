@@ -1,0 +1,123 @@
+.preferences-page {
+  max-width: 520px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.back-btn {
+  align-self: flex-start;
+  background: none;
+  border: none;
+  color: #CC0000;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0;
+}
+.back-btn:hover { text-decoration: underline; }
+
+.preferences-title {
+  font-size: 1.8rem;
+  font-weight: 800;
+  color: #003A70;
+  margin: 0;
+}
+
+.preferences-subtitle {
+  font-size: 0.95rem;
+  color: #6b7280;
+  margin: -1.25rem 0 0;
+}
+
+/* ── Secciones ────────────────────────────────────────────────────────── */
+.pref-section {
+  background: #fff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.pref-section-title {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #111827;
+  margin: 0;
+}
+
+.pref-section-desc {
+  font-size: 0.85rem;
+  color: #6b7280;
+  margin: 0;
+}
+
+/* ── Formulario ───────────────────────────────────────────────────────── */
+.pref-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.form-label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.form-input {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 0.95rem;
+  color: #111827;
+  transition: border-color 0.15s;
+}
+.form-input:focus {
+  outline: none;
+  border-color: #CC0000;
+}
+
+.form-error {
+  font-size: 0.8rem;
+  color: #CC0000;
+}
+
+/* ── Mensajes ─────────────────────────────────────────────────────────── */
+.message {
+  padding: 0.65rem 0.85rem;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin: 0;
+}
+.message--error   { background: #fee2e2; color: #991b1b; }
+.message--success { background: #dcfce7; color: #166534; }
+
+/* ── Botones ──────────────────────────────────────────────────────────── */
+.btn {
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, background 0.15s;
+  align-self: flex-start;
+}
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+.btn--primary { background: #CC0000; color: #fff; }
+.btn--primary:hover:not(:disabled) { background: #a30000; }

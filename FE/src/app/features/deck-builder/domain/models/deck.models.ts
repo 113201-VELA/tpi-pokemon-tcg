@@ -2,12 +2,12 @@ import { CardResponse } from './card.models';
 
 export interface UpdateDeckRequest {
   name?: string;
-  description?: string;
+  cardBack?: string;
+  coin?: string;
 }
 
 export interface CreateDeckRequest {
   name: string;
-  description?: string;
 }
 
 export interface AddCardRequest {
@@ -24,7 +24,8 @@ export interface DeckCardResponse {
 export interface DeckResponse {
   id: string;
   name: string;
-  description?: string;
+  cardBack: string;
+  coin: string;
   valid: boolean;
   cards: DeckCardResponse[];
   totalCardCount: number;

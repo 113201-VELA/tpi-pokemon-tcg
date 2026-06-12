@@ -36,7 +36,7 @@ public class AuthService {
 
         Player player = Player.builder()
                 .username(request.username())
-                .nickname(request.nickname() != null ? request.nickname() : request.username())
+                .nickname(request.nickname() != null && !request.nickname().isBlank() ? request.nickname() : request.username())
                 .email(request.email())
                 .password(passwordEncoder.encode(request.password()))
                 .build();

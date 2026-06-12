@@ -26,5 +26,12 @@ export const routes: Routes = [
     loadComponent: () =>
       import('./features/lobby/pages/lobby-page/lobby-page').then(m => m.LobbyPage)
   },
+  {
+    path: 'preferences',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/preferences/pages/preferences-page/preferences-page')
+        .then(m => m.PreferencesPage)
+  },
   { path: '**', redirectTo: 'home' }
 ];
