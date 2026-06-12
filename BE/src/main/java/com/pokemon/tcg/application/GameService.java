@@ -135,7 +135,7 @@ public class GameService {
 
         EngineResult result = engine.initializeGame(game.getId().toString(), ps1, ps2);
         if (result != null && result.newState() != null) {
-            game.setState(GameState.ACTIVE);
+            game.setState(GameState.SETUP);
             GameStateSnapshot snapshot = GameStateSnapshot.builder()
                     .game(game)
                     .turnNumber(result.newState().getTurnNumber())

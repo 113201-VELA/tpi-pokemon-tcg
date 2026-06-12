@@ -1,5 +1,8 @@
 package com.pokemon.tcg.domain.engine;
 
+import com.pokemon.tcg.domain.engine.attack.AttackContext;
+import com.pokemon.tcg.domain.engine.attack.AttackPipeline;
+import com.pokemon.tcg.domain.model.card.Attack;
 import com.pokemon.tcg.domain.model.game.*;
 import org.springframework.stereotype.Component;
 
@@ -10,10 +13,20 @@ public class TurnManager {
 
     private final RuleValidator ruleValidator;
     private final CoinFlipService coinFlipService;
+    private final AttackPipeline attackPipeline;
+    private final StatusEffectManager statusEffectManager;
+    private final CardLookupPort cardLookupPort;
 
-    public TurnManager(RuleValidator ruleValidator, CoinFlipService coinFlipService) {
-        this.ruleValidator   = ruleValidator;
-        this.coinFlipService = coinFlipService;
+    public TurnManager(RuleValidator ruleValidator,
+                       CoinFlipService coinFlipService,
+                       AttackPipeline attackPipeline,
+                       StatusEffectManager statusEffectManager,
+                       CardLookupPort cardLookupPort) {
+        this.ruleValidator       = ruleValidator;
+        this.coinFlipService     = coinFlipService;
+        this.attackPipeline      = attackPipeline;
+        this.statusEffectManager = statusEffectManager;
+        this.cardLookupPort      = cardLookupPort;
     }
 
     /**
@@ -22,19 +35,19 @@ public class TurnManager {
      */
     public BoardState advancePhase(BoardState state, GameAction action) {
         return switch (action.getType()) {
-            case DRAW_CARD           -> handleDrawCard(state, action);
-            case PLACE_BASIC_POKEMON -> handlePlaceBasicPokemon(state, action);
-            case ATTACH_ENERGY       -> handleAttachEnergy(state, action);
-            case PLAY_TRAINER        -> handlePlayTrainer(state, action);
-            case EVOLVE_POKEMON      -> handleEvolvePokemon(state, action);
-            case RETREAT             -> handleRetreat(state, action);
-            case DECLARE_ATTACK      -> handleDeclareAttack(state, action);
-            case END_TURN            -> handleEndTurn(state, action);
-            case SETUP_PLACE_ACTIVE  -> handleSetupPlaceActive(state, action);
-            case SETUP_PLACE_BENCH   -> handleSetupPlaceBench(state, action);
-            case MULLIGAN_CONFIRM    -> handleMulliganConfirm(state, action);
+            case DRAW_CARD            -> handleDrawCard(state, action);
+            case PLACE_BASIC_POKEMON  -> handlePlaceBasicPokemon(state, action);
+            case ATTACH_ENERGY        -> handleAttachEnergy(state, action);
+            case PLAY_TRAINER         -> handlePlayTrainer(state, action);
+            case EVOLVE_POKEMON       -> handleEvolvePokemon(state, action);
+            case RETREAT              -> handleRetreat(state, action);
+            case DECLARE_ATTACK       -> handleDeclareAttack(state, action);
+            case END_TURN             -> handleEndTurn(state, action);
+            case SETUP_PLACE_ACTIVE   -> handleSetupPlaceActive(state, action);
+            case SETUP_PLACE_BENCH    -> handleSetupPlaceBench(state, action);
+            case MULLIGAN_CONFIRM     -> handleMulliganConfirm(state, action);
             case CHOOSE_BENCH_POKEMON -> handleChooseBenchPokemon(state, action);
-            default                  -> state;
+            default                   -> state;
         };
     }
 
@@ -208,8 +221,7 @@ public class TurnManager {
 
         attachEnergyToPokemon(ps, targetId, cardId);
 
-        TurnFlags flags = state.getTurnFlags();
-        flags.setEnergyAttachedThisTurn(true);
+        state.getTurnFlags().setEnergyAttachedThisTurn(true);
 
         return state;
     }
@@ -235,9 +247,9 @@ public class TurnManager {
 
     /** Evolves an in-play Pokémon using a card from hand. */
     private BoardState handleEvolvePokemon(BoardState state, GameAction action) {
-        String cardId     = action.getPayloadString("cardId");
-        String targetId   = action.getPayloadString("targetInstanceId");
-        PlayerState ps    = state.getStateFor(action.getPlayerId());
+        String cardId   = action.getPayloadString("cardId");
+        String targetId = action.getPayloadString("targetInstanceId");
+        PlayerState ps  = state.getStateFor(action.getPlayerId());
 
         if (cardId == null || targetId == null) return state;
         if (!ps.getHand().contains(cardId)) return state;
@@ -298,17 +310,68 @@ public class TurnManager {
         return state;
     }
 
-    /** Declares an attack — transitions to ATTACK phase. */
+    /**
+     * Declares and executes an attack through the full 7-step pipeline.
+     * Resolves the attack object and defender HP from the card cache before
+     * building the context. After the pipeline resolves, processes between-turn
+     * effects and switches to the opponent's turn.
+     */
     private BoardState handleDeclareAttack(BoardState state, GameAction action) {
+        String attackName = action.getPayloadString("attackName");
+        if (attackName == null) return state;
+
+        PlayerState attackerState = state.getStateFor(action.getPlayerId());
+        ActivePokemon attacker = attackerState.getActivePokemon();
+        if (attacker == null) return state;
+
+        // Resolve the attack object from the card cache
+        Attack attack = findAttack(attacker.getCardId(), attackName);
+
+        // Resolve defender HP from the card cache
+        String opponentId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
+                ? state.getPlayer2State().getPlayerId()
+                : state.getPlayer1State().getPlayerId();
+        PlayerState defenderState = state.getStateFor(opponentId);
+        int defenderMaxHp = resolveMaxHp(defenderState.getActivePokemon());
+
+        AttackContext ctx = AttackContext.builder()
+                .boardState(state)
+                .action(action)
+                .attackName(attackName)
+                .attack(attack)
+                .defenderMaxHp(defenderMaxHp)
+                .cancelled(false)
+                .damageToApply(0)
+                .modifiers(new ArrayList<>())
+                .events(new ArrayList<>())
+                .build();
+
+        attackPipeline.execute(ctx);
+
+        // Process between-turns effects on both active Pokémon
+        state = processBetweenTurns(ctx.getBoardState());
+
+        // Switch to opponent's turn
+        String nextId = opponentId;
+
+        state.getTurnFlags().setAttackedThisTurn(true);
+
         return state.toBuilder()
-                .turnPhase(TurnPhase.ATTACK)
+                .currentPlayerId(nextId)
+                .turnPhase(TurnPhase.DRAW)
+                .turnNumber(state.getTurnNumber() + 1)
+                .turnFlags(TurnFlags.fresh())
                 .build();
     }
 
-    /** Ends the current turn, processes between-turns effects and switches player. */
+    /**
+     * Ends the turn without attacking, processes between-turn effects
+     * and passes control to the opponent.
+     */
     private BoardState handleEndTurn(BoardState state, GameAction action) {
-        String currentId  = state.getCurrentPlayerId();
-        String nextId     = currentId.equals(state.getPlayer1State().getPlayerId())
+        state = processBetweenTurns(state);
+
+        String nextId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
                 ? state.getPlayer2State().getPlayerId()
                 : state.getPlayer1State().getPlayerId();
 
@@ -318,6 +381,35 @@ public class TurnManager {
                 .turnNumber(state.getTurnNumber() + 1)
                 .turnFlags(TurnFlags.fresh())
                 .build();
+    }
+
+    /** Processes between-turn special condition effects for both active Pokémon. */
+    private BoardState processBetweenTurns(BoardState state) {
+        if (state.getPlayer1State().getActivePokemon() != null) {
+            statusEffectManager.processBetweenTurns(state.getPlayer1State().getActivePokemon());
+        }
+        if (state.getPlayer2State().getActivePokemon() != null) {
+            statusEffectManager.processBetweenTurns(state.getPlayer2State().getActivePokemon());
+        }
+        return state;
+    }
+
+    /**
+     * Looks up the attack by name on the given card from the card cache.
+     * Returns null if the card is not found or has no matching attack.
+     */
+    private Attack findAttack(String cardId, String attackName) {
+        return cardLookupPort.findAttack(cardId, attackName).orElse(null);
+    }
+
+    /**
+     * Resolves the max HP of the defending Active Pokémon from the card cache.
+     * The HP is read from the top card in the evolution stack (current form).
+     * Falls back to 0 if no Pokémon is active or the card is not found.
+     */
+    private int resolveMaxHp(ActivePokemon defender) {
+        if (defender == null) return 0;
+        return cardLookupPort.getMaxHp(defender.getCardId());
     }
 
     /** Chooses a Bench Pokémon to become Active after a KO. */

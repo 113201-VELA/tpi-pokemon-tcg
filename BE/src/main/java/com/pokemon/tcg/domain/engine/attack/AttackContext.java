@@ -1,17 +1,11 @@
 package com.pokemon.tcg.domain.engine.attack;
 
-//import com.pokemon.tcg.domain.model.game.Attack;
 import com.pokemon.tcg.domain.model.card.Attack;
-import com.pokemon.tcg.domain.model.game.BoardState;
-//import com.pokemon.tcg.domain.model.game.DamageModifier;
 import com.pokemon.tcg.domain.engine.DamageModifier;
+import com.pokemon.tcg.domain.model.game.BoardState;
 import com.pokemon.tcg.domain.model.game.GameAction;
 import com.pokemon.tcg.domain.model.game.GameEvent;
-import lombok.AllArgsConstructor;
-import lombok.Builder;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -29,6 +23,8 @@ public class AttackContext {
     private boolean cancelled;
     private String cancellationReason;
     private int damageToApply;
+    /** Max HP of the defending Active Pokémon, loaded from card cache before pipeline executes. */
+    private int defenderMaxHp;
     private List<DamageModifier> modifiers;
     private List<GameEvent> events;
 
