@@ -13,9 +13,11 @@
         button:hover { background: #c73652; }
         button:disabled { background: #555; cursor: not-allowed; }
         #log { background: #0f3460; padding: 10px; border-radius: 4px; height: 300px; overflow-y: auto; font-size: 12px; }
-        .log-entry { margin: 4px 0; padding: 4px; border-left: 3px solid #e94560; }
+        .log-entry { margin: 4px 0; padding: 4px; border-left: 3px solid #e94560; white-space: pre-wrap;}
         .log-ok { border-color: #4caf50; }
         .log-err { border-color: #f44336; }
+        .json-key { color: #ffd166; font-weight: bold; }
+        .log-prefix { color: #e94560; font-weight: bold; }
         .section { background: #16213e; padding: 15px; border-radius: 8px; margin-bottom: 15px; }
     </style>
 </head>
@@ -64,11 +66,43 @@
 <script>
     let stompClient = null;
 
+    function formatJson(text) {
+        try {
+            const obj = JSON.parse(text);
+
+            return JSON.stringify(obj, null, 2)
+                .replace(
+                    /"([^"]+)":/g,
+                    '<span class="json-key">"$1"</span>:'
+                );
+        } catch {
+            return text;
+        }
+    }
+
     function log(msg, type = '') {
         const div = document.getElementById('log');
         const entry = document.createElement('div');
         entry.className = 'log-entry ' + (type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : '');
         entry.textContent = new Date().toISOString().slice(11, 23) + ' | ' + msg;
+        div.appendChild(entry);
+        div.scrollTop = div.scrollHeight;
+    }
+
+    function log(msg, type = '') {
+        const div = document.getElementById('log');
+        const entry = document.createElement('div');
+
+        entry.className = 'log-entry ' + (type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : '');
+        const time = new Date().toISOString().slice(11, 23);
+        const match = msg.match(/^(\[[^\]]+\])\s*(.*)$/);
+        if (match) {
+            const prefix = match[1];
+            const body = match[2];
+            entry.innerHTML = `${time} | <span class="log-prefix">${prefix}</span>\n${formatJson(body)}`;
+        } else {
+            entry.innerHTML = `${time} | ${formatJson(msg)}`;
+        }
         div.appendChild(entry);
         div.scrollTop = div.scrollHeight;
     }
@@ -114,6 +148,14 @@
                 });
 
                 log('Subscribed to game: ' + gameId);
+
+                // Fetch current board state via REST on connect
+                fetch('http://localhost:8080/api/games/' + gameId + '/state', {
+                    headers: { 'Authorization': 'Bearer ' + token }
+                })
+                    .then(r => r.json())
+                    .then(data => log('[INITIAL STATE] ' + JSON.stringify(data), 'ok'))
+                    .catch(e => log('Could not fetch initial state: ' + e, 'err'));
             },
             function (err) {
                 log('Connection error: ' + err, 'err');
