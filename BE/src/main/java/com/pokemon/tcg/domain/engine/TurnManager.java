@@ -117,6 +117,19 @@ public class TurnManager {
                 .build();
 
         ps.setActivePokemon(active);
+        //return state;
+
+        // If both players have placed their Active Pokémon, setup is complete.
+        // Transition to DRAW phase so the first player can start their turn.
+        // This logic will be moved to SetupState when the State pattern is connected (step 4).
+        if (state.getPlayer1State().getActivePokemon() != null &&
+                state.getPlayer2State().getActivePokemon() != null) {
+            return state.toBuilder()
+                    .turnPhase(TurnPhase.DRAW)
+                    .gameState(GameState.ACTIVE)
+                    .build();
+        }
+
         return state;
     }
 

@@ -2,6 +2,7 @@ package com.pokemon.tcg.infrastructure.adapter;
 
 import com.pokemon.tcg.domain.engine.CardLookupPort;
 import com.pokemon.tcg.domain.model.card.Attack;
+import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.infrastructure.repository.CardRepository;
 import org.springframework.stereotype.Component;
 
@@ -62,5 +63,11 @@ public class CardLookupAdapter implements CardLookupPort {
         return cardRepository.findById(cardId)
                 .map(card -> card.getHp() != null ? card.getHp() : 0)
                 .orElse(0);
+    }
+
+    @Override
+    public Optional<Card> findCardById(String cardId) {
+        if (cardId == null) return Optional.empty();
+        return cardRepository.findById(cardId);
     }
 }

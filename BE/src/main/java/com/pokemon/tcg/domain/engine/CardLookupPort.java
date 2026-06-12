@@ -1,6 +1,7 @@
 package com.pokemon.tcg.domain.engine;
 
 import com.pokemon.tcg.domain.model.card.Attack;
+import com.pokemon.tcg.domain.model.card.Card;
 
 import java.util.Optional;
 
@@ -42,4 +43,12 @@ public interface CardLookupPort {
      *         (e.g. Energy and Trainer cards)
      */
     int getMaxHp(String cardId);
+
+    /**
+     * Returns the full card data for a given card ID.
+     *
+     * @param cardId the card's cache ID
+     * @return an Optional containing the Card, or empty if not found
+     */
+    Optional<Card> findCardById(String cardId);
 }
