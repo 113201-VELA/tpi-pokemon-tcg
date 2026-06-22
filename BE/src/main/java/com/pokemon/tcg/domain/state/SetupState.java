@@ -1,6 +1,6 @@
 package com.pokemon.tcg.domain.state;
 
-import com.pokemon.tcg.domain.engine.SetupManager;
+import com.pokemon.tcg.engine.SetupManager;
 import com.pokemon.tcg.domain.model.game.*;
 import org.springframework.stereotype.Component;
 

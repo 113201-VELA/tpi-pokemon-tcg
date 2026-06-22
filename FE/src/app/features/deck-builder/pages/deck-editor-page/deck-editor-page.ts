@@ -45,6 +45,30 @@ export class DeckEditorPage implements OnInit {
   readonly selectedCoin     = signal<string>('DEFAULT');
   readonly savingCosmetics  = signal(false);
 
+  /** Resolves the asset path for the currently selected card back. */
+  readonly cardBackPreviewUrl = computed(() => {
+    const map: Record<string, string> = {
+      DEFAULT:    'assets/cardBack/defaultBack.png',
+      PIKACHU:    'assets/cardBack/pikachuBack.png',
+      BULBASAUR:  'assets/cardBack/bulbasaurBack.png',
+      CHARMANDER: 'assets/cardBack/charmanderBack.png',
+      SQUIRTLE:   'assets/cardBack/squirtleBack.png',
+    };
+    return map[this.selectedCardBack()] ?? map['DEFAULT'];
+  });
+
+  /** Resolves the asset path for the currently selected coin (heads side). */
+  readonly coinPreviewUrl = computed(() => {
+    const map: Record<string, string> = {
+      DEFAULT:    'assets/coin/defaultCoinHead.png',
+      PIKACHU:    'assets/coin/pikachuCoin.png',
+      BULBASAUR:  'assets/coin/bulbasaurCoin.png',
+      CHARMANDER: 'assets/coin/charmanderCoin.png',
+      SQUIRTLE:   'assets/coin/squirtleCoin.png',
+    };
+    return map[this.selectedCoin()] ?? map['DEFAULT'];
+  });
+
   readonly totalCardCount  = computed(() => this.deck()?.totalCardCount ?? 0);
   readonly isCounterFull   = computed(() => this.totalCardCount() === 60);
 

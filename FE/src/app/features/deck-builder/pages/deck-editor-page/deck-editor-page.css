@@ -66,7 +66,24 @@
 .editor-header {
   display: flex;
   align-items: center;
+  justify-content: space-between;
   gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.editor-header__left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+  min-width: 200px;
+}
+
+.editor-header__preview {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-shrink: 0;
 }
 
 .deck-title {
@@ -427,4 +444,44 @@
 .cosmetics-save-btn {
   align-self: flex-start;
   margin-top: 0.25rem;
+}
+
+/* ── Cosmetics preview in header ──────────────────────────────────────── */
+.cosmetic-preview {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.cosmetic-preview__label {
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--gray-500);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.cosmetic-preview__img {
+  display: block;
+  object-fit: contain;
+  border-radius: 6px;
+  border: 2px solid transparent;
+  transition: border-color 0.2s ease;
+}
+
+.cosmetic-preview__img--card {
+  width: 60px;
+  height: 84px;
+}
+
+.cosmetic-preview__img--coin {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+}
+
+.cosmetic-preview__img--card:hover,
+.cosmetic-preview__img--coin:hover {
+  border-color: var(--pokemon-red);
 }

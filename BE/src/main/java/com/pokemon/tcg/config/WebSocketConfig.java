@@ -1,6 +1,6 @@
 package com.pokemon.tcg.config;
 
-import com.pokemon.tcg.infrastructure.security.JwtService;
+import com.pokemon.tcg.service.security.JwtService;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
