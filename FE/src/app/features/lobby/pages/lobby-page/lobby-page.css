@@ -1,14 +1,12 @@
-.lobby-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  min-height: 100vh;
-  gap: 1rem;
+:host {
+  display: block;
 }
 
-.back-link {
-  color: #3b4cca;
-  text-decoration: underline;
-  cursor: pointer;
+.lobby-page {
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 2rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
 }

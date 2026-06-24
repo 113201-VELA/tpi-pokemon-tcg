@@ -9,7 +9,7 @@
   }
 
   @if (error()) {
-    <p class="state-msg error">{{ error() }}</p>
+    <p class="state-msg state-msg--error">{{ error() }}</p>
   }
 
   @if (!loading() && decks().length === 0) {
@@ -36,7 +36,7 @@
           }
           <button
             class="btn-delete"
-            (click)="deleteDeck($event, deck)"
+            (click)="requestDeleteDeck($event, deck)"
             title="Eliminar mazo"
           >✕</button>
         </div>
@@ -45,6 +45,29 @@
   </div>
 
   <div class="back-home">
-    <button class="btn-back-home" (click)="router.navigate(['/home'])">⬅ Volver al Menú Principal</button>
+    <button class="btn-back-home" (click)="router.navigate(['/home'])">
+      ⬅ Volver al Menú Principal
+    </button>
   </div>
 </div>
+
+<!-- Modal de confirmación de borrado -->
+@if (deckToDelete()) {
+  <div class="modal-overlay" (click)="cancelDeleteDeck()">
+    <div class="modal-confirm" (click)="$event.stopPropagation()">
+      <h2 class="modal-confirm__title">Eliminar mazo</h2>
+      <p class="modal-confirm__body">
+        ¿Querés eliminar <strong>{{ deckToDelete()!.name }}</strong>?
+        Esta acción no se puede deshacer.
+      </p>
+      <div class="modal-confirm__actions">
+        <button class="btn-secondary btn-modal" (click)="cancelDeleteDeck()">
+          Cancelar
+        </button>
+        <button class="btn-danger btn-modal" (click)="confirmDeleteDeck()">
+          Eliminar
+        </button>
+      </div>
+    </div>
+  </div>
+}
