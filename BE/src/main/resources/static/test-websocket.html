@@ -68,7 +68,6 @@
     function formatJson(text) {
         try {
             const obj = JSON.parse(text);
-
             return JSON.stringify(obj, null, 2)
                 .replace(
                     /"([^"]+)":/g,
@@ -82,16 +81,6 @@
     function log(msg, type = '') {
         const div = document.getElementById('log');
         const entry = document.createElement('div');
-        entry.className = 'log-entry ' + (type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : '');
-        entry.textContent = new Date().toISOString().slice(11, 23) + ' | ' + msg;
-        div.appendChild(entry);
-        div.scrollTop = div.scrollHeight;
-    }
-
-    function log(msg, type = '') {
-        const div = document.getElementById('log');
-        const entry = document.createElement('div');
-
         entry.className = 'log-entry ' + (type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : '');
         const time = new Date().toISOString().slice(11, 23);
         const match = msg.match(/^(\[[^\]]+\])\s*(.*)$/);
@@ -148,7 +137,7 @@
                     .catch(e => log('Could not fetch initial state: ' + e, 'err'));
             },
             onStompError: function (err) {
-                log('Connection error: ' + err, 'err');
+                log('Connection error: ' + JSON.stringify(err), 'err');
             }
         });
 
@@ -180,7 +169,10 @@
         }
 
         const action = { type: actionType, payload: payload };
-        stompClient.send('/app/game/' + gameId + '/action', {}, JSON.stringify(action));
+        stompClient.publish({
+            destination: '/app/game/' + gameId + '/action',
+            body: JSON.stringify(action)
+        });
         log('[SENT] ' + JSON.stringify(action));
     }
 </script>

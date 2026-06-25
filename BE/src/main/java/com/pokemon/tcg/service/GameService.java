@@ -1,5 +1,7 @@
 package com.pokemon.tcg.service;
 
+import com.pokemon.tcg.controller.dto.response.GameLogResponseDTO;
+import com.pokemon.tcg.controller.mapper.GameLogMapper;
 import com.pokemon.tcg.controller.mapper.GameMapper;
 import com.pokemon.tcg.controller.mapper.GameStateMapper;
 import com.pokemon.tcg.controller.dto.response.GameResponseDTO;
@@ -33,6 +35,7 @@ public class GameService {
     private final PlayerMatchupRepository matchupRepository;
     private final GameStateMapper gameStateMapper;
     private final GameMapper gameMapper;
+    private final GameLogMapper gameLogMapper;
 
     public GameService(GameEngineFacade engine,
                        GameRepository gameRepository,
@@ -43,7 +46,8 @@ public class GameService {
                        DeckRepository deckRepository,
                        PlayerMatchupRepository matchupRepository,
                        GameStateMapper gameStateMapper,
-                       GameMapper gameMapper) {
+                       GameMapper gameMapper,
+                       GameLogMapper gameLogMapper) {
         this.engine           = engine;
         this.gameRepository   = gameRepository;
         this.stateRepository  = stateRepository;
@@ -54,6 +58,7 @@ public class GameService {
         this.matchupRepository= matchupRepository;
         this.gameStateMapper  = gameStateMapper;
         this.gameMapper       = gameMapper;
+        this.gameLogMapper = gameLogMapper;
     }
 
     /**
@@ -295,8 +300,9 @@ public class GameService {
     /**
      * Returns the complete action log for the specified game in chronological order.
      */
-    public List<GameLogEntry> getLog(UUID gameId) {
-        return logRepository.findByGameIdOrderByCreatedAtAsc(gameId);
+    public List<GameLogResponseDTO> getLog(UUID gameId) {
+        return gameLogMapper.toResponseDTOList(
+                logRepository.findByGameIdOrderByCreatedAtAsc(gameId));
     }
 
     /**

@@ -2,11 +2,11 @@ package com.pokemon.tcg.controller.rest;
 
 import com.pokemon.tcg.controller.dto.request.CreateGameRequest;
 import com.pokemon.tcg.controller.dto.request.JoinGameRequest;
+import com.pokemon.tcg.controller.dto.response.GameLogResponseDTO;
 import com.pokemon.tcg.controller.dto.response.GameResponseDTO;
 import com.pokemon.tcg.controller.dto.response.GameStateResponseDTO;
 import com.pokemon.tcg.service.GameService;
 import com.pokemon.tcg.domain.model.game.Game;
-import com.pokemon.tcg.domain.model.game.GameLogEntry;
 import com.pokemon.tcg.domain.model.player.Player;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -65,7 +65,7 @@ public class GameController {
 
     /** Returns the complete action log for the specified game. */
     @GetMapping("/{gameId}/log")
-    public ResponseEntity<List<GameLogEntry>> getLog(@PathVariable UUID gameId) {
+    public ResponseEntity<List<GameLogResponseDTO>> getLog(@PathVariable UUID gameId) {
         return ResponseEntity.ok(gameService.getLog(gameId));
     }
 }
