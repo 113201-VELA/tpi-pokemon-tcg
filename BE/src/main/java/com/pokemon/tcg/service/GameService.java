@@ -248,6 +248,26 @@ public class GameService {
     }
 
     /**
+     * Cancels a WAITING game. Only the creator (player 1) can cancel it.
+     * Transitions the game state to CANCELLED without affecting matchup records.
+     */
+    public void cancelGame(UUID gameId, UUID playerId) {
+        Game game = gameRepository.findByIdAndState(gameId, GameState.WAITING)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found or not cancellable"));
+
+        boolean isCreator = game.getPlayers().stream()
+                .anyMatch(gp -> gp.getPlayerNumber() == 1
+                        && gp.getPlayer().getId().equals(playerId));
+
+        if (!isCreator) {
+            throw new IllegalArgumentException("Only the game creator can cancel the game");
+        }
+
+        game.setState(GameState.CANCELLED);
+        gameRepository.save(game);
+    }
+
+    /**
      * Updates win/loss records for both players after a game finishes.
      * Uses upsert logic: creates the matchup record if it does not exist yet.
      */

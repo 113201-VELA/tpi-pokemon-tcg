@@ -25,7 +25,7 @@ public class SetupState implements GameStateHandler {
             default -> new EngineResult(state, List.of(
                 GameEvent.builder()
                     .type(GameEventType.GAME_OVER)
-                    .data(Map.of("error", "Acción no válida en estado SETUP"))
+                    .data(Map.of("error", "Invalid action in SETUP state"))
                     .build()
             ));
         };

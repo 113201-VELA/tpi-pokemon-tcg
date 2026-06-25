@@ -48,6 +48,14 @@ public class GameController {
         return ResponseEntity.ok(gameService.joinGame(gameId, player.getId(), request.getDeckId()));
     }
 
+    /** Cancels a WAITING game. Only the creator (player 1) can cancel it. */
+    @DeleteMapping("/{gameId}")
+    public ResponseEntity<Void> cancelGame(@AuthenticationPrincipal Player player,
+                                            @PathVariable UUID gameId) {
+        gameService.cancelGame(gameId, player.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     /** Returns the current board state for the authenticated player, hiding opponent's private data. */
     @GetMapping("/{gameId}/state")
     public ResponseEntity<GameStateResponseDTO> getState(@AuthenticationPrincipal Player player,
