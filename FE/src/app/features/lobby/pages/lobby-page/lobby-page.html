@@ -1,5 +1,132 @@
-<div class="lobby-container">
-  <h1>Salas de juego</h1>
-  <p>Sección en construcción.</p>
-  <a routerLink="/home" class="back-link">Volver al inicio</a>
+<div class="lobby-page">
+
+  <div class="lobby-header">
+    <a class="back-btn" routerLink="/home">← Back to menu</a>
+    <h1 class="lobby-title">Game Lobby</h1>
+  </div>
+
+  <!-- Global messages -->
+  @if (errorMessage()) {
+    <div class="message message--error">{{ errorMessage() }}</div>
+  }
+  @if (successMessage()) {
+    <div class="message message--success">{{ successMessage() }}</div>
+  }
+
+  <div class="lobby-layout">
+
+    <!-- Step 1: Deck selection -->
+    <section class="panel">
+      <h2 class="panel__title">
+        <span class="step-badge">1</span>
+        Select your deck
+      </h2>
+
+      @if (loadingDecks()) {
+        <p class="state-text">Loading decks...</p>
+      } @else if (validDecks().length === 0) {
+        <p class="state-text state-text--empty">
+          You have no valid decks.
+          <a routerLink="/decks" class="link">Build one first.</a>
+        </p>
+      } @else {
+        <ul class="deck-list">
+          @for (deck of validDecks(); track deck.id) {
+            <li
+              class="deck-item"
+              [class.deck-item--selected]="selectedDeckId() === deck.id"
+              (click)="selectDeck(deck.id)"
+            >
+              <span class="deck-item__name">{{ deck.name }}</span>
+              <span class="deck-item__count">{{ deck.totalCardCount }} cards</span>
+              @if (selectedDeckId() === deck.id) {
+                <span class="deck-item__check">✓</span>
+              }
+            </li>
+          }
+        </ul>
+      }
+    </section>
+
+    <!-- Step 2: Create or join -->
+    <section class="panel">
+      <div class="panel__header">
+        <h2 class="panel__title">
+          <span class="step-badge">2</span>
+          Open games
+        </h2>
+        <button
+          class="btn btn--primary"
+          [disabled]="!canAct || creating()"
+          (click)="createGame()"
+        >
+          @if (creating()) {
+            Creating...
+          } @else {
+            + Create game
+          }
+        </button>
+      </div>
+
+      @if (!canAct) {
+        <p class="hint">Select a deck to create or join a game.</p>
+      }
+
+      @if (loadingGames()) {
+        <p class="state-text">Loading games...</p>
+      } @else if (openGames().length === 0) {
+        <p class="state-text state-text--empty">
+          No open games available. Create one!
+        </p>
+      } @else {
+        <ul class="game-list">
+          @for (game of openGames(); track game.id) {
+            <li class="game-item">
+              <div class="game-item__info">
+                <span class="game-item__creator">{{ game.creatorUsername }}</span>
+                <span class="game-item__time">{{ formatTime(game.createdAt) }}</span>
+              </div>
+              <div class="game-item__actions">
+                @if (isOwnGame(game)) {
+                  <button
+                    class="btn btn--danger"
+                    [disabled]="cancellingGameId() === game.id"
+                    (click)="cancelGame($event, game.id)"
+                  >
+                    @if (cancellingGameId() === game.id) {
+                      Cancelling...
+                    } @else {
+                      Cancel
+                    }
+                  </button>
+                } @else {
+                  <button
+                    class="btn btn--secondary"
+                    [disabled]="!canAct || joiningGameId() === game.id"
+                    (click)="joinGame(game.id)"
+                  >
+                    @if (joiningGameId() === game.id) {
+                      <span class="spinner"></span>
+                      Joining...
+                    } @else {
+                      Join
+                    }
+                  </button>
+                }
+              </div>
+            </li>
+          }
+        </ul>
+      }
+
+      <button
+        class="btn btn--ghost refresh-btn"
+        [disabled]="loadingGames()"
+        (click)="loadOpenGames()"
+      >
+        ↻ Refresh
+      </button>
+    </section>
+
+  </div>
 </div>
