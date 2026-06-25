@@ -1,9 +1,10 @@
 package com.pokemon.tcg.engine;
 
-import com.pokemon.tcg.engine.attack.AttackContext;
-import com.pokemon.tcg.engine.attack.AttackPipeline;
 import com.pokemon.tcg.domain.model.card.Attack;
 import com.pokemon.tcg.domain.model.game.*;
+import com.pokemon.tcg.domain.strategy.TrainerEffectRegistry;
+import com.pokemon.tcg.engine.attack.AttackContext;
+import com.pokemon.tcg.engine.attack.AttackPipeline;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -16,17 +17,20 @@ public class TurnManager {
     private final AttackPipeline attackPipeline;
     private final StatusEffectManager statusEffectManager;
     private final CardLookupPort cardLookupPort;
+    private final TrainerEffectRegistry trainerEffectRegistry;
 
     public TurnManager(RuleValidator ruleValidator,
                        CoinFlipService coinFlipService,
                        AttackPipeline attackPipeline,
                        StatusEffectManager statusEffectManager,
-                       CardLookupPort cardLookupPort) {
-        this.ruleValidator       = ruleValidator;
-        this.coinFlipService     = coinFlipService;
-        this.attackPipeline      = attackPipeline;
-        this.statusEffectManager = statusEffectManager;
-        this.cardLookupPort      = cardLookupPort;
+                       CardLookupPort cardLookupPort,
+                       TrainerEffectRegistry trainerEffectRegistry) {
+        this.ruleValidator        = ruleValidator;
+        this.coinFlipService      = coinFlipService;
+        this.attackPipeline       = attackPipeline;
+        this.statusEffectManager  = statusEffectManager;
+        this.cardLookupPort       = cardLookupPort;
+        this.trainerEffectRegistry = trainerEffectRegistry;
     }
 
     /**
@@ -117,7 +121,6 @@ public class TurnManager {
                 .build();
 
         ps.setActivePokemon(active);
-        //return state;
 
         // If both players have placed their Active Pokémon, setup is complete.
         // Transition to DRAW phase so the first player can start their turn.
@@ -239,13 +242,18 @@ public class TurnManager {
         return state;
     }
 
-    /** Plays a Trainer card from hand. */
+    /**
+     * Plays a Trainer card from hand.
+     * Looks up the card's effect in the TrainerEffectRegistry and applies it.
+     * If no effect is registered for the card, it is discarded with no additional effect.
+     */
     private BoardState handlePlayTrainer(BoardState state, GameAction action) {
         String cardId  = action.getPayloadString("cardId");
         PlayerState ps = state.getStateFor(action.getPlayerId());
 
         if (cardId == null || !ps.getHand().contains(cardId)) return state;
 
+        // Remove from hand and add to discard
         List<String> hand = new ArrayList<>(ps.getHand());
         hand.remove(cardId);
         ps.setHand(hand);
@@ -254,6 +262,20 @@ public class TurnManager {
                 ps.getDiscard() != null ? ps.getDiscard() : new ArrayList<>());
         discard.add(cardId);
         ps.setDiscard(discard);
+
+        // Look up and apply the card's effect via Strategy pattern
+        String cardName = cardLookupPort.findCardById(cardId)
+                .map(card -> card.getName())
+                .orElse(null);
+
+        if (cardName != null) {
+            trainerEffectRegistry.findEffect(cardName).ifPresent(effect -> {
+                ValidationResult canApply = effect.canApply(state, action);
+                if (canApply.isValid()) {
+                    effect.apply(state, action);
+                }
+            });
+        }
 
         return state;
     }
@@ -364,13 +386,10 @@ public class TurnManager {
         // Process between-turns effects on both active Pokémon
         state = processBetweenTurns(ctx.getBoardState());
 
-        // Switch to opponent's turn
-        String nextId = opponentId;
-
         state.getTurnFlags().setAttackedThisTurn(true);
 
         return state.toBuilder()
-                .currentPlayerId(nextId)
+                .currentPlayerId(opponentId)
                 .turnPhase(TurnPhase.DRAW)
                 .turnNumber(state.getTurnNumber() + 1)
                 .turnFlags(TurnFlags.fresh())
