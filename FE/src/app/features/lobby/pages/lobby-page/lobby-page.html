@@ -143,3 +143,35 @@
 
   </div>
 </div>
+
+<!-- Waiting modal — blocks interaction while game is in WAITING state -->
+@if (showWaitingModal()) {
+  <div class="waiting-overlay">
+    <div class="waiting-modal">
+
+      <img
+        class="waiting-animation"
+        src="assets/loading/loading.svg"
+        alt="Loading..."
+      />
+
+      <h2 class="waiting-title">Waiting for opponent...</h2>
+      <p class="waiting-subtitle">
+        Share the lobby with a friend or wait for someone to join.
+      </p>
+
+      <button
+        class="btn btn--danger waiting-cancel-btn"
+        [disabled]="cancellingWait()"
+        (click)="cancelWaitingGame()"
+      >
+        @if (cancellingWait()) {
+          Cancelling...
+        } @else {
+          Cancel game
+        }
+      </button>
+
+    </div>
+  </div>
+}

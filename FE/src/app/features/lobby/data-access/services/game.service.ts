@@ -1,6 +1,7 @@
 import { inject, Injectable } from '@angular/core';
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpResponse } from '@angular/common/http';
 import { Observable } from 'rxjs';
+import { map } from 'rxjs/operators';
 import { environment } from '../../../../../environments/environment';
 import {
   CreateGameRequest,
@@ -32,5 +33,18 @@ export class GameService {
   /** Cancels a WAITING game. Only the creator can call this. */
   cancelGame(gameId: string): Observable<void> {
     return this.http.delete<void>(`${this.apiUrl}/${gameId}`);
+  }
+
+  /**
+   * Returns the authenticated player's current active game, if any.
+   * Returns null if the server responds with 204 No Content.
+   */
+  getActiveGame(): Observable<GameCreatedResponse | null> {
+    return this.http.get<GameCreatedResponse>(
+      `${this.apiUrl}/my-active-game`,
+      { observe: 'response' }
+    ).pipe(
+      map(response => response.status === 204 ? null : response.body)
+    );
   }
 }

@@ -45,17 +45,44 @@ export class LobbyPage implements OnInit, OnDestroy {
   readonly errorMessage     = signal<string | null>(null);
   readonly successMessage   = signal<string | null>(null);
 
+  // Waiting modal state — shown when player has a game in WAITING state
+  readonly showWaitingModal = signal(false);
+  readonly waitingGameId    = signal<string | null>(null);
+  readonly cancellingWait   = signal(false);
+
   readonly currentUsername  = this.authService.currentUser()?.username ?? '';
 
   // ── Lifecycle ───────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.loadValidDecks();
     this.loadOpenGames();
+    this.checkActiveGame();
     this.connectWebSocket();
   }
 
   ngOnDestroy(): void {
     this.stompClient?.deactivate();
+  }
+
+  // ── Active game detection ────────────────────────────────────────────────
+  private checkActiveGame(): void {
+    this.gameService.getActiveGame().subscribe({
+      next: game => {
+        if (!game) return;
+
+        if (game.state === 'WAITING') {
+          // Show waiting modal — player already has a game open
+          this.waitingGameId.set(game.id);
+          this.showWaitingModal.set(true);
+        } else if (game.state === 'SETUP' || game.state === 'ACTIVE') {
+          // Redirect directly to the game board
+          this.router.navigate(['/game', game.id]);
+        }
+      },
+      error: err => {
+        console.log('Active game error:', err);
+    }
+    });
   }
 
   // ── Data loading ────────────────────────────────────────────────────────
@@ -95,18 +122,39 @@ export class LobbyPage implements OnInit, OnDestroy {
     const wsBase = environment.wsUrl.replace(/^http/, 'ws');
 
     this.stompClient = new Client({
-      brokerURL: `${wsBase}/ws`,
+      brokerURL: wsBase,
       connectHeaders: token ? { Authorization: `Bearer ${token}` } : {},
       reconnectDelay: 5000,
       onConnect: () => {
         // Subscribe to lobby topic for real-time game list updates
-        this.stompClient!.subscribe('/topic/lobby', () => {
-          this.loadOpenGames();
+        this.stompClient!.subscribe('/topic/lobby', message => {
+          this.handleLobbyEvent(message.body);
         });
       },
     });
 
     this.stompClient.activate();
+  }
+
+  private handleLobbyEvent(body: string): void {
+    try {
+      const event = JSON.parse(body);
+
+      // If the waiting game has been joined, navigate to the board
+      if (
+        event.type === 'GAME_STARTED' &&
+        event.data?.gameId === this.waitingGameId()
+      ) {
+        this.showWaitingModal.set(false);
+        this.router.navigate(['/game', this.waitingGameId()]);
+        return;
+      }
+    } catch {
+      // Ignore malformed events
+    }
+
+    // Refresh open games list on any lobby event
+    this.loadOpenGames();
   }
 
   // ── Actions ─────────────────────────────────────────────────────────────
@@ -125,9 +173,10 @@ export class LobbyPage implements OnInit, OnDestroy {
     this.clearMessages();
 
     this.gameService.createGame({ deckId }).subscribe({
-      next: () => {
+      next: game => {
         this.creating.set(false);
-        this.successMessage.set('Game created. Waiting for an opponent...');
+        this.waitingGameId.set(game.id);
+        this.showWaitingModal.set(true);
         this.loadOpenGames();
       },
       error: (err: HttpErrorResponse) => {
@@ -168,6 +217,26 @@ export class LobbyPage implements OnInit, OnDestroy {
       },
       error: (err: HttpErrorResponse) => {
         this.cancellingGameId.set(null);
+        this.errorMessage.set(err.error?.message ?? 'Could not cancel game.');
+      },
+    });
+  }
+
+  cancelWaitingGame(): void {
+    const gameId = this.waitingGameId();
+    if (!gameId) return;
+
+    this.cancellingWait.set(true);
+
+    this.gameService.cancelGame(gameId).subscribe({
+      next: () => {
+        this.cancellingWait.set(false);
+        this.showWaitingModal.set(false);
+        this.waitingGameId.set(null);
+        this.loadOpenGames();
+      },
+      error: (err: HttpErrorResponse) => {
+        this.cancellingWait.set(false);
         this.errorMessage.set(err.error?.message ?? 'Could not cancel game.');
       },
     });
