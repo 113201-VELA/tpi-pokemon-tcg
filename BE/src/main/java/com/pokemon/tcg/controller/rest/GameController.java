@@ -32,6 +32,15 @@ public class GameController {
         return ResponseEntity.ok(gameService.listOpenGames());
     }
 
+    /** Returns the authenticated player's current active game, if any. */
+    @GetMapping("/my-active-game")
+    public ResponseEntity<GameResponseDTO> getActiveGame(
+            @AuthenticationPrincipal Player player) {
+        return gameService.getActiveGame(player.getId())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
+
     /** Creates a new game in WAITING state with the authenticated player as player 1. */
     @PostMapping
     public ResponseEntity<Game> createGame(@AuthenticationPrincipal Player player,

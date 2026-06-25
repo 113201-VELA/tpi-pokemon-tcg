@@ -314,6 +314,25 @@ public class GameService {
     }
 
     /**
+     * Returns the most recent active game for the given player, if any.
+     * Active states: WAITING, SETUP, ACTIVE.
+     * Returns empty if the player has no active game.
+     */
+    @Transactional(readOnly = true)
+    public Optional<GameResponseDTO> getActiveGame(UUID playerId) {
+        List<GameState> activeStates = List.of(
+                GameState.WAITING,
+                GameState.SETUP,
+                GameState.ACTIVE
+        );
+
+        return gameRepository.findActiveGamesByPlayerId(playerId, activeStates)
+                .stream()
+                .findFirst()
+                .map(gameMapper::toResponseDTO);
+    }
+
+    /**
      * Cancels a WAITING game. Only the creator (player 1) can cancel it.
      * Transitions the game state to CANCELLED without affecting matchup records.
      */

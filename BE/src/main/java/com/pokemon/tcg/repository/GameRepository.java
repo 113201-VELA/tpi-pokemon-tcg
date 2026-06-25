@@ -20,4 +20,25 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
     List<Game> findByStateWithPlayersOrderByCreatedAtDesc(@Param("state") GameState state);
 
     Optional<Game> findByIdAndState(UUID gameId, GameState state);
+
+    /**
+     * Returns the most recent active game for a given player.
+     * Active means the game is in WAITING, SETUP, or ACTIVE state.
+     * A player can participate as player 1 or player 2.
+     */
+    @Query("""
+        SELECT DISTINCT g FROM Game g
+        LEFT JOIN FETCH g.players gp
+        LEFT JOIN FETCH gp.player
+        WHERE g.state IN (:states)
+          AND EXISTS (
+            SELECT 1 FROM GamePlayer p
+            WHERE p.game = g
+              AND p.player.id = :playerId
+          )
+        ORDER BY g.createdAt DESC
+        """)
+    List<Game> findActiveGamesByPlayerId(
+            @Param("playerId") UUID playerId,
+            @Param("states") List<GameState> states);
 }
