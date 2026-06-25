@@ -45,6 +45,7 @@ public class RuleValidator {
             case RETREAT              -> validateRetreat(state, action);
             case DECLARE_ATTACK       -> validateAttack(state, action);
             case END_TURN             -> validateEndTurn(state, action);
+            case MULLIGAN_CONFIRM     -> validateMulliganConfirm(state, action);
             default                   -> ValidationResult.ok();
         };
     }
@@ -104,6 +105,33 @@ public class RuleValidator {
         }
         String cardId = action.getPayloadString("cardId");
         return validateIsBasicPokemonInHand(ps, cardId);
+    }
+
+    /**
+     * Mulligan is only valid during SETUP and only if the player
+     * has no Basic Pokémon in their current hand.
+     */
+    private ValidationResult validateMulliganConfirm(BoardState state, GameAction action) {
+        if (state.getTurnPhase() != TurnPhase.SETUP) {
+            return ValidationResult.fail("Mulligan can only be declared during setup.");
+        }
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        var card = ps.getHand() == null || ps.getHand().isEmpty();
+        if (!card) {
+            // Check if hand has any Basic Pokémon via card lookup
+            boolean hasBasic = ps.getHand().stream().anyMatch(id -> {
+                var c = cardLookupPort.findCardById(id);
+                if (c.isEmpty()) return false;
+                var subtypes = c.get().getSubtypes();
+                return c.get().getSupertype() == com.pokemon.tcg.domain.model.card.CardType.POKEMON
+                        && subtypes != null && subtypes.contains("Basic");
+            });
+            if (hasBasic) {
+                return ValidationResult.fail(
+                        "You cannot declare a mulligan when you have a Basic Pokémon in hand.");
+            }
+        }
+        return ValidationResult.ok();
     }
 
     // ─── MAIN PHASE ───────────────────────────────────────────────────────────

@@ -23,6 +23,9 @@ public class PlayerState {
     private ActivePokemon activePokemon;
     private List<BenchPokemon> bench;
 
+    @Builder.Default
+    private int mulliganBonusDraws = 0;
+
     @JsonIgnore
     public int getHandSize() {
         return hand != null ? hand.size() : 0;

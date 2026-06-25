@@ -19,19 +19,22 @@ public class TurnManager {
     private final StatusEffectManager statusEffectManager;
     private final CardLookupPort cardLookupPort;
     private final TrainerEffectRegistry trainerEffectRegistry;
+    private final SetupManager setupManager;
 
     public TurnManager(RuleValidator ruleValidator,
                        CoinFlipService coinFlipService,
                        AttackPipeline attackPipeline,
                        StatusEffectManager statusEffectManager,
                        CardLookupPort cardLookupPort,
-                       TrainerEffectRegistry trainerEffectRegistry) {
+                       TrainerEffectRegistry trainerEffectRegistry,
+                       SetupManager setupManager) {
         this.ruleValidator         = ruleValidator;
         this.coinFlipService       = coinFlipService;
         this.attackPipeline        = attackPipeline;
         this.statusEffectManager   = statusEffectManager;
         this.cardLookupPort        = cardLookupPort;
         this.trainerEffectRegistry = trainerEffectRegistry;
+        this.setupManager = setupManager;
     }
 
     /**
@@ -107,6 +110,9 @@ public class TurnManager {
 
         if (cardId == null || !ps.getHand().contains(cardId)) return state;
 
+        // Apply any pending mulligan bonus draws before placing Active
+        setupManager.applyMulliganBonusDraws(ps);
+
         List<String> hand = new ArrayList<>(ps.getHand());
         hand.remove(cardId);
         ps.setHand(hand);
@@ -166,9 +172,23 @@ public class TurnManager {
         return state;
     }
 
-    /** Confirms mulligan — no Basic Pokémon in hand, reshuffles and redraws. */
+    /**
+     * Confirms mulligan — the player has no Basic Pokémon in hand.
+     * Shuffles the hand back into the deck, redraws 7, and grants
+     * the opponent 1 bonus draw for each mulligan declared.
+     * If the new hand still has no Basic Pokémon, the player must
+     * declare mulligan again.
+     */
     private BoardState handleMulliganConfirm(BoardState state, GameAction action) {
-        return state;
+        String playerId = action.getPlayerId();
+        PlayerState ps  = state.getStateFor(playerId);
+
+        // Only allow mulligan if the hand truly has no Basic Pokémon
+        if (setupManager.hasBasicPokemonInHand(ps)) {
+            return state;
+        }
+
+        return setupManager.handleMulligan(state, playerId);
     }
 
     // ─── DRAW ─────────────────────────────────────────────────────────────────
