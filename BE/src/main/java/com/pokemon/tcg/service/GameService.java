@@ -199,20 +199,27 @@ public class GameService {
     }
 
     /**
-     * Processes a player action through the game engine and persists
-     * the resulting board state as a new snapshot in the database.
+     * Processes a player action through the game engine, persists the resulting
+     * board state as a new snapshot in the database, and logs the action to the game log.
+     *
+     * <p>Every action is logged regardless of outcome:
+     * <ul>
+     *   <li>{@code SUCCESS} — the action was valid and the engine processed it.</li>
+     *   <li>{@code FAILED} — the action was rejected by the rule validator.</li>
+     * </ul>
      */
     public EngineResult processAction(UUID gameId, UUID playerId, GameAction action) {
         BoardState currentState = getCurrentState(gameId);
         EngineResult result = engine.processAction(currentState, action);
 
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("Player not found"));
+
         if (result != null && result.newState() != null) {
-            Game game = gameRepository.findById(gameId)
-                    .orElseThrow(() -> new IllegalArgumentException("Game not found"));
-
-            Player player = playerRepository.findById(playerId)
-                    .orElseThrow(() -> new IllegalArgumentException("Player not found"));
-
+            // Persist new board state snapshot
             GameStateSnapshot snapshot = GameStateSnapshot.builder()
                     .game(game)
                     .turnNumber(result.newState().getTurnNumber())
@@ -220,14 +227,66 @@ public class GameService {
                     .currentPlayer(player)
                     .boardState(result.newState())
                     .build();
-
             stateRepository.save(snapshot);
 
-            // If the game finished, update the Game entity state
+            // Update Game entity if the game finished
             if (result.newState().getGameState() == GameState.FINISHED) {
                 game.setState(GameState.FINISHED);
+
+                // Find the winner from the GAME_OVER event if present
+                result.events().stream()
+                        .filter(e -> e.getType() == GameEventType.GAME_OVER)
+                        .findFirst()
+                        .ifPresent(e -> {
+                            String winnerId = (String) e.getData().get("winnerId");
+                            if (winnerId != null && !winnerId.equals("none")) {
+                                playerRepository.findById(UUID.fromString(winnerId))
+                                        .ifPresent(game::setWinner);
+                            }
+                        });
+
                 gameRepository.save(game);
+
+                if (game.getWinner() != null) {
+                    updateMatchups(game);
+                }
             }
+
+            // Determine log result: FAILED if there's an error event, SUCCESS otherwise
+            boolean hasPipelineError = result.events().stream()
+                    .anyMatch(e -> e.getType() == GameEventType.TURN_ENDED
+                            && e.getData().containsKey("error"));
+            String logResult = hasPipelineError ? "FAILED" : "SUCCESS";
+
+            // Build action data from payload
+            Map<String, Object> actionData = action.getPayload() != null
+                    ? new java.util.HashMap<>(action.getPayload())
+                    : new java.util.HashMap<>();
+
+            // Build result data from events
+            Map<String, Object> resultData = new java.util.HashMap<>();
+            if (hasPipelineError) {
+                result.events().stream()
+                        .filter(e -> e.getData().containsKey("error"))
+                        .findFirst()
+                        .ifPresent(e -> resultData.put("error", e.getData().get("error")));
+            } else {
+                result.events().forEach(e ->
+                        resultData.put(e.getType().name().toLowerCase(),
+                                e.getData()));
+            }
+
+            // Persist log entry
+            GameLogEntry logEntry = GameLogEntry.builder()
+                    .game(game)
+                    .turnNumber(currentState.getTurnNumber())
+                    .player(player)
+                    .actionType(action.getType().name())
+                    .actionData(actionData)
+                    .result(logResult)
+                    .resultData(resultData)
+                    .build();
+            logRepository.save(logEntry);
         }
 
         return result;
