@@ -223,9 +223,10 @@ public class GameService {
 
             stateRepository.save(snapshot);
 
-            if (result.newState().getGameState() == GameState.FINISHED
-                    && game.getWinner() != null) {
-                updateMatchups(game);
+            // If the game finished, update the Game entity state
+            if (result.newState().getGameState() == GameState.FINISHED) {
+                game.setState(GameState.FINISHED);
+                gameRepository.save(game);
             }
         }
 

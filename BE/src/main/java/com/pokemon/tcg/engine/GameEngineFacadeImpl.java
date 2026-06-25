@@ -32,23 +32,18 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
      */
     @Override
     public EngineResult initializeGame(String gameId, PlayerState player1, PlayerState player2) {
-        // Shuffle decks
         setupManager.shuffleDeck(player1);
         setupManager.shuffleDeck(player2);
 
-        // Draw initial hands
         setupManager.drawInitialHand(player1);
         setupManager.drawInitialHand(player2);
 
-        // Set up prizes
         setupManager.setupPrizes(player1);
         setupManager.setupPrizes(player2);
 
-        // Determine first player
         String firstPlayerId = setupManager.determineFirstPlayer(
                 player1.getPlayerId(), player2.getPlayerId());
 
-        // Build initial board state
         BoardState initialState = BoardState.builder()
                 .gameId(gameId)
                 .gameState(GameState.SETUP)
@@ -61,7 +56,6 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
                 .pendingEvents(new ArrayList<>())
                 .build();
 
-        // Build game started event
         GameEvent startEvent = GameEvent.builder()
                 .type(GameEventType.GAME_STARTED)
                 .gameId(gameId)
@@ -76,6 +70,10 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
     /**
      * Processes a player action, validates it, advances the game state,
      * and checks for victory conditions.
+     *
+     * <p>Events generated inside the engine (e.g. pipeline cancellations stored
+     * in {@code BoardState.pendingEvents}) are collected here and included in the
+     * result so the WebSocket layer can broadcast them to clients.
      */
     @Override
     public EngineResult processAction(BoardState currentState, GameAction action) {
@@ -97,9 +95,25 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
         // Advance state
         BoardState newState = turnManager.advancePhase(currentState, action);
 
-        // Check victory
+        // Collect any events generated inside the engine (e.g. pipeline cancellations)
+        // that were stored in pendingEvents by TurnManager, then clear them so they
+        // are not re-emitted on the next action.
         List<GameEvent> events = new ArrayList<>();
-        victoryChecker.check(newState).ifPresent(events::add);
+        if (newState.getPendingEvents() != null && !newState.getPendingEvents().isEmpty()) {
+            events.addAll(newState.getPendingEvents());
+            newState = newState.toBuilder()
+                    .pendingEvents(new ArrayList<>())
+                    .build();
+        }
+
+        // Check victory conditions
+        Optional<GameEvent> victoryEvent = victoryChecker.check(newState);
+        if (victoryEvent.isPresent()) {
+            events.add(victoryEvent.get());
+            newState = newState.toBuilder()
+                    .gameState(GameState.FINISHED)
+                    .build();
+        }
 
         return EngineResult.of(newState, events);
     }

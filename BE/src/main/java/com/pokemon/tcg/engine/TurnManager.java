@@ -7,6 +7,7 @@ import com.pokemon.tcg.engine.attack.AttackContext;
 import com.pokemon.tcg.engine.attack.AttackPipeline;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.*;
 
 @Component
@@ -25,11 +26,11 @@ public class TurnManager {
                        StatusEffectManager statusEffectManager,
                        CardLookupPort cardLookupPort,
                        TrainerEffectRegistry trainerEffectRegistry) {
-        this.ruleValidator        = ruleValidator;
-        this.coinFlipService      = coinFlipService;
-        this.attackPipeline       = attackPipeline;
-        this.statusEffectManager  = statusEffectManager;
-        this.cardLookupPort       = cardLookupPort;
+        this.ruleValidator         = ruleValidator;
+        this.coinFlipService       = coinFlipService;
+        this.attackPipeline        = attackPipeline;
+        this.statusEffectManager   = statusEffectManager;
+        this.cardLookupPort        = cardLookupPort;
         this.trainerEffectRegistry = trainerEffectRegistry;
     }
 
@@ -179,7 +180,8 @@ public class TurnManager {
         if (ps.getDeck() == null || ps.getDeck().isEmpty()) return state;
 
         List<String> deck = new ArrayList<>(ps.getDeck());
-        List<String> hand = new ArrayList<>(ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        List<String> hand = new ArrayList<>(
+                ps.getHand() != null ? ps.getHand() : new ArrayList<>());
 
         hand.add(deck.remove(0));
         ps.setDeck(deck);
@@ -236,7 +238,6 @@ public class TurnManager {
         ps.setHand(hand);
 
         attachEnergyToPokemon(ps, targetId, cardId);
-
         state.getTurnFlags().setEnergyAttachedThisTurn(true);
 
         return state;
@@ -253,7 +254,6 @@ public class TurnManager {
 
         if (cardId == null || !ps.getHand().contains(cardId)) return state;
 
-        // Remove from hand and add to discard
         List<String> hand = new ArrayList<>(ps.getHand());
         hand.remove(cardId);
         ps.setHand(hand);
@@ -350,6 +350,9 @@ public class TurnManager {
      * Resolves the attack object and defender HP from the card cache before
      * building the context. After the pipeline resolves, processes between-turn
      * effects and switches to the opponent's turn.
+     *
+     * <p>If the pipeline is cancelled (e.g. insufficient energy, confusion flip),
+     * the turn does not end — the player keeps their turn and receives an error event.
      */
     private BoardState handleDeclareAttack(BoardState state, GameAction action) {
         String attackName = action.getPayloadString("attackName");
@@ -359,10 +362,8 @@ public class TurnManager {
         ActivePokemon attacker = attackerState.getActivePokemon();
         if (attacker == null) return state;
 
-        // Resolve the attack object from the card cache
         Attack attack = findAttack(attacker.getCardId(), attackName);
 
-        // Resolve defender HP from the card cache
         String opponentId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
                 ? state.getPlayer2State().getPlayerId()
                 : state.getPlayer1State().getPlayerId();
@@ -383,9 +384,31 @@ public class TurnManager {
 
         attackPipeline.execute(ctx);
 
-        // Process between-turns effects on both active Pokémon
-        state = processBetweenTurns(ctx.getBoardState());
+        // If the pipeline was cancelled (e.g. insufficient energy, confusion flip)
+        // the turn does not end — the player keeps their turn and can act again.
+        // A TURN_ENDED event with the cancellation reason is emitted so the client
+        // can display a descriptive error message.
+        if (ctx.isCancelled()) {
+            List<GameEvent> pending = new ArrayList<>(
+                    ctx.getBoardState().getPendingEvents() != null
+                            ? ctx.getBoardState().getPendingEvents() : new ArrayList<>());
+            pending.add(GameEvent.builder()
+                    .type(GameEventType.TURN_ENDED)
+                    .gameId(state.getGameId())
+                    .playerId(action.getPlayerId())
+                    .turnNumber(state.getTurnNumber())
+                    .data(Map.of("error", ctx.getCancellationReason() != null
+                            ? ctx.getCancellationReason()
+                            : "Attack was cancelled."))
+                    .occurredAt(Instant.now())
+                    .build());
+            return ctx.getBoardState().toBuilder()
+                    .pendingEvents(pending)
+                    .build();
+        }
 
+        // Attack resolved successfully — process between-turn effects and switch player
+        state = processBetweenTurns(ctx.getBoardState());
         state.getTurnFlags().setAttackedThisTurn(true);
 
         return state.toBuilder()
