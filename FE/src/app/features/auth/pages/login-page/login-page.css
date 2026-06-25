@@ -5,7 +5,7 @@
 
 .auth-bg {
   min-height: 100vh;
-  background: linear-gradient(135deg, var(--pokemon-red) 0%, #990000 60%, var(--pokemon-blue) 100%);
+  background-color: var(--bg-base);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -13,7 +13,8 @@
 }
 
 .auth-card {
-  background: white;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   padding: 2.5rem 2rem;
@@ -32,15 +33,16 @@
 }
 
 .auth-logo {
-  font-size: 1.75rem;
+  font-size: 2rem;
   font-weight: 800;
-  color: var(--pokemon-red);
-  letter-spacing: -0.5px;
+  color: var(--accent);
+  letter-spacing: 1px;
+  text-shadow: 0 0 20px var(--accent-glow);
 }
 
 .auth-subtitle {
   font-size: 0.9375rem;
-  color: var(--gray-600);
+  color: var(--text-secondary);
 }
 
 .auth-form {
@@ -52,5 +54,5 @@
 .auth-footer {
   text-align: center;
   font-size: 0.9375rem;
-  color: var(--gray-600);
+  color: var(--text-secondary);
 }

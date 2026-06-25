@@ -16,25 +16,80 @@
     </div>
   </div>
 
-  <!-- Deck name header -->
+  <!-- Header: nombre + cosmetics -->
   <div class="editor-header">
-    @if (deckNameEditing()) {
-      <div class="deck-name-edit">
-        <input
-          class="deck-name-input"
-          type="text"
-          [ngModel]="deckName()"
-          (ngModelChange)="deckName.set($event)"
-          autofocus
-        />
-        <button class="btn-primary btn-sm" (click)="saveDeckName()">Guardar</button>
-        <button class="btn-secondary btn-sm" (click)="cancelEditingName()">Cancelar</button>
+
+    <!-- Nombre del mazo -->
+    <div class="editor-header__name">
+      @if (deckNameEditing()) {
+        <div class="deck-name-edit">
+          <input
+            class="deck-name-input"
+            type="text"
+            [ngModel]="deckName()"
+            (ngModelChange)="deckName.set($event)"
+            autofocus
+          />
+          <button class="btn-primary btn-sm" (click)="saveDeckName()">Guardar</button>
+          <button class="btn-secondary btn-sm" (click)="cancelEditingName()">Cancelar</button>
+        </div>
+      } @else {
+        <h1 class="deck-title" (click)="startEditingName()">
+          {{ deckName() }} <span class="edit-hint">✏️</span>
+        </h1>
+      }
+    </div>
+
+    <!-- Cosmetics: selector + preview de dorso, selector + preview de moneda -->
+    <div class="editor-header__cosmetics">
+
+      <div class="cosmetic-group">
+        <div class="cosmetic-group__selector">
+          <label class="cosmetic-label" for="cardBackSelect">Dorso</label>
+          <select
+            id="cardBackSelect"
+            class="cosmetic-select"
+            [ngModel]="selectedCardBack()"
+            (ngModelChange)="selectedCardBack.set($event); saveCosmetics()"
+          >
+            @for (option of cardBackOptions(); track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+        <div class="cosmetic-preview">
+          <img
+            class="cosmetic-preview__img cosmetic-preview__img--card"
+            [src]="cardBackPreviewUrl()"
+            alt="Dorso seleccionado"
+          />
+        </div>
       </div>
-    } @else {
-      <h1 class="deck-title" (click)="startEditingName()">
-        {{ deckName() }} <span class="edit-hint">✏️</span>
-      </h1>
-    }
+
+      <div class="cosmetic-group">
+        <div class="cosmetic-group__selector">
+          <label class="cosmetic-label" for="coinSelect">Moneda</label>
+          <select
+            id="coinSelect"
+            class="cosmetic-select"
+            [ngModel]="selectedCoin()"
+            (ngModelChange)="selectedCoin.set($event); saveCosmetics()"
+          >
+            @for (option of coinOptions(); track option) {
+              <option [value]="option">{{ option }}</option>
+            }
+          </select>
+        </div>
+        <div class="cosmetic-preview">
+          <img
+            class="cosmetic-preview__img cosmetic-preview__img--coin"
+            [src]="coinPreviewUrl()"
+            alt="Moneda seleccionada"
+          />
+        </div>
+      </div>
+
+    </div>
   </div>
 
   <!-- Layout principal -->
@@ -68,48 +123,6 @@
           </li>
         }
       </ul>
-
-      <!-- Cosmetics -->
-      <div class="cosmetics-section">
-        <h3 class="cosmetics-title">Personalización</h3>
-
-        <div class="cosmetics-field">
-          <label class="cosmetics-label" for="cardBackSelect">Dorso de carta</label>
-          <select
-            id="cardBackSelect"
-            class="cosmetics-select"
-            [ngModel]="selectedCardBack()"
-            (ngModelChange)="selectedCardBack.set($event)"
-          >
-            @for (option of cardBackOptions(); track option) {
-              <option [value]="option">{{ option }}</option>
-            }
-          </select>
-        </div>
-
-        <div class="cosmetics-field">
-          <label class="cosmetics-label" for="coinSelect">Moneda</label>
-          <select
-            id="coinSelect"
-            class="cosmetics-select"
-            [ngModel]="selectedCoin()"
-            (ngModelChange)="selectedCoin.set($event)"
-          >
-            @for (option of coinOptions(); track option) {
-              <option [value]="option">{{ option }}</option>
-            }
-          </select>
-        </div>
-
-        <button
-          class="btn-primary btn-sm cosmetics-save-btn"
-          (click)="saveCosmetics()"
-          [disabled]="savingCosmetics()"
-        >
-          {{ savingCosmetics() ? 'Guardando...' : 'Guardar personalización' }}
-        </button>
-      </div>
-
     </aside>
 
     <!-- Panel derecho: catálogo -->

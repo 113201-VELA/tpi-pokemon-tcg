@@ -1,8 +1,8 @@
 package com.pokemon.tcg.domain.state;
 
 //import com.pokemon.tcg.domain.engine.AttackPipeline;
-import com.pokemon.tcg.domain.engine.attack.AttackPipeline;
-import com.pokemon.tcg.domain.engine.TurnManager;
+import com.pokemon.tcg.engine.attack.AttackPipeline;
+import com.pokemon.tcg.engine.TurnManager;
 import com.pokemon.tcg.domain.model.game.*;
 import org.springframework.stereotype.Component;
 

@@ -1,3 +1,7 @@
+:host {
+  display: block;
+}
+
 .preferences-page {
   max-width: 520px;
   margin: 0 auto;
@@ -11,32 +15,40 @@
   align-self: flex-start;
   background: none;
   border: none;
-  color: #CC0000;
+  font-family: 'Exo 2', sans-serif;
+  font-style: italic;
+  color: var(--text-secondary);
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
   padding: 0;
+  transition: color 0.2s ease;
 }
-.back-btn:hover { text-decoration: underline; }
+
+.back-btn:hover { color: var(--accent); }
 
 .preferences-title {
   font-size: 1.8rem;
   font-weight: 800;
-  color: #003A70;
+  color: var(--accent);
   margin: 0;
 }
 
 .preferences-subtitle {
   font-size: 0.95rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: -1.25rem 0 0;
+}
+
+.preferences-subtitle strong {
+  color: var(--text-primary);
 }
 
 /* ── Secciones ────────────────────────────────────────────────────────── */
 .pref-section {
-  background: #fff;
-  border: 1px solid #e5e7eb;
-  border-radius: 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
   padding: 1.5rem;
   display: flex;
   flex-direction: column;
@@ -46,13 +58,13 @@
 .pref-section-title {
   font-size: 1rem;
   font-weight: 700;
-  color: #111827;
+  color: var(--text-primary);
   margin: 0;
 }
 
 .pref-section-desc {
   font-size: 0.85rem;
-  color: #6b7280;
+  color: var(--text-secondary);
   margin: 0;
 }
 
@@ -72,44 +84,50 @@
 .form-label {
   font-size: 0.8rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
 
 .form-input {
   padding: 0.55rem 0.85rem;
-  border: 1px solid #d1d5db;
-  border-radius: 8px;
+  background: var(--bg-surface-2);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'Exo 2', sans-serif;
+  font-style: italic;
   font-size: 0.95rem;
-  color: #111827;
+  outline: none;
   transition: border-color 0.15s;
 }
-.form-input:focus {
-  outline: none;
-  border-color: #CC0000;
-}
+
+.form-input:focus { border-color: var(--border-focus); }
+.form-input::placeholder { color: var(--text-muted); }
 
 .form-error {
   font-size: 0.8rem;
-  color: #CC0000;
+  color: var(--danger);
 }
 
 /* ── Mensajes ─────────────────────────────────────────────────────────── */
 .message {
   padding: 0.65rem 0.85rem;
-  border-radius: 6px;
+  border-radius: var(--radius-sm);
   font-size: 0.875rem;
   font-weight: 600;
   margin: 0;
 }
-.message--error   { background: #fee2e2; color: #991b1b; }
-.message--success { background: #dcfce7; color: #166534; }
+
+.message--error   { background: var(--danger-bg);  color: var(--danger); }
+.message--success { background: var(--success-bg); color: var(--success); }
 
 /* ── Botones ──────────────────────────────────────────────────────────── */
 .btn {
   padding: 0.6rem 1.2rem;
-  border-radius: 8px;
+  border-radius: var(--radius-sm);
+  font-family: 'Exo 2', sans-serif;
+  font-style: italic;
   font-weight: 700;
   font-size: 0.9rem;
   cursor: pointer;
@@ -117,7 +135,8 @@
   transition: opacity 0.15s, background 0.15s;
   align-self: flex-start;
 }
-.btn:disabled { opacity: 0.45; cursor: not-allowed; }
 
-.btn--primary { background: #CC0000; color: #fff; }
-.btn--primary:hover:not(:disabled) { background: #a30000; }
+.btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn--primary { background: var(--accent); color: #111318; }
+.btn--primary:hover:not(:disabled) { background: var(--accent-dark); }

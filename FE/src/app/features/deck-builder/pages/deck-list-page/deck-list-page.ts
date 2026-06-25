@@ -13,9 +13,12 @@ export class DeckListPage implements OnInit {
   private readonly deckService = inject(DeckService);
   readonly router = inject(Router);
 
-  readonly decks = signal<DeckResponse[]>([]);
+  readonly decks   = signal<DeckResponse[]>([]);
   readonly loading = signal(false);
-  readonly error = signal<string | null>(null);
+  readonly error   = signal<string | null>(null);
+
+  // Deck pending deletion — drives the confirmation modal
+  readonly deckToDelete = signal<DeckResponse | null>(null);
 
   ngOnInit(): void {
     this.loadDecks();
@@ -47,12 +50,27 @@ export class DeckListPage implements OnInit {
     this.router.navigate(['/decks', deck.id, 'edit']);
   }
 
-  deleteDeck(event: Event, deck: DeckResponse): void {
+  requestDeleteDeck(event: Event, deck: DeckResponse): void {
     event.stopPropagation();
-    if (!window.confirm(`¿Eliminar el mazo "${deck.name}"?`)) return;
+    this.deckToDelete.set(deck);
+  }
+
+  confirmDeleteDeck(): void {
+    const deck = this.deckToDelete();
+    if (!deck) return;
     this.deckService.deleteDeck(deck.id).subscribe({
-      next: () => this.decks.update(decks => decks.filter(d => d.id !== deck.id)),
-      error: () => this.error.set('No se pudo eliminar el mazo.')
+      next: () => {
+        this.decks.update(decks => decks.filter(d => d.id !== deck.id));
+        this.deckToDelete.set(null);
+      },
+      error: () => {
+        this.error.set('No se pudo eliminar el mazo.');
+        this.deckToDelete.set(null);
+      }
     });
+  }
+
+  cancelDeleteDeck(): void {
+    this.deckToDelete.set(null);
   }
 }
