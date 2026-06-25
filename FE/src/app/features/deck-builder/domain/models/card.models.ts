@@ -42,15 +42,6 @@ export interface CardResponse {
   number: string;
 }
 
-export interface CardPage {
-  content: CardResponse[];
-  totalElements: number;
-  totalPages: number;
-  number: number;
-  size: number;
-  last: boolean;
-}
-
 export interface CardFilters {
   name?: string;
   type?: CardSupertype;

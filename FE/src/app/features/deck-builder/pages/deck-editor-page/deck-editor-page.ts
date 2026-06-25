@@ -31,8 +31,6 @@ export class DeckEditorPage implements OnInit {
   readonly cards           = signal<CardResponse[]>([]);
   readonly loadingCards    = signal(false);
   readonly loadingDeck     = signal(false);
-  readonly cardPage        = signal(0);
-  readonly totalPages      = signal(0);
   readonly selectedCard    = signal<CardResponse | null>(null);
   readonly deckNameEditing = signal(false);
   readonly deckName        = signal('');
@@ -100,19 +98,6 @@ export class DeckEditorPage implements OnInit {
     return this.totalCardCount() === 60 && this.hasNoExcessCopies() && this.hasBasicPokemon();
   });
 
-  readonly filteredCards = computed(() => {
-    const f   = this.filters();
-    const all = this.cards();
-
-    if (!f.energyType && !f.pokemonSubtype) return all;
-
-    return all.filter(c => {
-      if (f.energyType    && !c.types.includes(f.energyType))       return false;
-      if (f.pokemonSubtype && !c.subtypes.includes(f.pokemonSubtype)) return false;
-      return true;
-    });
-  });
-
   readonly supertypes: CardSupertype[] = ['POKEMON', 'ENERGY', 'TRAINER'];
   readonly energyTypes: EnergyType[]   = [
     'GRASS', 'FIRE', 'WATER', 'LIGHTNING', 'PSYCHIC',
@@ -123,7 +108,7 @@ export class DeckEditorPage implements OnInit {
   ngOnInit(): void {
     this.deckId = this.route.snapshot.paramMap.get('deckId')!;
     this.loadDeck();
-    this.loadCards(0);
+    this.loadCards();
     this.loadCosmeticsOptions();
   }
 
@@ -142,17 +127,11 @@ export class DeckEditorPage implements OnInit {
     });
   }
 
-  loadCards(page: number): void {
+  loadCards(): void {
     this.loadingCards.set(true);
-    this.cardService.searchCards(this.filters(), page).subscribe({
-      next: result => {
-        if (page === 0) {
-          this.cards.set(result.content);
-        } else {
-          this.cards.update(prev => [...prev, ...result.content]);
-        }
-        this.cardPage.set(result.number);
-        this.totalPages.set(result.totalPages);
+    this.cardService.searchCards(this.filters()).subscribe({
+      next: cards => {
+        this.cards.set(cards);
         this.loadingCards.set(false);
       },
       error: () => this.loadingCards.set(false)
@@ -170,13 +149,7 @@ export class DeckEditorPage implements OnInit {
 
   applyFilters(filters: CardFilters): void {
     this.filters.set(filters);
-    this.loadCards(0);
-  }
-
-  loadMoreCards(): void {
-    if (this.cardPage() + 1 < this.totalPages()) {
-      this.loadCards(this.cardPage() + 1);
-    }
+    this.loadCards();
   }
 
   getQuantityInDeck(cardId: string): number {

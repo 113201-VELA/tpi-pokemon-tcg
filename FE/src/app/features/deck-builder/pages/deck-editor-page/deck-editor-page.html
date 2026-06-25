@@ -182,7 +182,7 @@
       }
 
       <div class="card-grid">
-        @for (card of filteredCards(); track card.id) {
+        @for (card of cards(); track card.id) {
           <div class="catalog-card">
             <img
               class="catalog-card-img"
@@ -205,15 +205,6 @@
           </div>
         }
       </div>
-
-      <!-- Cargar más -->
-      @if (cardPage() + 1 < totalPages()) {
-        <div class="load-more">
-          <button class="btn-secondary" (click)="loadMoreCards()" [disabled]="loadingCards()">
-            {{ loadingCards() ? 'Cargando...' : 'Cargar más cartas' }}
-          </button>
-        </div>
-      }
 
     </section>
   </div>
