@@ -8,6 +8,7 @@ public record DeckResponseDTO(
         String name,
         String cardBack,
         String coin,
+        String featuredCardId,
         boolean valid,
         List<DeckCardResponseDTO> cards,
         int totalCardCount

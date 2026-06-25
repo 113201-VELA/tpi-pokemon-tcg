@@ -159,6 +159,31 @@
   box-shadow: 0 0 8px var(--accent-glow);
 }
 
+.deck-item__featured {
+  flex-shrink: 0;
+}
+
+.deck-item__featured-img {
+  width: 36px;
+  height: 50px;
+  object-fit: cover;
+  border-radius: 3px;
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.deck-item__featured-placeholder {
+  width: 36px;
+  height: 50px;
+  border-radius: 3px;
+  border: 2px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 0.9rem;
+}
+
 .deck-item__name  { flex: 1; font-weight: 700; color: var(--text-primary); }
 .deck-item__count { font-size: 0.8rem; color: var(--text-secondary); }
 .deck-item__check { color: var(--accent); font-weight: 800; }

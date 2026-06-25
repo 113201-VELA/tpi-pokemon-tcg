@@ -43,6 +43,24 @@ export class DeckEditorPage implements OnInit {
   readonly selectedCoin     = signal<string>('DEFAULT');
   readonly savingCosmetics  = signal(false);
 
+  // Featured card state
+  readonly selectedFeaturedCardId = signal<string | null>(null);
+
+  /** Pokémon currently in the deck — available for featured card selection. */
+  readonly deckPokemon = computed(() => {
+    return this.deck()?.cards
+      .filter(entry => entry.card.supertype === 'POKEMON')
+      .map(entry => entry.card) ?? [];
+  });
+
+  /** Resolves the image URL for the currently selected featured card. */
+  readonly featuredCardImageUrl = computed(() => {
+    const id = this.selectedFeaturedCardId();
+    if (!id) return null;
+    const entry = this.deck()?.cards.find(e => e.card.id === id);
+    return entry?.card.imageSmall ?? null;
+  });
+
   /** Resolves the asset path for the currently selected card back. */
   readonly cardBackPreviewUrl = computed(() => {
     const map: Record<string, string> = {
@@ -121,6 +139,7 @@ export class DeckEditorPage implements OnInit {
         this.deckName.set(found?.name ?? '');
         this.selectedCardBack.set(found?.cardBack ?? 'DEFAULT');
         this.selectedCoin.set(found?.coin ?? 'DEFAULT');
+        this.selectedFeaturedCardId.set(found?.featuredCardId ?? null);
         this.loadingDeck.set(false);
       },
       error: () => this.loadingDeck.set(false)
@@ -183,6 +202,11 @@ export class DeckEditorPage implements OnInit {
   }
 
   removeCard(card: CardResponse): void {
+    // Clear featured card if the removed card was the selected one
+    if (this.selectedFeaturedCardId() === card.id) {
+      this.saveFeaturedCard(null);
+    }
+
     const current = this.getQuantityInDeck(card.id);
     if (current <= 1) {
       this.deckService.removeCard(this.deckId, card.id).subscribe({
@@ -253,5 +277,17 @@ export class DeckEditorPage implements OnInit {
 
   goBackToDecks(): void {
     this.router.navigate(['/decks']);
+  }
+
+  saveFeaturedCard(cardId: string | null): void {
+    // Send empty string to clear, card ID to set
+    const featuredCardId = cardId ?? '';
+
+    this.deckService.updateDeck(this.deckId, { featuredCardId }).subscribe({
+      next: updatedDeck => {
+        this.deck.set(updatedDeck);
+        this.selectedFeaturedCardId.set(updatedDeck.featuredCardId);
+      }
+    });
   }
 }

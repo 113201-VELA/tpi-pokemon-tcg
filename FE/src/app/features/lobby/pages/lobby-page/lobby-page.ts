@@ -187,6 +187,12 @@ export class LobbyPage implements OnInit, OnDestroy {
     return game.creatorUsername === this.currentUsername;
   }
 
+  getFeaturedCardImage(deck: DeckResponse): string | null {
+    if (!deck.featuredCardId) return null;
+    const entry = deck.cards.find(c => c.card.id === deck.featuredCardId);
+    return entry?.card.imageSmall ?? null;
+  }
+
   formatTime(iso: string): string {
     return new Date(iso).toLocaleTimeString('en-US', {
       hour: '2-digit',

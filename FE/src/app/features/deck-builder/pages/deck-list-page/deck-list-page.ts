@@ -73,4 +73,10 @@ export class DeckListPage implements OnInit {
   cancelDeleteDeck(): void {
     this.deckToDelete.set(null);
   }
+
+  getFeaturedCardImage(deck: DeckResponse): string | null {
+    if (!deck.featuredCardId) return null;
+    const entry = deck.cards.find(c => c.card.id === deck.featuredCardId);
+    return entry?.card.imageSmall ?? null;
+  }
 }

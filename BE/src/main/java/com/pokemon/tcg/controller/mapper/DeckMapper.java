@@ -29,6 +29,7 @@ public class DeckMapper {
                 deck.getName(),
                 deck.getCardBack(),
                 deck.getCoin(),
+                deck.getFeaturedCardId(),
                 deck.isValid(),
                 cardDTOs,
                 deck.getTotalCardCount()

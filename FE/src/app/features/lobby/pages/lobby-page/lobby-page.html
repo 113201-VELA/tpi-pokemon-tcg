@@ -37,6 +37,19 @@
               [class.deck-item--selected]="selectedDeckId() === deck.id"
               (click)="selectDeck(deck.id)"
             >
+              <!-- Featured card preview -->
+              <div class="deck-item__featured">
+                @if (deck.featuredCardId) {
+                  <img
+                    class="deck-item__featured-img"
+                    [src]="getFeaturedCardImage(deck)"
+                    [alt]="deck.name"
+                  />
+                } @else {
+                  <div class="deck-item__featured-placeholder">?</div>
+                }
+              </div>
+
               <span class="deck-item__name">{{ deck.name }}</span>
               <span class="deck-item__count">{{ deck.totalCardCount }} cards</span>
               @if (selectedDeckId() === deck.id) {

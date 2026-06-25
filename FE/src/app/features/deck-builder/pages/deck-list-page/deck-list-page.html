@@ -22,23 +22,38 @@
   <div class="deck-grid">
     @for (deck of decks(); track deck.id) {
       <div class="deck-card" (click)="openDeck(deck)">
-        <div class="deck-card-info">
-          <span class="deck-name">{{ deck.name }}</span>
-          <span class="deck-count" [class.deck-count--full]="deck.totalCardCount === 60">
-            {{ deck.totalCardCount }}/60
-          </span>
-        </div>
-        <div class="deck-card-meta">
-          @if (deck.valid) {
-            <span class="badge badge--valid">Válido</span>
+        <!-- Featured card preview -->
+        <div class="deck-card-featured">
+          @if (deck.featuredCardId && getFeaturedCardImage(deck)) {
+            <img
+              class="deck-featured-img"
+              [src]="getFeaturedCardImage(deck)"
+              [alt]="deck.name"
+            />
           } @else {
-            <span class="badge badge--invalid">Incompleto</span>
+            <div class="deck-featured-placeholder">?</div>
           }
-          <button
-            class="btn-delete"
-            (click)="requestDeleteDeck($event, deck)"
-            title="Eliminar mazo"
-          >✕</button>
+        </div>
+
+        <div class="deck-card-body">
+          <div class="deck-card-info">
+            <span class="deck-name">{{ deck.name }}</span>
+            <span class="deck-count" [class.deck-count--full]="deck.totalCardCount === 60">
+              {{ deck.totalCardCount }}/60
+            </span>
+          </div>
+          <div class="deck-card-meta">
+            @if (deck.valid) {
+              <span class="badge badge--valid">Valid</span>
+            } @else {
+              <span class="badge badge--invalid">Incomplete</span>
+            }
+            <button
+              class="btn-delete"
+              (click)="requestDeleteDeck($event, deck)"
+              title="Delete deck"
+            >✕</button>
+          </div>
         </div>
       </div>
     }

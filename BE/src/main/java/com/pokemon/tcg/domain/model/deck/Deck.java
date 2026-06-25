@@ -39,6 +39,9 @@ public class Deck {
     @Builder.Default
     private String coin = "DEFAULT";
 
+    @Column(name = "featured_card_id", length = 20)
+    private String featuredCardId;
+
     @Column(name = "is_valid", nullable = false)
     private boolean valid = false;
 
