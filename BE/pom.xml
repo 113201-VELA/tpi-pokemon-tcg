@@ -155,7 +155,7 @@
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-maven-plugin</artifactId>
         <configuration>
-          <mainClass>com.pokemon.tcg.TcgApplication</mainClass>
+          <jvmArguments>-Duser.timezone=UTC</jvmArguments>
           <excludes>
             <exclude>
               <groupId>org.projectlombok</groupId>
