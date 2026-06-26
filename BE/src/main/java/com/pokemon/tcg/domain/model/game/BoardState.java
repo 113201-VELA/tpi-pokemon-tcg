@@ -3,6 +3,7 @@ package com.pokemon.tcg.domain.model.game;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -47,6 +48,22 @@ public class BoardState {
     @Builder.Default
     private String firstPlayerId = null;
 
+    /**
+     * Set to the player's ID when a card effect (e.g. Great Ball) requires them
+     * to select a card from a set of revealed deck cards. All other actions are
+     * blocked until that player sends SELECT_FROM_DECK.
+     * Null when no deck selection is pending.
+     */
+    @Builder.Default
+    private String pendingDeckSelectionPlayerId = null;
+
+    /**
+     * The card IDs from the top of the deck that are set aside for the player
+     * to choose from. Only meaningful when pendingDeckSelectionPlayerId is set.
+     */
+    @Builder.Default
+    private List<String> pendingDeckSelectionCardIds = new ArrayList<>();
+
     public PlayerState getStateFor(String playerId) {
         if (playerId.equals(player1State.getPlayerId())) return player1State;
         if (playerId.equals(player2State.getPlayerId())) return player2State;
@@ -74,5 +91,13 @@ public class BoardState {
      */
     public boolean isPendingBenchChoice() {
         return pendingBenchChoicePlayerId != null;
+    }
+
+    /**
+     * Returns true when a card effect (e.g. Great Ball) requires the player
+     * to select a card from a set of revealed deck cards.
+     */
+    public boolean isPendingDeckSelection() {
+        return pendingDeckSelectionPlayerId != null;
     }
 }

@@ -9,7 +9,6 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.*;
-
 @Component
 public class TurnManager {
 
@@ -62,6 +61,8 @@ public class TurnManager {
             case END_TURN              -> handleEndTurn(state, action);
             // ── Post-KO ──────────────────────────────────────────────
             case CHOOSE_BENCH_POKEMON  -> handleChooseBenchPokemon(state, action);
+            // ── Deck selection ───────────────────────────────────────
+            case SELECT_FROM_DECK      -> handleSelectFromDeck(state, action);
             default                    -> state;
         };
     }
@@ -84,6 +85,11 @@ public class TurnManager {
 
         if (phase == TurnPhase.DRAW) {
             actions.add(GameActionType.DRAW_CARD);
+            return actions;
+        }
+
+        if (state.isPendingDeckSelection()) {
+            actions.add(GameActionType.SELECT_FROM_DECK);
             return actions;
         }
 
@@ -581,6 +587,45 @@ public class TurnManager {
                 .turnNumber(state.getTurnNumber() + 1)
                 .turnFlags(TurnFlags.fresh())
                 .build();
+    }
+
+    /**
+     * Handles the player selecting a card from a set revealed by a card effect
+     * (e.g. Great Ball). The chosen card is moved to the player's hand and the
+     * remaining revealed cards are shuffled back into the deck.
+     */
+    private BoardState handleSelectFromDeck(BoardState state, GameAction action) {
+        String playerId = action.getPlayerId();
+        if (!state.isPendingDeckSelection() || !state.getPendingDeckSelectionPlayerId().equals(playerId)) {
+            return state;
+        }
+
+        String chosenCardId = action.getPayloadString("cardId");
+        List<String> pendingCards = state.getPendingDeckSelectionCardIds();
+        if (chosenCardId == null || pendingCards == null || !pendingCards.contains(chosenCardId)) {
+            return state;
+        }
+
+        PlayerState ps = state.getStateFor(playerId);
+
+        // Move chosen card to hand
+        List<String> hand = new ArrayList<>(ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        hand.add(chosenCardId);
+        ps.setHand(hand);
+
+        // Shuffle remaining cards back into deck
+        List<String> remaining = new ArrayList<>(pendingCards);
+        remaining.remove(chosenCardId);
+        List<String> deck = new ArrayList<>(ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
+        deck.addAll(remaining);
+        Collections.shuffle(deck);
+        ps.setDeck(deck);
+
+        // Clear pending state
+        state.setPendingDeckSelectionPlayerId(null);
+        state.setPendingDeckSelectionCardIds(new ArrayList<>());
+
+        return state;
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────

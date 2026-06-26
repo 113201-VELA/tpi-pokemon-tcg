@@ -4,6 +4,8 @@ import com.pokemon.tcg.domain.model.card.CardType;
 import com.pokemon.tcg.domain.model.game.*;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 /**
  * Validates the legality of every game action before the engine executes it.
  * Each validation method checks only the rules relevant to its action type.
@@ -51,6 +53,20 @@ public class RuleValidator {
             return validateAcceptMulliganBonus(state, action);
         }
 
+        // During pendingDeckSelection, only SELECT_FROM_DECK is allowed
+        // and only the affected player may act.
+        if (state.isPendingDeckSelection()) {
+            if (action.getType() != GameActionType.SELECT_FROM_DECK) {
+                return ValidationResult.fail(
+                        "You must select a card from your deck first.");
+            }
+            if (!state.getPendingDeckSelectionPlayerId().equals(action.getPlayerId())) {
+                return ValidationResult.fail(
+                        "It is not your turn to select from the deck.");
+            }
+            return validateSelectFromDeck(state, action);
+        }
+
         // During SETUP both players can act simultaneously (mulligan, place active/bench, confirm setup)
         // Turn order is not enforced during setup phase
         boolean isSetupAction = action.getType() == GameActionType.MULLIGAN_CONFIRM
@@ -82,6 +98,8 @@ public class RuleValidator {
             case END_TURN              -> validateEndTurn(state, action);
             // ── Post-KO ──────────────────────────────────────────────
             case CHOOSE_BENCH_POKEMON  -> validateChooseBenchPokemon(state, action);
+            // ── Deck selection ───────────────────────────────────────
+            case SELECT_FROM_DECK      -> validateSelectFromDeck(state, action);
             default                    -> ValidationResult.ok();
         };
     }
@@ -463,6 +481,22 @@ public class RuleValidator {
                 .anyMatch(b -> b.getInstanceId().equals(instanceId));
         if (!exists) {
             return ValidationResult.fail("The specified Pokémon is not on your bench.");
+        }
+        return ValidationResult.ok();
+    }
+
+    /**
+     * SELECT_FROM_DECK is only valid when a deck selection is pending for this player.
+     * The specified cardId must be among the pending selection cards.
+     */
+    private ValidationResult validateSelectFromDeck(BoardState state, GameAction action) {
+        String cardId = action.getPayloadString("cardId");
+        if (cardId == null) {
+            return ValidationResult.fail("You must specify a cardId to select.");
+        }
+        List<String> pendingCards = state.getPendingDeckSelectionCardIds();
+        if (pendingCards == null || !pendingCards.contains(cardId)) {
+            return ValidationResult.fail("The specified card is not available for selection.");
         }
         return ValidationResult.ok();
     }

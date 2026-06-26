@@ -1,6 +1,7 @@
 package com.pokemon.tcg.domain.strategy;
 
 import com.pokemon.tcg.domain.strategy.item.EvosodaEffect;
+import com.pokemon.tcg.domain.strategy.item.GreatBallEffect;
 import com.pokemon.tcg.domain.strategy.item.ProfessorsLetterEffect;
 import com.pokemon.tcg.domain.strategy.item.SuperPotionEffect;
 import com.pokemon.tcg.domain.strategy.supporter.CassiusEffect;
@@ -32,7 +33,8 @@ public class TrainerEffectRegistry {
                                  CassiusEffect cassiusEffect,
                                  TeamFlareGruntEffect teamFlareGruntEffect,
                                  ProfessorsLetterEffect professorsLetterEffect,
-                                 EvosodaEffect evosodaEffect) {
+                                 EvosodaEffect evosodaEffect,
+                                 GreatBallEffect greatBallEffect) {
         this.effects = Map.ofEntries(
                 Map.entry("super potion",        superPotionEffect),
                 Map.entry("professor sycamore",  professorSycamoreEffect),
@@ -40,7 +42,8 @@ public class TrainerEffectRegistry {
                 Map.entry("cassius",             cassiusEffect),
                 Map.entry("team flare grunt",    teamFlareGruntEffect),
                 Map.entry("professor's letter",  professorsLetterEffect),
-                Map.entry("evosoda",             evosodaEffect)
+                Map.entry("evosoda",             evosodaEffect),
+                Map.entry("great ball",          greatBallEffect)
         );
     }
 
