@@ -92,6 +92,7 @@ public class GameActionHandler {
                 .prizes(List.of())
                 .totalMulligans(state.getPlayer1State().getTotalMulligans())
                 .mulliganBonusDraws(state.getPlayer1State().getMulliganBonusDraws())
+                .setupConfirmed(state.getPlayer1State().isSetupConfirmed())
                 .build();
 
         PlayerState p2 = PlayerState.builder()
@@ -104,6 +105,7 @@ public class GameActionHandler {
                 .prizes(List.of())
                 .totalMulligans(state.getPlayer2State().getTotalMulligans())
                 .mulliganBonusDraws(state.getPlayer2State().getMulliganBonusDraws())
+                .setupConfirmed(state.getPlayer2State().isSetupConfirmed())
                 .build();
 
         return BoardState.builder()

@@ -30,19 +30,24 @@ public class SetupState implements GameStateHandler {
     public EngineResult handle(BoardState state, GameAction action) {
         return switch (action.getType()) {
             case MULLIGAN_CONFIRM,
-                 SETUP_PLACE_BENCH,
-                 ACCEPT_MULLIGAN_BONUS -> {
+                 SETUP_PLACE_ACTIVE,
+                 SETUP_PLACE_BENCH -> {
                 BoardState newState = turnManager.advancePhase(state, action);
                 yield EngineResult.of(newState, List.of());
             }
-            case SETUP_PLACE_ACTIVE -> {
+            case ACCEPT_MULLIGAN_BONUS -> {
+                BoardState newState = turnManager.advancePhase(state, action);
+                yield EngineResult.of(newState, List.of());
+            }
+            case CONFIRM_SETUP -> {
                 BoardState newState = turnManager.advancePhase(state, action);
 
-                // Both players have placed their Active Pokémon — setup placement done.
-                // Transition responsibility moved here from TurnManager as part of State pattern.
-                if (newState.getPlayer1State().getActivePokemon() != null &&
-                        newState.getPlayer2State().getActivePokemon() != null) {
+                boolean bothConfirmed =
+                        newState.getPlayer1State().isSetupConfirmed() &&
+                                newState.getPlayer2State().isSetupConfirmed();
 
+                if (bothConfirmed) {
+                    // Both players confirmed — check for pending bonus draws first
                     if (newState.hasAnyPendingBonus()) {
                         newState = newState.toBuilder()
                                 .bonusDrawPending(true)

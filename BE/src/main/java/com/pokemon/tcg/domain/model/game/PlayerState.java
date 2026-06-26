@@ -28,6 +28,9 @@ public class PlayerState {
     /** Net bonus draws this player can accept, based on opponent's total mulligans. */
     @Builder.Default
     private int mulliganBonusDraws = 0;
+    /** True once the player has confirmed their setup is complete. */
+    @Builder.Default
+    private boolean setupConfirmed = false;
 
 
     @JsonIgnore

@@ -48,6 +48,7 @@ public class TurnManager {
             case SETUP_PLACE_ACTIVE    -> handleSetupPlaceActive(state, action);
             case SETUP_PLACE_BENCH     -> handleSetupPlaceBench(state, action);
             case ACCEPT_MULLIGAN_BONUS -> handleAcceptMulliganBonus(state, action);
+            case CONFIRM_SETUP         -> handleConfirmSetup(state, action);
             // ── Draw phase ───────────────────────────────────────────
             case DRAW_CARD             -> handleDrawCard(state, action);
             // ── Main phase ───────────────────────────────────────────
@@ -213,6 +214,17 @@ public class TurnManager {
         return state.toBuilder()
                 .bonusDrawPending(true)
                 .build();
+    }
+
+    /**
+     * Marks the player's setup as confirmed.
+     * The actual transition to ACTIVE is handled by SetupState after
+     * checking that both players have confirmed.
+     */
+    private BoardState handleConfirmSetup(BoardState state, GameAction action) {
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        ps.setSetupConfirmed(true);
+        return state;
     }
 
     // ─── DRAW ─────────────────────────────────────────────────────────────────

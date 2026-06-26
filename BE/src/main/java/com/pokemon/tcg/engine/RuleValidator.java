@@ -37,11 +37,12 @@ public class RuleValidator {
             return validateAcceptMulliganBonus(state, action);
         }
 
-        // During SETUP both players can act simultaneously (mulligan, place active/bench)
+        // During SETUP both players can act simultaneously (mulligan, place active/bench, confirm setup)
         // Turn order is not enforced during setup phase
         boolean isSetupAction = action.getType() == GameActionType.MULLIGAN_CONFIRM
                 || action.getType() == GameActionType.SETUP_PLACE_ACTIVE
-                || action.getType() == GameActionType.SETUP_PLACE_BENCH;
+                || action.getType() == GameActionType.SETUP_PLACE_BENCH
+                || action.getType() == GameActionType.CONFIRM_SETUP;
 
         // Only the current player may act.
         if (!isSetupAction && !state.getCurrentPlayerId().equals(action.getPlayerId())) {
@@ -54,6 +55,7 @@ public class RuleValidator {
             case SETUP_PLACE_ACTIVE    -> validateSetupPlaceActive(state, action);
             case SETUP_PLACE_BENCH     -> validateSetupPlaceBench(state, action);
             case ACCEPT_MULLIGAN_BONUS -> validateAcceptMulliganBonus(state, action);
+            case CONFIRM_SETUP         -> validateConfirmSetup(state, action);
             // ── Draw phase ───────────────────────────────────────────
             case DRAW_CARD             -> validateDrawCard(state, action);
             // ── Main phase ───────────────────────────────────────────
@@ -187,6 +189,25 @@ public class RuleValidator {
         if (cardsToDraw > ps.getMulliganBonusDraws()) {
             return ValidationResult.fail(
                     "You can draw at most " + ps.getMulliganBonusDraws() + " bonus cards.");
+        }
+        return ValidationResult.ok();
+    }
+
+    /**
+     * CONFIRM_SETUP is valid during SETUP phase, only if the player
+     * has already placed their Active Pokémon and has not confirmed yet.
+     */
+    private ValidationResult validateConfirmSetup(BoardState state, GameAction action) {
+        if (state.getTurnPhase() != TurnPhase.SETUP) {
+            return ValidationResult.fail("Setup can only be confirmed during setup phase.");
+        }
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        if (ps.getActivePokemon() == null) {
+            return ValidationResult.fail(
+                    "You must place your Active Pokémon before confirming setup.");
+        }
+        if (ps.isSetupConfirmed()) {
+            return ValidationResult.fail("You have already confirmed your setup.");
         }
         return ValidationResult.ok();
     }
