@@ -95,6 +95,35 @@ class DamageCalculatorTest {
         assertThat(calculator.calculate(attacker, defender, 70, List.of())).isEqualTo(70);
     }
 
+    // ── Stadium suppression (Shadow Circle) ────────────────────────────────────
+
+    @Test
+    void calculate_shouldSuppressWeakness_whenShadowCircleAndDefenderIsDarkness() {
+        ActivePokemon attacker = attackerWithType(EnergyType.FIGHTING);
+        ActivePokemon defender = darknessDefenderWithWeakness(EnergyType.FIGHTING);
+
+        assertThat(calculator.calculate(attacker, defender, 60, List.of(), "shadow circle"))
+                .isEqualTo(60);
+    }
+
+    @Test
+    void calculate_shouldNotSuppressWeakness_whenStadiumIsNull() {
+        ActivePokemon attacker = attackerWithType(EnergyType.FIGHTING);
+        ActivePokemon defender = darknessDefenderWithWeakness(EnergyType.FIGHTING);
+
+        assertThat(calculator.calculate(attacker, defender, 60, List.of(), null))
+                .isEqualTo(120);
+    }
+
+    @Test
+    void calculate_shouldNotSuppressWeakness_whenDefenderIsNotDarkness() {
+        ActivePokemon attacker = attackerWithType(EnergyType.FIRE);
+        ActivePokemon defender = defenderWithWeakness(EnergyType.FIRE);
+
+        assertThat(calculator.calculate(attacker, defender, 80, List.of(), "shadow circle"))
+                .isEqualTo(160);
+    }
+
     private ActivePokemon attackerWithType(EnergyType type) {
         return ActivePokemon.builder()
                 .instanceId("attacker")
@@ -160,6 +189,21 @@ class DamageCalculatorTest {
                 .cardId("xy1-2")
                 .types(new ArrayList<>())
                 .weaknesses(new ArrayList<>())
+                .resistances(new ArrayList<>())
+                .attachedEnergyIds(new ArrayList<>())
+                .evolutionStack(new ArrayList<>())
+                .damageCounters(0)
+                .conditions(new HashSet<>())
+                .build();
+    }
+
+    private ActivePokemon darknessDefenderWithWeakness(EnergyType weaknessType) {
+        return ActivePokemon.builder()
+                .instanceId("defender")
+                .cardId("xy1-2")
+                .types(new ArrayList<>(List.of(EnergyType.DARKNESS)))
+                .weaknesses(new ArrayList<>(List.of(
+                        TypeModifier.builder().type(weaknessType).value("×2").build())))
                 .resistances(new ArrayList<>())
                 .attachedEnergyIds(new ArrayList<>())
                 .evolutionStack(new ArrayList<>())

@@ -2,8 +2,10 @@ package com.pokemon.tcg.domain.strategy;
 
 import com.pokemon.tcg.domain.strategy.item.EvosodaEffect;
 import com.pokemon.tcg.domain.strategy.item.GreatBallEffect;
+import com.pokemon.tcg.domain.strategy.item.HardCharmEffect;
 import com.pokemon.tcg.domain.strategy.item.MaxReviveEffect;
 import com.pokemon.tcg.domain.strategy.item.MuscleBandEffect;
+import com.pokemon.tcg.domain.strategy.stadium.ShadowCircleEffect;
 import com.pokemon.tcg.domain.strategy.item.ProfessorsLetterEffect;
 import com.pokemon.tcg.domain.strategy.item.RedCardEffect;
 import com.pokemon.tcg.domain.strategy.item.RollerSkatesEffect;
@@ -42,7 +44,9 @@ public class TrainerEffectRegistry {
                                  RollerSkatesEffect rollerSkatesEffect,
                                  RedCardEffect redCardEffect,
                                  MaxReviveEffect maxReviveEffect,
-                                 MuscleBandEffect muscleBandEffect) {
+                                 MuscleBandEffect muscleBandEffect,
+                                 HardCharmEffect hardCharmEffect,
+                                 ShadowCircleEffect shadowCircleEffect) {
         this.effects = Map.ofEntries(
                 Map.entry("super potion",        superPotionEffect),
                 Map.entry("professor sycamore",  professorSycamoreEffect),
@@ -55,7 +59,9 @@ public class TrainerEffectRegistry {
                 Map.entry("roller skates",       rollerSkatesEffect),
                 Map.entry("red card",            redCardEffect),
                 Map.entry("max revive",          maxReviveEffect),
-                Map.entry("muscle band",         muscleBandEffect)
+                Map.entry("muscle band",         muscleBandEffect),
+                Map.entry("hard charm",          hardCharmEffect),
+                Map.entry("shadow circle",       shadowCircleEffect)
         );
     }
 

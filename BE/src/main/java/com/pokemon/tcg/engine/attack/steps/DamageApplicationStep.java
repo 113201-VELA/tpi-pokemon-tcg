@@ -58,7 +58,8 @@ public class DamageApplicationStep implements AttackStep {
                 attacker,
                 defender,
                 baseDamage,
-                ctx.getModifiers() != null ? ctx.getModifiers() : new ArrayList<>()
+                ctx.getModifiers() != null ? ctx.getModifiers() : new ArrayList<>(),
+                ctx.getBoardState().getActiveStadiumCardId()
         );
 
         int counters = damageCalculator.toCounters(finalDamage);

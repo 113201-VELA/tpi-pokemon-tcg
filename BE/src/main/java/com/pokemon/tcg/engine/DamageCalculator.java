@@ -25,8 +25,21 @@ public class DamageCalculator {
      * <p>If base damage is 0, returns 0 immediately without applying
      * weakness, resistance, or modifiers.
      */
+    /**
+     * Calculates damage with no active stadium card.
+     */
     public int calculate(ActivePokemon attacker, ActivePokemon defender,
                          int baseDamage, List<DamageModifier> modifiers) {
+        return calculate(attacker, defender, baseDamage, modifiers, null);
+    }
+
+    /**
+     * Calculates the final damage dealt to the defending Pokémon,
+     * accounting for the active stadium card.
+     */
+    public int calculate(ActivePokemon attacker, ActivePokemon defender,
+                         int baseDamage, List<DamageModifier> modifiers,
+                         String activeStadiumCardId) {
         if (baseDamage == 0) return 0;
 
         int damage = baseDamage;
@@ -35,7 +48,10 @@ public class DamageCalculator {
         damage = applyModifiers(damage, modifiers, true);
 
         // Step 3 — weakness (×2 if attacker type matches defender's weakness)
-        damage = applyWeakness(damage, attacker, defender);
+        // Skipped when the active stadium card suppresses it (e.g. Shadow Circle).
+        if (!isWeaknessSuppressed(activeStadiumCardId, defender)) {
+            damage = applyWeakness(damage, attacker, defender);
+        }
 
         // Step 4 — resistance (−20, minimum 0 after resistance)
         damage = applyResistance(damage, attacker, defender);
@@ -93,6 +109,25 @@ public class DamageCalculator {
             }
         }
         return damage;
+    }
+
+    /**
+     * Checks whether the active stadium card suppresses weakness for the defender.
+     *
+     * <p>Shadow Circle (xy1-126): Each player's Darkness Pokémon have no weakness.
+     */
+    private boolean isWeaknessSuppressed(String activeStadiumCardId, ActivePokemon defender) {
+        if (activeStadiumCardId == null) return false;
+        if (!"shadow circle".equals(activeStadiumCardId)) return false;
+        return defenderHasType(defender, EnergyType.DARKNESS);
+    }
+
+    /**
+     * Returns true if the Pokémon has the given energy type in its types list.
+     */
+    private boolean defenderHasType(ActivePokemon defender, EnergyType type) {
+        if (defender.getTypes() == null || defender.getTypes().isEmpty()) return false;
+        return defender.getTypes().contains(type);
     }
 
     /**
