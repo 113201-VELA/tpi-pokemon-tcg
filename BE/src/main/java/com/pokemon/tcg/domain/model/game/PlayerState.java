@@ -8,6 +8,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.util.List;
+import java.util.Optional;
 
 @Getter
 @Setter
@@ -56,5 +57,21 @@ public class PlayerState {
     @JsonIgnore
     public boolean hasAnyPokemonInPlay() {
         return activePokemon != null || (bench != null && !bench.isEmpty());
+    }
+
+    /**
+     * Finds the cardId of a Pokémon in play by its instanceId.
+     */
+    public Optional<String> findCardIdByInstanceId(String instanceId) {
+        if (activePokemon != null && activePokemon.getInstanceId().equals(instanceId)) {
+            return Optional.of(activePokemon.getCardId());
+        }
+        if (bench != null) {
+            return bench.stream()
+                    .filter(p -> p.getInstanceId().equals(instanceId))
+                    .map(BenchPokemon::getCardId)
+                    .findFirst();
+        }
+        return Optional.empty();
     }
 }
