@@ -27,6 +27,20 @@ public class RuleValidator {
 
     public ValidationResult validate(BoardState state, GameAction action) {
 
+        // During pendingBenchChoice, only the defending player may send CHOOSE_BENCH_POKEMON.
+        // The attacker is blocked until the replacement is chosen.
+        if (state.isPendingBenchChoice()) {
+            if (action.getType() != GameActionType.CHOOSE_BENCH_POKEMON) {
+                return ValidationResult.fail(
+                        "Waiting for the defending player to choose a replacement Pokémon.");
+            }
+            if (!state.getPendingBenchChoicePlayerId().equals(action.getPlayerId())) {
+                return ValidationResult.fail(
+                        "It is not your turn to choose a replacement Pokémon.");
+            }
+            return validateChooseBenchPokemon(state, action);
+        }
+
         // During bonusDrawPending, only ACCEPT_MULLIGAN_BONUS is allowed
         // and any player with pending bonus can act regardless of currentPlayerId
         if (state.isBonusDrawPending()) {
@@ -67,7 +81,7 @@ public class RuleValidator {
             case DECLARE_ATTACK        -> validateAttack(state, action);
             case END_TURN              -> validateEndTurn(state, action);
             // ── Post-KO ──────────────────────────────────────────────
-            case CHOOSE_BENCH_POKEMON  -> ValidationResult.ok();
+            case CHOOSE_BENCH_POKEMON  -> validateChooseBenchPokemon(state, action);
             default                    -> ValidationResult.ok();
         };
     }
@@ -321,7 +335,6 @@ public class RuleValidator {
      * - The card must be in hand.
      * - Supporter limit (1 per turn) is enforced here.
      * - Stadium limit (1 per turn) is enforced here.
-     * Full Supporter/Stadium/Item subtype distinction requires card lookup.
      */
     private ValidationResult validatePlayTrainer(BoardState state, GameAction action) {
         if (state.getTurnPhase() != TurnPhase.MAIN) {
@@ -385,6 +398,7 @@ public class RuleValidator {
 
     /**
      * Attack rules:
+     * - The player who goes first cant attack on the first turn.
      * - Only during MAIN phase.
      * - Active Pokémon must not be Asleep or Paralyzed.
      * Energy sufficiency is checked inside EnergyCheckStep in the pipeline,
@@ -394,6 +408,15 @@ public class RuleValidator {
         if (state.getTurnPhase() != TurnPhase.MAIN) {
             return ValidationResult.fail("You can only attack during your main phase.");
         }
+
+        // The player who goes first cannot attack on turn 1
+        if (state.getTurnNumber() == 0
+                && state.getFirstPlayerId() != null
+                && state.getFirstPlayerId().equals(action.getPlayerId())) {
+            return ValidationResult.fail(
+                    "The player who goes first cannot attack on their first turn.");
+        }
+
         PlayerState ps = state.getStateFor(action.getPlayerId());
         ActivePokemon active = ps.getActivePokemon();
         if (active == null) {
@@ -416,6 +439,30 @@ public class RuleValidator {
     private ValidationResult validateEndTurn(BoardState state, GameAction action) {
         if (state.getTurnPhase() != TurnPhase.MAIN) {
             return ValidationResult.fail("You can only end your turn during the main phase.");
+        }
+        return ValidationResult.ok();
+    }
+
+    // ─── POST-KO ──────────────────────────────────────────────────────────────
+
+    /**
+     * CHOOSE_BENCH_POKEMON is only valid when a bench choice is pending for this player.
+     * The specified instanceId must match a Pokémon actually on their bench.
+     */
+    private ValidationResult validateChooseBenchPokemon(BoardState state, GameAction action) {
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        String instanceId = action.getPayloadString("instanceId");
+        if (instanceId == null) {
+            return ValidationResult.fail(
+                    "You must specify the instanceId of the Pokémon to bring to the Active spot.");
+        }
+        if (ps.getBench() == null || ps.getBench().isEmpty()) {
+            return ValidationResult.fail("You have no Pokémon on the bench to choose from.");
+        }
+        boolean exists = ps.getBench().stream()
+                .anyMatch(b -> b.getInstanceId().equals(instanceId));
+        if (!exists) {
+            return ValidationResult.fail("The specified Pokémon is not on your bench.");
         }
         return ValidationResult.ok();
     }

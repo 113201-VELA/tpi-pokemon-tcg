@@ -1,5 +1,7 @@
 package com.pokemon.tcg.domain.model.game;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -9,6 +11,7 @@ import lombok.Setter;
 import java.util.List;
 import java.util.Set;
 
+@JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
 @Setter
 @Builder
@@ -36,13 +39,15 @@ public class ActivePokemon {
         return conditions != null && conditions.contains(condition);
     }
 
+    @JsonIgnore
     public boolean canAttack() {
         return !hasCondition(SpecialCondition.ASLEEP)
-            && !hasCondition(SpecialCondition.PARALYZED);
+                && !hasCondition(SpecialCondition.PARALYZED);
     }
 
+    @JsonIgnore
     public boolean canRetreat() {
         return !hasCondition(SpecialCondition.ASLEEP)
-            && !hasCondition(SpecialCondition.PARALYZED);
+                && !hasCondition(SpecialCondition.PARALYZED);
     }
 }

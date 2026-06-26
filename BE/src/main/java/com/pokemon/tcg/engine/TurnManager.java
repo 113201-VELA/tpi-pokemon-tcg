@@ -409,6 +409,10 @@ public class TurnManager {
      *
      * <p>If the pipeline is cancelled (e.g. insufficient energy, confusion flip),
      * the turn does not end — the player keeps their turn and receives an error event.
+     *
+     * <p>If a KO occurred and the defender has bench Pokémon, the turn is suspended
+     * until the defender sends CHOOSE_BENCH_POKEMON. Between-turn effects and the
+     * turn switch happen only after the bench choice is resolved.
      */
     private BoardState handleDeclareAttack(BoardState state, GameAction action) {
         String attackName = action.getPayloadString("attackName");
@@ -442,8 +446,6 @@ public class TurnManager {
 
         // If the pipeline was cancelled (e.g. insufficient energy, confusion flip)
         // the turn does not end — the player keeps their turn and can act again.
-        // A TURN_ENDED event with the cancellation reason is emitted so the client
-        // can display a descriptive error message.
         if (ctx.isCancelled()) {
             List<GameEvent> pending = new ArrayList<>(
                     ctx.getBoardState().getPendingEvents() != null
@@ -463,7 +465,14 @@ public class TurnManager {
                     .build();
         }
 
-        // Attack resolved successfully — process between-turn effects and switch player
+        // If a KO occurred and the defender has bench Pokémon, suspend the turn.
+        // Between-turn effects and turn switch will happen after CHOOSE_BENCH_POKEMON.
+        if (ctx.getBoardState().isPendingBenchChoice()) {
+            return ctx.getBoardState();
+        }
+
+        // Attack resolved with no pending bench choice — process between-turn effects
+        // and switch to the opponent's turn normally.
         state = processBetweenTurns(ctx.getBoardState());
         state.getTurnFlags().setAttackedThisTurn(true);
 
@@ -523,7 +532,7 @@ public class TurnManager {
         return cardLookupPort.getMaxHp(defender.getCardId());
     }
 
-    /** Chooses a Bench Pokémon to become Active after a KO. */
+    /** Chooses a Bench Pokémon to become Active after a KO, then resumes the turn switch. */
     private BoardState handleChooseBenchPokemon(BoardState state, GameAction action) {
         String instanceId = action.getPayloadString("instanceId");
         PlayerState ps    = state.getStateFor(action.getPlayerId());
@@ -552,7 +561,26 @@ public class TurnManager {
         ps.setBench(bench);
         ps.setActivePokemon(newActive);
 
-        return state;
+        // Clear the pending bench choice flag
+        state = state.toBuilder()
+                .pendingBenchChoicePlayerId(null)
+                .build();
+
+        // Now that the defender has a new Active, resume the suspended turn:
+        // process between-turn effects and pass control to the original attacker's opponent.
+        // The attacker is whoever is NOT the player who just chose.
+        String attackerId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
+                ? state.getPlayer2State().getPlayerId()
+                : state.getPlayer1State().getPlayerId();
+
+        state = processBetweenTurns(state);
+
+        return state.toBuilder()
+                .currentPlayerId(attackerId)
+                .turnPhase(TurnPhase.DRAW)
+                .turnNumber(state.getTurnNumber() + 1)
+                .turnFlags(TurnFlags.fresh())
+                .build();
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────

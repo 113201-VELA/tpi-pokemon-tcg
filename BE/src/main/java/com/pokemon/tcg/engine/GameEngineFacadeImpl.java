@@ -53,6 +53,7 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
                 .turnPhase(TurnPhase.SETUP)
                 .currentPlayerId(firstPlayerId)
                 .turnNumber(0)
+                .firstPlayerId(firstPlayerId)
                 .player1State(player1)
                 .player2State(player2)
                 .turnFlags(TurnFlags.fresh())
