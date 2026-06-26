@@ -1,0 +1,290 @@
+<div class="game-page">
+
+  <!-- Loading screen -->
+  @if (loading()) {
+    <div class="loading-screen">
+      <img src="assets/loading/loading.svg" alt="Loading..." class="loading-anim" />
+      <p>Loading game...</p>
+    </div>
+  }
+
+  <!-- Error screen -->
+  @if (errorMessage()) {
+    <div class="error-screen">
+      <p>{{ errorMessage() }}</p>
+      <button class="btn-back" (click)="goBackToLobby()">← Back to lobby</button>
+    </div>
+  }
+
+  <!-- Board -->
+  @if (!loading() && !errorMessage() && boardState()) {
+
+    <!-- Game header -->
+    <header class="game-header">
+      <div class="game-info">
+        <span class="turn-badge" [class.turn-badge--active]="isMyTurn()">
+          {{ isMyTurn() ? 'Your turn' : "Opponent's turn" }}
+        </span>
+        <span class="turn-number">Turn {{ boardState()!.turnNumber }}</span>
+        <span class="phase-badge">{{ boardState()!.turnPhase }}</span>
+      </div>
+      <button class="btn-back" (click)="goBackToLobby()">← Lobby</button>
+    </header>
+
+    <!-- Board with perspective -->
+    <div class="board-perspective">
+      <div class="board">
+
+        <!-- ══ OPPONENT ZONE (top, rotated 180°) ══ -->
+        <div class="player-zone player-zone--opponent">
+
+          <!-- Prizes: 2 stacked columns of 3 -->
+          <div class="prizes-area">
+            <div class="prize-column">
+              @for (i of [0,1,2]; track i) {
+                <div class="prize-slot prize-slot--face-down">
+                  <div class="card-back-mini"></div>
+                </div>
+              }
+            </div>
+            <div class="prize-column">
+              @for (i of [0,1,2]; track i) {
+                <div class="prize-slot prize-slot--face-down">
+                  <div class="card-back-mini"></div>
+                </div>
+              }
+            </div>
+            <span class="prizes-label">{{ boardState()!.opponentState.prizesCount }} prizes</span>
+          </div>
+
+          <!-- Deck + Discard -->
+          <div class="deck-discard-area">
+            <div class="zone-slot deck-slot">
+              <div class="card-back-mini"></div>
+              <span class="slot-label">{{ boardState()!.opponentState.deckCount }}</span>
+            </div>
+            <div
+              class="zone-slot discard-slot"
+              (click)="openCardDetail(getDiscardTop(boardState()!.opponentState.discardPile))"
+            >
+              @if (boardState()!.opponentState.discardPile.length > 0) {
+                <img
+                  [src]="getDiscardTop(boardState()!.opponentState.discardPile)!.imageSmall"
+                  alt="Discard"
+                  class="card-img-mini"
+                />
+              } @else {
+                <span class="slot-empty">Discard</span>
+              }
+            </div>
+          </div>
+
+          <!-- Bench (5 slots) -->
+          <div class="bench-area">
+            @for (slot of getBenchSlots(boardState()!.opponentState.bench); track $index) {
+              <div class="bench-slot-wrap">
+                @if (slot) {
+                  <app-bench-pokemon-slot
+                    [pokemon]="slot"
+                    (cardClick)="openCardDetail($event)"
+                  />
+                } @else {
+                  <span class="slot-empty">B{{ $index + 1 }}</span>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Active Pokémon + Support Card -->
+          <div class="active-area">
+            <div class="support-card-slot">
+              @if (boardState()!.opponentState.active?.attachedTool) {
+                <img
+                  [src]="boardState()!.opponentState.active!.attachedTool!.imageSmall"
+                  alt="Tool"
+                  class="card-img-mini"
+                  (click)="openCardDetail(boardState()!.opponentState.active!.attachedTool)"
+                />
+              } @else {
+                <span class="slot-empty">Tool</span>
+              }
+            </div>
+            <div class="active-slot-wrap">
+              @if (boardState()!.opponentState.active) {
+                <app-active-pokemon-slot
+                  [pokemon]="boardState()!.opponentState.active!"
+                  (cardClick)="openCardDetail($event)"
+                />
+              } @else {
+                <span class="slot-empty">Active</span>
+              }
+            </div>
+          </div>
+
+          <!-- Hand count -->
+          <div class="hand-count-area">
+            <span class="hand-count__label">Hand</span>
+            <span class="hand-count__value">{{ boardState()!.opponentState.cardsInHand }}</span>
+          </div>
+
+        </div>
+
+        <!-- ══ SHARED ZONE (center) ══ -->
+        <div class="shared-zone">
+          <div class="stadium-slot">
+            @if (boardState()!.activeStadiumCardId) {
+              <span class="slot-label">Stadium</span>
+            } @else {
+              <span class="slot-empty">Stadium</span>
+            }
+          </div>
+        </div>
+
+        <!-- ══ OWN ZONE (bottom) ══ -->
+        <div class="player-zone player-zone--own">
+
+          <!-- Hand -->
+          <div class="hand-area">
+            @for (card of boardState()!.ownState.hand; track card.id) {
+              <img
+                class="hand-card"
+                [src]="card.imageSmall"
+                [alt]="card.name"
+                (click)="openCardDetail(card)"
+              />
+            }
+          </div>
+
+          <!-- Active Pokémon + Support Card -->
+          <div class="active-area">
+            <div class="support-card-slot">
+              @if (boardState()!.ownState.active?.attachedTool) {
+                <img
+                  [src]="boardState()!.ownState.active!.attachedTool!.imageSmall"
+                  alt="Tool"
+                  class="card-img-mini"
+                  (click)="openCardDetail(boardState()!.ownState.active!.attachedTool)"
+                />
+              } @else {
+                <span class="slot-empty">Tool</span>
+              }
+            </div>
+            <div class="active-slot-wrap">
+              @if (boardState()!.ownState.active) {
+                <app-active-pokemon-slot
+                  [pokemon]="boardState()!.ownState.active!"
+                  (cardClick)="openCardDetail($event)"
+                />
+              } @else {
+                <span class="slot-empty">Active</span>
+              }
+            </div>
+          </div>
+
+          <!-- Bench (5 slots) -->
+          <div class="bench-area">
+            @for (slot of getBenchSlots(boardState()!.ownState.bench); track $index) {
+              <div class="bench-slot-wrap">
+                @if (slot) {
+                  <app-bench-pokemon-slot
+                    [pokemon]="slot"
+                    (cardClick)="openCardDetail($event)"
+                  />
+                } @else {
+                  <span class="slot-empty">B{{ $index + 1 }}</span>
+                }
+              </div>
+            }
+          </div>
+
+          <!-- Deck + Discard -->
+          <div class="deck-discard-area">
+            <div class="zone-slot deck-slot">
+              <div class="card-back-mini"></div>
+              <span class="slot-label">{{ boardState()!.ownState.deckCount }}</span>
+            </div>
+            <div
+              class="zone-slot discard-slot"
+              (click)="openCardDetail(getDiscardTop(boardState()!.ownState.discardPile))"
+            >
+              @if (boardState()!.ownState.discardPile.length > 0) {
+                <img
+                  [src]="getDiscardTop(boardState()!.ownState.discardPile)!.imageSmall"
+                  alt="Discard"
+                  class="card-img-mini"
+                />
+              } @else {
+                <span class="slot-empty">Discard</span>
+              }
+            </div>
+          </div>
+
+          <!-- Prizes: 2 stacked columns of 3 -->
+          <div class="prizes-area">
+            <span class="prizes-label">{{ boardState()!.ownState.prizes.length }} prizes</span>
+            <div class="prize-column">
+              @for (i of [0,1,2]; track i) {
+                <div class="prize-slot" (click)="openCardDetail(boardState()!.ownState.prizes[i] ?? null)">
+                  @if (boardState()!.ownState.prizes[i]) {
+                    <img
+                      [src]="boardState()!.ownState.prizes[i].imageSmall"
+                      alt="Prize"
+                      class="card-img-mini"
+                    />
+                  } @else {
+                    <div class="card-back-mini"></div>
+                  }
+                </div>
+              }
+            </div>
+            <div class="prize-column">
+              @for (i of [3,4,5]; track i) {
+                <div class="prize-slot" (click)="openCardDetail(boardState()!.ownState.prizes[i] ?? null)">
+                  @if (boardState()!.ownState.prizes[i]) {
+                    <img
+                      [src]="boardState()!.ownState.prizes[i].imageSmall"
+                      alt="Prize"
+                      class="card-img-mini"
+                    />
+                  } @else {
+                    <div class="card-back-mini"></div>
+                  }
+                </div>
+              }
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- Card detail modal -->
+  @if (selectedCard()) {
+    <div class="modal-overlay" (click)="closeCardDetail()">
+      <div class="modal-content" (click)="$event.stopPropagation()">
+        <img
+          class="modal-card-img"
+          [src]="selectedCard()!.imageLarge"
+          [alt]="selectedCard()!.name"
+        />
+        <button class="modal-close" (click)="closeCardDetail()">✕</button>
+      </div>
+    </div>
+  }
+
+  <!-- Coin flip overlay -->
+  @if (showCoinFlip()) {
+    <div class="coin-overlay">
+      <div class="coin-result">
+        <img
+          class="coin-img"
+          [src]="coinImageSrc()"
+          [alt]="coinResult()!"
+        />
+        <p class="coin-label">{{ coinResult() }}</p>
+      </div>
+    </div>
+  }
+
+</div>
