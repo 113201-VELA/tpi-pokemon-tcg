@@ -22,9 +22,13 @@ public class PlayerState {
     private List<String> prizes;
     private ActivePokemon activePokemon;
     private List<BenchPokemon> bench;
-
+    /** Total number of mulligans declared by this player during setup. */
+    @Builder.Default
+    private int totalMulligans = 0;
+    /** Net bonus draws this player can accept, based on opponent's total mulligans. */
     @Builder.Default
     private int mulliganBonusDraws = 0;
+
 
     @JsonIgnore
     public int getHandSize() {

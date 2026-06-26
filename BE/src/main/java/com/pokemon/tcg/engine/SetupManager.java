@@ -67,7 +67,6 @@ public class SetupManager {
 
     /**
      * Checks whether a player's current hand contains at least one Basic Pokémon.
-     * Used to determine if a mulligan is required.
      */
     public boolean hasBasicPokemonInHand(PlayerState playerState) {
         return hasBasicPokemon(playerState.getHand());
@@ -75,21 +74,21 @@ public class SetupManager {
 
     /**
      * Handles a mulligan for the given player:
-     * - Shuffles the hand back into the deck
-     * - Redraws 7 cards
-     * - Increments the opponent's mulligan bonus draw counter
+     * - Shuffles the hand back into the deck and redraws 7 cards
+     * - Increments a raw mulligan counter on the player
+     * - After the mulligan, recalculates net bonus draws for both players:
+     *   if both have mulliganed, the counters cancel out (net = abs difference,
+     *   awarded to the player with fewer mulligans).
      *
-     * <p>The opponent's bonus cards are drawn immediately when they confirm
-     * setup (SETUP_PLACE_ACTIVE), not here, to keep this method stateless
-     * regarding the opponent's actions.
-     *
-     * <p>Returns the updated BoardState with the mulliganCount incremented
-     * for the opponent so the engine knows how many bonus cards to award.
+     * <p>Per the rulebook: if both players mulligan simultaneously in the same
+     * round, neither receives a bonus. The bonus is only the net difference
+     * across all mulligan rounds.
      */
     public BoardState handleMulligan(BoardState state, String playerId) {
-        PlayerState ps = state.getStateFor(playerId);
+        PlayerState ps       = state.getStateFor(playerId);
+        PlayerState opponent = state.getOpponentState(playerId);
 
-        // Return hand to deck and reshuffle
+        // Shuffle hand back into deck and redraw
         List<String> deck = new ArrayList<>(ps.getDeck());
         if (ps.getHand() != null) {
             deck.addAll(ps.getHand());
@@ -97,32 +96,40 @@ public class SetupManager {
         ps.setHand(new ArrayList<>());
         ps.setDeck(deck);
         shuffleDeck(ps);
-
-        // Redraw 7 cards
         drawInitialHand(ps);
 
-        // Increment mulligan bonus counter on the opponent's state
-        PlayerState opponent = state.getOpponentState(playerId);
-        opponent.setMulliganBonusDraws(
-                opponent.getMulliganBonusDraws() + 1);
+        // Increment raw mulligan counter on this player
+        ps.setTotalMulligans(ps.getTotalMulligans() + 1);
+
+        // Recalculate net bonus draws for both players based on total mulligans
+        // Net bonus = max(0, opponentTotalMulligans - myTotalMulligans)
+        int p1Total = state.getPlayer1State().getTotalMulligans();
+        int p2Total = state.getPlayer2State().getTotalMulligans();
+
+        state.getPlayer1State().setMulliganBonusDraws(Math.max(0, p2Total - p1Total));
+        state.getPlayer2State().setMulliganBonusDraws(Math.max(0, p1Total - p2Total));
 
         return state;
     }
 
     /**
-     * Awards bonus cards to a player based on accumulated mulligan draws.
-     * Called when a player confirms their setup (SETUP_PLACE_ACTIVE).
-     * Resets the counter after drawing.
+     * Awards bonus cards to a player based on their choice.
+     * The player chooses how many cards to draw (0 to mulliganBonusDraws).
+     * Resets the bonus counter after drawing regardless of how many were taken.
      */
-    public void applyMulliganBonusDraws(PlayerState playerState) {
+    public void applyMulliganBonusDraws(PlayerState playerState, int cardsToDraw) {
         int bonus = playerState.getMulliganBonusDraws();
-        if (bonus <= 0) return;
+        if (bonus <= 0 || cardsToDraw <= 0) {
+            playerState.setMulliganBonusDraws(0);
+            return;
+        }
+
+        int actualDraw = Math.min(cardsToDraw, Math.min(bonus, playerState.getDeck().size()));
 
         List<String> deck = new ArrayList<>(playerState.getDeck());
         List<String> hand = new ArrayList<>(playerState.getHand());
 
-        int cardsToDraw = Math.min(bonus, deck.size());
-        for (int i = 0; i < cardsToDraw; i++) {
+        for (int i = 0; i < actualDraw; i++) {
             hand.add(deck.remove(0));
         }
 

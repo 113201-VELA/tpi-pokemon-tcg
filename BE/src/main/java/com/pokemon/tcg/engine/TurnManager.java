@@ -43,19 +43,25 @@ public class TurnManager {
      */
     public BoardState advancePhase(BoardState state, GameAction action) {
         return switch (action.getType()) {
-            case DRAW_CARD            -> handleDrawCard(state, action);
-            case PLACE_BASIC_POKEMON  -> handlePlaceBasicPokemon(state, action);
-            case ATTACH_ENERGY        -> handleAttachEnergy(state, action);
-            case PLAY_TRAINER         -> handlePlayTrainer(state, action);
-            case EVOLVE_POKEMON       -> handleEvolvePokemon(state, action);
-            case RETREAT              -> handleRetreat(state, action);
-            case DECLARE_ATTACK       -> handleDeclareAttack(state, action);
-            case END_TURN             -> handleEndTurn(state, action);
-            case SETUP_PLACE_ACTIVE   -> handleSetupPlaceActive(state, action);
-            case SETUP_PLACE_BENCH    -> handleSetupPlaceBench(state, action);
-            case MULLIGAN_CONFIRM     -> handleMulliganConfirm(state, action);
-            case CHOOSE_BENCH_POKEMON -> handleChooseBenchPokemon(state, action);
-            default                   -> state;
+            // ── Setup phase ──────────────────────────────────────────
+            case MULLIGAN_CONFIRM      -> handleMulliganConfirm(state, action);
+            case SETUP_PLACE_ACTIVE    -> handleSetupPlaceActive(state, action);
+            case SETUP_PLACE_BENCH     -> handleSetupPlaceBench(state, action);
+            case ACCEPT_MULLIGAN_BONUS -> handleAcceptMulliganBonus(state, action);
+            // ── Draw phase ───────────────────────────────────────────
+            case DRAW_CARD             -> handleDrawCard(state, action);
+            // ── Main phase ───────────────────────────────────────────
+            case PLACE_BASIC_POKEMON   -> handlePlaceBasicPokemon(state, action);
+            case EVOLVE_POKEMON        -> handleEvolvePokemon(state, action);
+            case ATTACH_ENERGY         -> handleAttachEnergy(state, action);
+            case PLAY_TRAINER          -> handlePlayTrainer(state, action);
+            case USE_ABILITY           -> state;
+            case RETREAT               -> handleRetreat(state, action);
+            case DECLARE_ATTACK        -> handleDeclareAttack(state, action);
+            case END_TURN              -> handleEndTurn(state, action);
+            // ── Post-KO ──────────────────────────────────────────────
+            case CHOOSE_BENCH_POKEMON  -> handleChooseBenchPokemon(state, action);
+            default                    -> state;
         };
     }
 
@@ -110,9 +116,6 @@ public class TurnManager {
 
         if (cardId == null || !ps.getHand().contains(cardId)) return state;
 
-        // Apply any pending mulligan bonus draws before placing Active
-        setupManager.applyMulliganBonusDraws(ps);
-
         List<String> hand = new ArrayList<>(ps.getHand());
         hand.remove(cardId);
         ps.setHand(hand);
@@ -129,11 +132,19 @@ public class TurnManager {
 
         ps.setActivePokemon(active);
 
-        // If both players have placed their Active Pokémon, setup is complete.
-        // Transition to DRAW phase so the first player can start their turn.
+        // Both players have placed their Active Pokémon — setup placement is done.
+        // If any player has pending bonus draws, enter bonusDrawPending state so
+        // players can accept or decline before the game starts.
         // This logic will be moved to SetupState when the State pattern is connected (step 4).
         if (state.getPlayer1State().getActivePokemon() != null &&
                 state.getPlayer2State().getActivePokemon() != null) {
+
+            if (state.hasAnyPendingBonus()) {
+                return state.toBuilder()
+                        .bonusDrawPending(true)
+                        .build();
+            }
+
             return state.toBuilder()
                     .turnPhase(TurnPhase.DRAW)
                     .gameState(GameState.ACTIVE)
@@ -189,6 +200,38 @@ public class TurnManager {
         }
 
         return setupManager.handleMulligan(state, playerId);
+    }
+
+    /**
+     * Handles the player's decision to accept mulligan bonus draws.
+     * The player specifies how many cards to draw (0 to mulliganBonusDraws).
+     * After all players with pending bonuses have decided, transitions to DRAW.
+     *
+     * <p>Per the rulebook, the player with the bonus chooses how many cards
+     * to draw — anywhere from 0 up to their full bonus amount.
+     */
+    private BoardState handleAcceptMulliganBonus(BoardState state, GameAction action) {
+        String playerId  = action.getPlayerId();
+        PlayerState ps   = state.getStateFor(playerId);
+
+        // cardsToDraw defaults to 0 if not specified (player declines bonus)
+        Integer cardsToDraw = action.getPayloadInt("cardsToDraw");
+        int drawCount = cardsToDraw != null ? cardsToDraw : 0;
+
+        setupManager.applyMulliganBonusDraws(ps, drawCount);
+
+        // If no more pending bonuses, transition to DRAW phase
+        if (!state.hasAnyPendingBonus()) {
+            return state.toBuilder()
+                    .bonusDrawPending(false)
+                    .turnPhase(TurnPhase.DRAW)
+                    .gameState(GameState.ACTIVE)
+                    .build();
+        }
+
+        return state.toBuilder()
+                .bonusDrawPending(true)
+                .build();
     }
 
     // ─── DRAW ─────────────────────────────────────────────────────────────────

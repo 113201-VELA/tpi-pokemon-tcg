@@ -26,27 +26,47 @@ public class RuleValidator {
     }
 
     public ValidationResult validate(BoardState state, GameAction action) {
-        // Global rule: only the current player may act.
-        // Exception: setup actions are allowed for both players simultaneously,
-        // since both need to place their Active and Bench Pokémon before the game starts.
-        if (state.getTurnPhase() != TurnPhase.SETUP &&
-                !state.getCurrentPlayerId().equals(action.getPlayerId())) {
+
+        // During bonusDrawPending, only ACCEPT_MULLIGAN_BONUS is allowed
+        // and any player with pending bonus can act regardless of currentPlayerId
+        if (state.isBonusDrawPending()) {
+            if (action.getType() != GameActionType.ACCEPT_MULLIGAN_BONUS) {
+                return ValidationResult.fail(
+                        "Mulligan bonus draws must be resolved before continuing.");
+            }
+            return validateAcceptMulliganBonus(state, action);
+        }
+
+        // During SETUP both players can act simultaneously (mulligan, place active/bench)
+        // Turn order is not enforced during setup phase
+        boolean isSetupAction = action.getType() == GameActionType.MULLIGAN_CONFIRM
+                || action.getType() == GameActionType.SETUP_PLACE_ACTIVE
+                || action.getType() == GameActionType.SETUP_PLACE_BENCH;
+
+        // Only the current player may act.
+        if (!isSetupAction && !state.getCurrentPlayerId().equals(action.getPlayerId())) {
             return ValidationResult.fail("It is not your turn.");
         }
 
         return switch (action.getType()) {
-            case DRAW_CARD            -> validateDrawCard(state, action);
-            case SETUP_PLACE_ACTIVE   -> validateSetupPlaceActive(state, action);
-            case SETUP_PLACE_BENCH    -> validateSetupPlaceBench(state, action);
-            case PLACE_BASIC_POKEMON  -> validatePlaceBasicPokemon(state, action);
-            case EVOLVE_POKEMON       -> validateEvolution(state, action);
-            case ATTACH_ENERGY        -> validateAttachEnergy(state, action);
-            case PLAY_TRAINER         -> validatePlayTrainer(state, action);
-            case RETREAT              -> validateRetreat(state, action);
-            case DECLARE_ATTACK       -> validateAttack(state, action);
-            case END_TURN             -> validateEndTurn(state, action);
-            case MULLIGAN_CONFIRM     -> validateMulliganConfirm(state, action);
-            default                   -> ValidationResult.ok();
+            // ── Setup phase ──────────────────────────────────────────
+            case MULLIGAN_CONFIRM      -> validateMulliganConfirm(state, action);
+            case SETUP_PLACE_ACTIVE    -> validateSetupPlaceActive(state, action);
+            case SETUP_PLACE_BENCH     -> validateSetupPlaceBench(state, action);
+            case ACCEPT_MULLIGAN_BONUS -> validateAcceptMulliganBonus(state, action);
+            // ── Draw phase ───────────────────────────────────────────
+            case DRAW_CARD             -> validateDrawCard(state, action);
+            // ── Main phase ───────────────────────────────────────────
+            case PLACE_BASIC_POKEMON   -> validatePlaceBasicPokemon(state, action);
+            case EVOLVE_POKEMON        -> validateEvolution(state, action);
+            case ATTACH_ENERGY         -> validateAttachEnergy(state, action);
+            case PLAY_TRAINER          -> validatePlayTrainer(state, action);
+            case RETREAT               -> validateRetreat(state, action);
+            case DECLARE_ATTACK        -> validateAttack(state, action);
+            case END_TURN              -> validateEndTurn(state, action);
+            // ── Post-KO ──────────────────────────────────────────────
+            case CHOOSE_BENCH_POKEMON  -> ValidationResult.ok();
+            default                    -> ValidationResult.ok();
         };
     }
 
@@ -130,6 +150,34 @@ public class RuleValidator {
                 return ValidationResult.fail(
                         "You cannot declare a mulligan when you have a Basic Pokémon in hand.");
             }
+        }
+        return ValidationResult.ok();
+    }
+
+    /**
+     * Bonus draw acceptance is only valid during setup when bonusDrawPending is true
+     * and the acting player actually has bonus draws available.
+     * The requested draw count must be between 0 and the player's bonus amount.
+     */
+    private ValidationResult validateAcceptMulliganBonus(BoardState state, GameAction action) {
+        if (!state.isBonusDrawPending()) {
+            return ValidationResult.fail("There are no pending mulligan bonus draws.");
+        }
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        if (ps.getMulliganBonusDraws() <= 0) {
+            return ValidationResult.fail("You have no mulligan bonus draws available.");
+        }
+        Integer cardsToDraw = action.getPayloadInt("cardsToDraw");
+        if (cardsToDraw == null) {
+            return ValidationResult.fail(
+                    "You must specify 'cardsToDraw' (0 to " + ps.getMulliganBonusDraws() + ").");
+        }
+        if (cardsToDraw < 0) {
+            return ValidationResult.fail("Cards to draw cannot be negative.");
+        }
+        if (cardsToDraw > ps.getMulliganBonusDraws()) {
+            return ValidationResult.fail(
+                    "You can draw at most " + ps.getMulliganBonusDraws() + " bonus cards.");
         }
         return ValidationResult.ok();
     }

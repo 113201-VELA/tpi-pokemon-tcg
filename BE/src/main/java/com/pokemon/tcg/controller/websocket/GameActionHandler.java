@@ -90,6 +90,8 @@ public class GameActionHandler {
                 .hand(List.of())
                 .deck(List.of())
                 .prizes(List.of())
+                .totalMulligans(state.getPlayer1State().getTotalMulligans())
+                .mulliganBonusDraws(state.getPlayer1State().getMulliganBonusDraws())
                 .build();
 
         PlayerState p2 = PlayerState.builder()
@@ -100,6 +102,8 @@ public class GameActionHandler {
                 .hand(List.of())
                 .deck(List.of())
                 .prizes(List.of())
+                .totalMulligans(state.getPlayer2State().getTotalMulligans())
+                .mulliganBonusDraws(state.getPlayer2State().getMulliganBonusDraws())
                 .build();
 
         return BoardState.builder()
@@ -113,6 +117,7 @@ public class GameActionHandler {
                 .activeStadiumCardId(state.getActiveStadiumCardId())
                 .turnFlags(state.getTurnFlags())
                 .pendingEvents(state.getPendingEvents())
+                .bonusDrawPending(state.isBonusDrawPending())
                 .build();
     }
 }
