@@ -8,7 +8,6 @@ import com.pokemon.tcg.repository.cache.PokemonTcgApiClient;
 import com.pokemon.tcg.repository.CardRepository;
 import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.data.domain.Page;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -64,18 +63,41 @@ public class CardCacheService {
         return cardRepository.findById(id).map(cardMapper::toResponseDTO);
     }
 
-    public Page<CardResponseDTO> searchCards(String setId, String name,
-                                             CardType supertype,
-                                             org.springframework.data.domain.Pageable pageable) {
-        Page<Card> cardPage;
-        if (name != null && !name.isBlank()) {
-            cardPage = cardRepository.findBySetIdAndNameContainingIgnoreCase(setId, name, pageable);
-        } else if (supertype != null) {
-            cardPage = cardRepository.findBySetIdAndSupertype(setId, supertype, pageable);
+    public List<CardResponseDTO> searchCards(String setId,
+                                              String name,
+                                              CardType supertype,
+                                              String energyType,
+                                              String pokemonSubtype) {
+        List<Card> cards;
+
+        boolean hasName      = name != null && !name.isBlank();
+        boolean hasSupertype = supertype != null;
+
+        if (hasName && hasSupertype) {
+            cards = cardRepository.findBySetIdAndSupertypeAndNameOrderByNumber(setId, supertype, name);
+        } else if (hasName) {
+            cards = cardRepository.findBySetIdAndNameOrderByNumber(setId, name);
+        } else if (hasSupertype) {
+            cards = cardRepository.findBySetIdAndSupertypeOrderByNumber(setId, supertype);
         } else {
-            cardPage = cardRepository.findBySetIdAndNameContainingIgnoreCase(setId, "", pageable);
+            cards = cardRepository.findBySetIdOrderByNumber(setId);
         }
-        return cardPage.map(cardMapper::toResponseDTO);
+
+        if (energyType != null && !energyType.isBlank()) {
+            String normalizedType = energyType.trim();
+            cards = cards.stream()
+                    .filter(c -> c.getTypes() != null && c.getTypes().contains(normalizedType))
+                    .toList();
+        }
+
+        if (pokemonSubtype != null && !pokemonSubtype.isBlank()) {
+            String normalizedSubtype = pokemonSubtype.trim();
+            cards = cards.stream()
+                    .filter(c -> c.getSubtypes() != null && c.getSubtypes().contains(normalizedSubtype))
+                    .toList();
+        }
+
+        return cards.stream().map(cardMapper::toResponseDTO).toList();
     }
 
     @SuppressWarnings("unchecked")
@@ -89,7 +111,10 @@ public class CardCacheService {
         String evolvesFrom = (String) raw.get("evolvesFrom");
 
         List<String> subtypes    = toStringList(raw.get("subtypes"));
-        List<String> types       = toStringList(raw.get("types"));
+        List<String> types = toStringList(raw.get("types"))
+                .stream()
+                .map(String::toUpperCase)
+                .toList();
         List<String> retreatCost = toStringList(raw.get("retreatCost"));
 
         Integer hp = null;

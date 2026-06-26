@@ -4,6 +4,7 @@ export interface UpdateDeckRequest {
   name?: string;
   cardBack?: string;
   coin?: string;
+  featuredCardId?: string;   // empty string to clear, card ID to set
 }
 
 export interface CreateDeckRequest {
@@ -26,6 +27,7 @@ export interface DeckResponse {
   name: string;
   cardBack: string;
   coin: string;
+  featuredCardId: string | null;
   valid: boolean;
   cards: DeckCardResponse[];
   totalCardCount: number;

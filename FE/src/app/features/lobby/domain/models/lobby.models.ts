@@ -11,3 +11,14 @@ export interface GameResponseDTO {
 export interface CreateGameRequest {
   deckId: string;
 }
+
+export interface JoinGameRequest {
+  deckId: string;
+}
+
+// Shape returned by createGame and joinGame (backend returns Game entity)
+export interface GameCreatedResponse {
+  id: string;
+  state: GameState;
+}
+

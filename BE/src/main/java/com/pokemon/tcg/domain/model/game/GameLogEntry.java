@@ -53,5 +53,6 @@ public class GameLogEntry {
     private Map<String, Object> resultData;
 
     @Column(nullable = false, updatable = false)
+    @Builder.Default
     private Instant createdAt = Instant.now();
 }

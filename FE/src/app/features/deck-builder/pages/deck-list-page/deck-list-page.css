@@ -229,3 +229,43 @@
 .btn-danger:hover {
   opacity: 0.85;
 }
+
+/* ── Featured card in deck list ───────────────────────────────────────── */
+.deck-card {
+  flex-direction: row;
+  align-items: center;
+  gap: 1rem;
+}
+
+.deck-card-featured {
+  flex-shrink: 0;
+}
+
+.deck-featured-img {
+  width: 48px;
+  height: 67px;
+  object-fit: cover;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+  display: block;
+}
+
+.deck-featured-placeholder {
+  width: 48px;
+  height: 67px;
+  border-radius: 4px;
+  border: 2px dashed var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+  font-size: 1.25rem;
+}
+
+.deck-card-body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  min-width: 0;
+}

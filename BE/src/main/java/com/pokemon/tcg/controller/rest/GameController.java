@@ -2,11 +2,11 @@ package com.pokemon.tcg.controller.rest;
 
 import com.pokemon.tcg.controller.dto.request.CreateGameRequest;
 import com.pokemon.tcg.controller.dto.request.JoinGameRequest;
+import com.pokemon.tcg.controller.dto.response.GameLogResponseDTO;
 import com.pokemon.tcg.controller.dto.response.GameResponseDTO;
 import com.pokemon.tcg.controller.dto.response.GameStateResponseDTO;
 import com.pokemon.tcg.service.GameService;
 import com.pokemon.tcg.domain.model.game.Game;
-import com.pokemon.tcg.domain.model.game.GameLogEntry;
 import com.pokemon.tcg.domain.model.player.Player;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -32,6 +32,15 @@ public class GameController {
         return ResponseEntity.ok(gameService.listOpenGames());
     }
 
+    /** Returns the authenticated player's current active game, if any. */
+    @GetMapping("/my-active-game")
+    public ResponseEntity<GameResponseDTO> getActiveGame(
+            @AuthenticationPrincipal Player player) {
+        return gameService.getActiveGame(player.getId())
+                .map(ResponseEntity::ok)
+                .orElse(ResponseEntity.noContent().build());
+    }
+
     /** Creates a new game in WAITING state with the authenticated player as player 1. */
     @PostMapping
     public ResponseEntity<Game> createGame(@AuthenticationPrincipal Player player,
@@ -48,6 +57,22 @@ public class GameController {
         return ResponseEntity.ok(gameService.joinGame(gameId, player.getId(), request.getDeckId()));
     }
 
+    /** Surrenders the game. The opponent is declared the winner. */
+    @PostMapping("/{gameId}/surrender")
+    public ResponseEntity<Void> surrenderGame(@AuthenticationPrincipal Player player,
+                                               @PathVariable UUID gameId) {
+        gameService.surrenderGame(gameId, player.getId());
+        return ResponseEntity.noContent().build();
+    }
+
+    /** Cancels a WAITING game. Only the creator (player 1) can cancel it. */
+    @DeleteMapping("/{gameId}")
+    public ResponseEntity<Void> cancelGame(@AuthenticationPrincipal Player player,
+                                            @PathVariable UUID gameId) {
+        gameService.cancelGame(gameId, player.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     /** Returns the current board state for the authenticated player, hiding opponent's private data. */
     @GetMapping("/{gameId}/state")
     public ResponseEntity<GameStateResponseDTO> getState(@AuthenticationPrincipal Player player,
@@ -57,7 +82,7 @@ public class GameController {
 
     /** Returns the complete action log for the specified game. */
     @GetMapping("/{gameId}/log")
-    public ResponseEntity<List<GameLogEntry>> getLog(@PathVariable UUID gameId) {
+    public ResponseEntity<List<GameLogResponseDTO>> getLog(@PathVariable UUID gameId) {
         return ResponseEntity.ok(gameService.getLog(gameId));
     }
 }

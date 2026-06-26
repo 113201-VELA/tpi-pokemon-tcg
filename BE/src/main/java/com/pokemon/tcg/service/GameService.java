@@ -1,9 +1,12 @@
 package com.pokemon.tcg.service;
 
+import com.pokemon.tcg.controller.dto.response.GameLogResponseDTO;
+import com.pokemon.tcg.controller.mapper.GameLogMapper;
 import com.pokemon.tcg.controller.mapper.GameMapper;
 import com.pokemon.tcg.controller.mapper.GameStateMapper;
 import com.pokemon.tcg.controller.dto.response.GameResponseDTO;
 import com.pokemon.tcg.controller.dto.response.GameStateResponseDTO;
+import com.pokemon.tcg.controller.websocket.GameEventPublisher;
 import com.pokemon.tcg.engine.GameEngineFacade;
 import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.domain.model.deck.Deck;
@@ -31,8 +34,10 @@ public class GameService {
     private final PlayerRepository playerRepository;
     private final DeckRepository deckRepository;
     private final PlayerMatchupRepository matchupRepository;
+    private final GameEventPublisher eventPublisher;
     private final GameStateMapper gameStateMapper;
     private final GameMapper gameMapper;
+    private final GameLogMapper gameLogMapper;
 
     public GameService(GameEngineFacade engine,
                        GameRepository gameRepository,
@@ -41,9 +46,10 @@ public class GameService {
                        CardRepository cardRepository,
                        PlayerRepository playerRepository,
                        DeckRepository deckRepository,
-                       PlayerMatchupRepository matchupRepository,
+                       PlayerMatchupRepository matchupRepository, GameEventPublisher eventPublisher,
                        GameStateMapper gameStateMapper,
-                       GameMapper gameMapper) {
+                       GameMapper gameMapper,
+                       GameLogMapper gameLogMapper) {
         this.engine           = engine;
         this.gameRepository   = gameRepository;
         this.stateRepository  = stateRepository;
@@ -52,8 +58,10 @@ public class GameService {
         this.playerRepository = playerRepository;
         this.deckRepository   = deckRepository;
         this.matchupRepository= matchupRepository;
+        this.eventPublisher = eventPublisher;
         this.gameStateMapper  = gameStateMapper;
         this.gameMapper       = gameMapper;
+        this.gameLogMapper = gameLogMapper;
     }
 
     /**
@@ -144,7 +152,14 @@ public class GameService {
                     .boardState(result.newState())
                     .build();
             stateRepository.save(snapshot);
-        }
+        };
+        // Notify lobby subscribers that the game has started
+        eventPublisher.publishLobbyUpdate(
+                GameEvent.builder()
+                        .type(GameEventType.GAME_STARTED)
+                        .data(Map.of("gameId", game.getId().toString()))
+                        .build()
+        );
 
         return gameRepository.save(game);
     }
@@ -169,6 +184,7 @@ public class GameService {
         Map<String, Card> cardCache = cardRepository.findAllById(allCardIds).stream()
                 .collect(Collectors.toMap(Card::getId, Function.identity()));
 
+        // Resolve player names and cosmetics from GamePlayer records
         String requestingPlayerName = playerRepository.findById(requestingPlayerId)
                 .map(Player::getUsername)
                 .orElse("Unknown");
@@ -178,11 +194,34 @@ public class GameService {
                 .map(Player::getUsername)
                 .orElse("Unknown");
 
+        // Load the game to access GamePlayer deck cosmetics
+        Game game = gameRepository.findByIdWithPlayersAndDecks(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        String ownCardBack      = "DEFAULT";
+        String ownCoin          = "DEFAULT";
+        String opponentCardBack = "DEFAULT";
+        String opponentCoin     = "DEFAULT";
+
+        for (GamePlayer gp : game.getPlayers()) {
+            if (gp.getPlayer().getId().equals(requestingPlayerId)) {
+                ownCardBack = gp.getDeck().getCardBack();
+                ownCoin     = gp.getDeck().getCoin();
+            } else {
+                opponentCardBack = gp.getDeck().getCardBack();
+                opponentCoin     = gp.getDeck().getCoin();
+            }
+        }
+
         return gameStateMapper.toGameStateResponse(
                 boardState,
                 requestingPlayerId.toString(),
                 requestingPlayerName,
                 opponentPlayerName,
+                ownCardBack,
+                ownCoin,
+                opponentCardBack,
+                opponentCoin,
                 cardCache
         );
     }
@@ -199,20 +238,27 @@ public class GameService {
     }
 
     /**
-     * Processes a player action through the game engine and persists
-     * the resulting board state as a new snapshot in the database.
+     * Processes a player action through the game engine, persists the resulting
+     * board state as a new snapshot in the database, and logs the action to the game log.
+     *
+     * <p>Every action is logged regardless of outcome:
+     * <ul>
+     *   <li>{@code SUCCESS} — the action was valid and the engine processed it.</li>
+     *   <li>{@code FAILED} — the action was rejected by the rule validator.</li>
+     * </ul>
      */
     public EngineResult processAction(UUID gameId, UUID playerId, GameAction action) {
         BoardState currentState = getCurrentState(gameId);
         EngineResult result = engine.processAction(currentState, action);
 
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        Player player = playerRepository.findById(playerId)
+                .orElseThrow(() -> new IllegalArgumentException("Player not found"));
+
         if (result != null && result.newState() != null) {
-            Game game = gameRepository.findById(gameId)
-                    .orElseThrow(() -> new IllegalArgumentException("Game not found"));
-
-            Player player = playerRepository.findById(playerId)
-                    .orElseThrow(() -> new IllegalArgumentException("Player not found"));
-
+            // Persist new board state snapshot
             GameStateSnapshot snapshot = GameStateSnapshot.builder()
                     .game(game)
                     .turnNumber(result.newState().getTurnNumber())
@@ -220,13 +266,66 @@ public class GameService {
                     .currentPlayer(player)
                     .boardState(result.newState())
                     .build();
-
             stateRepository.save(snapshot);
 
-            if (result.newState().getGameState() == GameState.FINISHED
-                    && game.getWinner() != null) {
-                updateMatchups(game);
+            // Update Game entity if the game finished
+            if (result.newState().getGameState() == GameState.FINISHED) {
+                game.setState(GameState.FINISHED);
+
+                // Find the winner from the GAME_OVER event if present
+                result.events().stream()
+                        .filter(e -> e.getType() == GameEventType.GAME_OVER)
+                        .findFirst()
+                        .ifPresent(e -> {
+                            String winnerId = (String) e.getData().get("winnerId");
+                            if (winnerId != null && !winnerId.equals("none")) {
+                                playerRepository.findById(UUID.fromString(winnerId))
+                                        .ifPresent(game::setWinner);
+                            }
+                        });
+
+                gameRepository.save(game);
+
+                if (game.getWinner() != null) {
+                    updateMatchups(game);
+                }
             }
+
+            // Determine log result: FAILED if there's an error event, SUCCESS otherwise
+            boolean hasPipelineError = result.events().stream()
+                    .anyMatch(e -> e.getType() == GameEventType.TURN_ENDED
+                            && e.getData().containsKey("error"));
+            String logResult = hasPipelineError ? "FAILED" : "SUCCESS";
+
+            // Build action data from payload
+            Map<String, Object> actionData = action.getPayload() != null
+                    ? new java.util.HashMap<>(action.getPayload())
+                    : new java.util.HashMap<>();
+
+            // Build result data from events
+            Map<String, Object> resultData = new java.util.HashMap<>();
+            if (hasPipelineError) {
+                result.events().stream()
+                        .filter(e -> e.getData().containsKey("error"))
+                        .findFirst()
+                        .ifPresent(e -> resultData.put("error", e.getData().get("error")));
+            } else {
+                result.events().forEach(e ->
+                        resultData.put(e.getType().name().toLowerCase(),
+                                e.getData()));
+            }
+
+            // Persist log entry
+            GameLogEntry logEntry = GameLogEntry.builder()
+                    .game(game)
+                    .turnNumber(currentState.getTurnNumber())
+                    .player(player)
+                    .actionType(action.getType().name())
+                    .actionData(actionData)
+                    .result(logResult)
+                    .resultData(resultData)
+                    .build();
+            logRepository.save(logEntry);
         }
 
         return result;
@@ -235,8 +334,9 @@ public class GameService {
     /**
      * Returns the complete action log for the specified game in chronological order.
      */
-    public List<GameLogEntry> getLog(UUID gameId) {
-        return logRepository.findByGameIdOrderByCreatedAtAsc(gameId);
+    public List<GameLogResponseDTO> getLog(UUID gameId) {
+        return gameLogMapper.toResponseDTOList(
+                logRepository.findByGameIdOrderByCreatedAtAsc(gameId));
     }
 
     /**
@@ -245,6 +345,81 @@ public class GameService {
     public List<GameResponseDTO> listOpenGames() {
         List<Game> openGames = gameRepository.findByStateWithPlayersOrderByCreatedAtDesc(GameState.WAITING);
         return gameMapper.toResponseDTOList(openGames);
+    }
+
+    /**
+     * Returns the most recent active game for the given player, if any.
+     * Active states: WAITING, SETUP, ACTIVE.
+     * Returns empty if the player has no active game.
+     */
+    @Transactional(readOnly = true)
+    public Optional<GameResponseDTO> getActiveGame(UUID playerId) {
+        List<GameState> activeStates = List.of(
+                GameState.WAITING,
+                GameState.SETUP,
+                GameState.ACTIVE
+        );
+
+        return gameRepository.findActiveGamesByPlayerId(playerId, activeStates)
+                .stream()
+                .findFirst()
+                .map(gameMapper::toResponseDTO);
+    }
+
+    /**
+     * Cancels a WAITING game. Only the creator (player 1) can cancel it.
+     * Transitions the game state to CANCELLED without affecting matchup records.
+     */
+    public void cancelGame(UUID gameId, UUID playerId) {
+        Game game = gameRepository.findByIdAndState(gameId, GameState.WAITING)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found or not cancellable"));
+
+        boolean isCreator = game.getPlayers().stream()
+                .anyMatch(gp -> gp.getPlayerNumber() == 1
+                        && gp.getPlayer().getId().equals(playerId));
+
+        if (!isCreator) {
+            throw new IllegalArgumentException("Only the game creator can cancel the game");
+        }
+
+        game.setState(GameState.CANCELLED);
+        gameRepository.save(game);
+    }
+
+    /**
+     * Surrenders an active game on behalf of the requesting player.
+     * The opponent is declared the winner. Matchup records are updated.
+     * Valid for games in SETUP or ACTIVE state only.
+     */
+    public void surrenderGame(UUID gameId, UUID playerId) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        if (game.getState() != GameState.SETUP && game.getState() != GameState.ACTIVE) {
+            throw new IllegalArgumentException("Game is not in a surrenderable state");
+        }
+
+        boolean isParticipant = game.getPlayers().stream()
+                .anyMatch(gp -> gp.getPlayer().getId().equals(playerId));
+
+        if (!isParticipant) {
+            throw new IllegalArgumentException("Player is not a participant of this game");
+        }
+
+        // Find the opponent and declare them the winner
+        Player winner = game.getPlayers().stream()
+                .filter(gp -> !gp.getPlayer().getId().equals(playerId))
+                .map(GamePlayer::getPlayer)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Opponent not found"));
+
+        game.setState(GameState.FINISHED);
+        game.setWinner(winner);
+        game.setFinishReason(FinishReason.SURRENDER);
+        game.setFinishedAt(java.time.Instant.now());
+        gameRepository.save(game);
+
+        updateMatchups(game);
     }
 
     /**

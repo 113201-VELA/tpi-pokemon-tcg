@@ -3,8 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <title>WebSocket Test — Pokémon TCG</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@stomp/stompjs@7/bundles/stomp.umd.min.js"></script>
     <style>
         body { font-family: monospace; padding: 20px; background: #1a1a2e; color: #eee; }
         h2 { color: #e94560; }
@@ -39,17 +38,19 @@
     <label>Action Type</label>
     <select id="actionType">
         <option value="DRAW_CARD">DRAW_CARD</option>
-        <option value="PLACE_BASIC_POKEMON">PLACE_BASIC_POKEMON</option>
+        <option value="SETUP_PLACE_ACTIVE">SETUP_PLACE_ACTIVE</option>
+        <option value="SETUP_PLACE_BENCH">SETUP_PLACE_BENCH</option>
+        <option value="MULLIGAN_CONFIRM">MULLIGAN_CONFIRM</option>
+        <option value="ACCEPT_MULLIGAN_BONUS">ACCEPT_MULLIGAN_BONUS</option>
+        <option value="CONFIRM_SETUP">CONFIRM_SETUP</option>
         <option value="ATTACH_ENERGY">ATTACH_ENERGY</option>
+        <option value="DECLARE_ATTACK">DECLARE_ATTACK</option>
+        <option value="PLACE_BASIC_POKEMON">PLACE_BASIC_POKEMON</option>
         <option value="PLAY_TRAINER">PLAY_TRAINER</option>
         <option value="EVOLVE_POKEMON">EVOLVE_POKEMON</option>
         <option value="RETREAT">RETREAT</option>
         <option value="USE_ABILITY">USE_ABILITY</option>
-        <option value="DECLARE_ATTACK">DECLARE_ATTACK</option>
         <option value="END_TURN">END_TURN</option>
-        <option value="SETUP_PLACE_ACTIVE">SETUP_PLACE_ACTIVE</option>
-        <option value="SETUP_PLACE_BENCH">SETUP_PLACE_BENCH</option>
-        <option value="MULLIGAN_CONFIRM">MULLIGAN_CONFIRM</option>
         <option value="CHOOSE_BENCH_POKEMON">CHOOSE_BENCH_POKEMON</option>
     </select>
     <label>Payload (JSON)</label>
@@ -69,7 +70,6 @@
     function formatJson(text) {
         try {
             const obj = JSON.parse(text);
-
             return JSON.stringify(obj, null, 2)
                 .replace(
                     /"([^"]+)":/g,
@@ -83,16 +83,6 @@
     function log(msg, type = '') {
         const div = document.getElementById('log');
         const entry = document.createElement('div');
-        entry.className = 'log-entry ' + (type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : '');
-        entry.textContent = new Date().toISOString().slice(11, 23) + ' | ' + msg;
-        div.appendChild(entry);
-        div.scrollTop = div.scrollHeight;
-    }
-
-    function log(msg, type = '') {
-        const div = document.getElementById('log');
-        const entry = document.createElement('div');
-
         entry.className = 'log-entry ' + (type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : '');
         const time = new Date().toISOString().slice(11, 23);
         const match = msg.match(/^(\[[^\]]+\])\s*(.*)$/);
@@ -120,36 +110,27 @@
             return;
         }
 
-        const socket = new SockJS('http://localhost:8080/ws');
-        stompClient  = Stomp.over(socket);
-        stompClient.debug = null; // silence debug noise
-
-        stompClient.connect(
-            { Authorization: 'Bearer ' + token },
-            function () {
+        stompClient = new StompJs.Client({
+            brokerURL: 'ws://localhost:8080/ws',
+            connectHeaders: { Authorization: 'Bearer ' + token },
+            onConnect: function () {
                 log('Connected!', 'ok');
                 document.getElementById('btnConnect').disabled    = true;
                 document.getElementById('btnDisconnect').disabled = false;
                 document.getElementById('btnSend').disabled       = false;
 
-                // Subscribe to public board state
                 stompClient.subscribe('/topic/game/' + gameId + '/state', function (msg) {
                     log('[BOARD STATE] ' + msg.body, 'ok');
                 });
-
-                // Subscribe to public events
                 stompClient.subscribe('/topic/game/' + gameId + '/events', function (msg) {
                     log('[EVENT] ' + msg.body, 'ok');
                 });
-
-                // Subscribe to private player state
                 stompClient.subscribe('/user/queue/game/' + gameId + '/player', function (msg) {
                     log('[PRIVATE STATE] ' + msg.body, 'ok');
                 });
 
                 log('Subscribed to game: ' + gameId);
 
-                // Fetch current board state via REST on connect
                 fetch('http://localhost:8080/api/games/' + gameId + '/state', {
                     headers: { 'Authorization': 'Bearer ' + token }
                 })
@@ -157,15 +138,17 @@
                     .then(data => log('[INITIAL STATE] ' + JSON.stringify(data), 'ok'))
                     .catch(e => log('Could not fetch initial state: ' + e, 'err'));
             },
-            function (err) {
-                log('Connection error: ' + err, 'err');
+            onStompError: function (err) {
+                log('Connection error: ' + JSON.stringify(err), 'err');
             }
-        );
+        });
+
+        stompClient.activate();
     }
 
     function disconnect() {
         if (stompClient) {
-            stompClient.disconnect();
+            stompClient.deactivate();
             stompClient = null;
         }
         document.getElementById('btnConnect').disabled    = false;
@@ -188,7 +171,10 @@
         }
 
         const action = { type: actionType, payload: payload };
-        stompClient.send('/app/game/' + gameId + '/action', {}, JSON.stringify(action));
+        stompClient.publish({
+            destination: '/app/game/' + gameId + '/action',
+            body: JSON.stringify(action)
+        });
         log('[SENT] ' + JSON.stringify(action));
     }
 </script>

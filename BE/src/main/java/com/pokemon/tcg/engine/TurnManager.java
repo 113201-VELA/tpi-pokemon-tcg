@@ -7,8 +7,8 @@ import com.pokemon.tcg.engine.attack.AttackContext;
 import com.pokemon.tcg.engine.attack.AttackPipeline;
 import org.springframework.stereotype.Component;
 
+import java.time.Instant;
 import java.util.*;
-
 @Component
 public class TurnManager {
 
@@ -18,19 +18,22 @@ public class TurnManager {
     private final StatusEffectManager statusEffectManager;
     private final CardLookupPort cardLookupPort;
     private final TrainerEffectRegistry trainerEffectRegistry;
+    private final SetupManager setupManager;
 
     public TurnManager(RuleValidator ruleValidator,
                        CoinFlipService coinFlipService,
                        AttackPipeline attackPipeline,
                        StatusEffectManager statusEffectManager,
                        CardLookupPort cardLookupPort,
-                       TrainerEffectRegistry trainerEffectRegistry) {
-        this.ruleValidator        = ruleValidator;
-        this.coinFlipService      = coinFlipService;
-        this.attackPipeline       = attackPipeline;
-        this.statusEffectManager  = statusEffectManager;
-        this.cardLookupPort       = cardLookupPort;
+                       TrainerEffectRegistry trainerEffectRegistry,
+                       SetupManager setupManager) {
+        this.ruleValidator         = ruleValidator;
+        this.coinFlipService       = coinFlipService;
+        this.attackPipeline        = attackPipeline;
+        this.statusEffectManager   = statusEffectManager;
+        this.cardLookupPort        = cardLookupPort;
         this.trainerEffectRegistry = trainerEffectRegistry;
+        this.setupManager = setupManager;
     }
 
     /**
@@ -39,19 +42,28 @@ public class TurnManager {
      */
     public BoardState advancePhase(BoardState state, GameAction action) {
         return switch (action.getType()) {
-            case DRAW_CARD            -> handleDrawCard(state, action);
-            case PLACE_BASIC_POKEMON  -> handlePlaceBasicPokemon(state, action);
-            case ATTACH_ENERGY        -> handleAttachEnergy(state, action);
-            case PLAY_TRAINER         -> handlePlayTrainer(state, action);
-            case EVOLVE_POKEMON       -> handleEvolvePokemon(state, action);
-            case RETREAT              -> handleRetreat(state, action);
-            case DECLARE_ATTACK       -> handleDeclareAttack(state, action);
-            case END_TURN             -> handleEndTurn(state, action);
-            case SETUP_PLACE_ACTIVE   -> handleSetupPlaceActive(state, action);
-            case SETUP_PLACE_BENCH    -> handleSetupPlaceBench(state, action);
-            case MULLIGAN_CONFIRM     -> handleMulliganConfirm(state, action);
-            case CHOOSE_BENCH_POKEMON -> handleChooseBenchPokemon(state, action);
-            default                   -> state;
+            // ── Setup phase ──────────────────────────────────────────
+            case MULLIGAN_CONFIRM      -> handleMulliganConfirm(state, action);
+            case SETUP_PLACE_ACTIVE    -> handleSetupPlaceActive(state, action);
+            case SETUP_PLACE_BENCH     -> handleSetupPlaceBench(state, action);
+            case ACCEPT_MULLIGAN_BONUS -> handleAcceptMulliganBonus(state, action);
+            case CONFIRM_SETUP         -> handleConfirmSetup(state, action);
+            // ── Draw phase ───────────────────────────────────────────
+            case DRAW_CARD             -> handleDrawCard(state, action);
+            // ── Main phase ───────────────────────────────────────────
+            case PLACE_BASIC_POKEMON   -> handlePlaceBasicPokemon(state, action);
+            case EVOLVE_POKEMON        -> handleEvolvePokemon(state, action);
+            case ATTACH_ENERGY         -> handleAttachEnergy(state, action);
+            case PLAY_TRAINER          -> handlePlayTrainer(state, action);
+            case USE_ABILITY           -> state;
+            case RETREAT               -> handleRetreat(state, action);
+            case DECLARE_ATTACK        -> handleDeclareAttack(state, action);
+            case END_TURN              -> handleEndTurn(state, action);
+            // ── Post-KO ──────────────────────────────────────────────
+            case CHOOSE_BENCH_POKEMON  -> handleChooseBenchPokemon(state, action);
+            // ── Deck selection ───────────────────────────────────────
+            case SELECT_FROM_DECK      -> handleSelectFromDeck(state, action);
+            default                    -> state;
         };
     }
 
@@ -73,6 +85,11 @@ public class TurnManager {
 
         if (phase == TurnPhase.DRAW) {
             actions.add(GameActionType.DRAW_CARD);
+            return actions;
+        }
+
+        if (state.isPendingDeckSelection()) {
+            actions.add(GameActionType.SELECT_FROM_DECK);
             return actions;
         }
 
@@ -122,17 +139,6 @@ public class TurnManager {
 
         ps.setActivePokemon(active);
 
-        // If both players have placed their Active Pokémon, setup is complete.
-        // Transition to DRAW phase so the first player can start their turn.
-        // This logic will be moved to SetupState when the State pattern is connected (step 4).
-        if (state.getPlayer1State().getActivePokemon() != null &&
-                state.getPlayer2State().getActivePokemon() != null) {
-            return state.toBuilder()
-                    .turnPhase(TurnPhase.DRAW)
-                    .gameState(GameState.ACTIVE)
-                    .build();
-        }
-
         return state;
     }
 
@@ -165,8 +171,65 @@ public class TurnManager {
         return state;
     }
 
-    /** Confirms mulligan — no Basic Pokémon in hand, reshuffles and redraws. */
+    /**
+     * Confirms mulligan — the player has no Basic Pokémon in hand.
+     * Shuffles the hand back into the deck, redraws 7, and grants
+     * the opponent 1 bonus draw for each mulligan declared.
+     * If the new hand still has no Basic Pokémon, the player must
+     * declare mulligan again.
+     */
     private BoardState handleMulliganConfirm(BoardState state, GameAction action) {
+        String playerId = action.getPlayerId();
+        PlayerState ps  = state.getStateFor(playerId);
+
+        // Only allow mulligan if the hand truly has no Basic Pokémon
+        if (setupManager.hasBasicPokemonInHand(ps)) {
+            return state;
+        }
+
+        return setupManager.handleMulligan(state, playerId);
+    }
+
+    /**
+     * Handles the player's decision to accept mulligan bonus draws.
+     * The player specifies how many cards to draw (0 to mulliganBonusDraws).
+     * After all players with pending bonuses have decided, transitions to DRAW.
+     *
+     * <p>Per the rulebook, the player with the bonus chooses how many cards
+     * to draw — anywhere from 0 up to their full bonus amount.
+     */
+    private BoardState handleAcceptMulliganBonus(BoardState state, GameAction action) {
+        String playerId  = action.getPlayerId();
+        PlayerState ps   = state.getStateFor(playerId);
+
+        // cardsToDraw defaults to 0 if not specified (player declines bonus)
+        Integer cardsToDraw = action.getPayloadInt("cardsToDraw");
+        int drawCount = cardsToDraw != null ? cardsToDraw : 0;
+
+        setupManager.applyMulliganBonusDraws(ps, drawCount);
+
+        // If no more pending bonuses, transition to DRAW phase
+        if (!state.hasAnyPendingBonus()) {
+            return state.toBuilder()
+                    .bonusDrawPending(false)
+                    .turnPhase(TurnPhase.DRAW)
+                    .gameState(GameState.ACTIVE)
+                    .build();
+        }
+
+        return state.toBuilder()
+                .bonusDrawPending(true)
+                .build();
+    }
+
+    /**
+     * Marks the player's setup as confirmed.
+     * The actual transition to ACTIVE is handled by SetupState after
+     * checking that both players have confirmed.
+     */
+    private BoardState handleConfirmSetup(BoardState state, GameAction action) {
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        ps.setSetupConfirmed(true);
         return state;
     }
 
@@ -179,7 +242,8 @@ public class TurnManager {
         if (ps.getDeck() == null || ps.getDeck().isEmpty()) return state;
 
         List<String> deck = new ArrayList<>(ps.getDeck());
-        List<String> hand = new ArrayList<>(ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        List<String> hand = new ArrayList<>(
+                ps.getHand() != null ? ps.getHand() : new ArrayList<>());
 
         hand.add(deck.remove(0));
         ps.setDeck(deck);
@@ -236,7 +300,6 @@ public class TurnManager {
         ps.setHand(hand);
 
         attachEnergyToPokemon(ps, targetId, cardId);
-
         state.getTurnFlags().setEnergyAttachedThisTurn(true);
 
         return state;
@@ -253,7 +316,6 @@ public class TurnManager {
 
         if (cardId == null || !ps.getHand().contains(cardId)) return state;
 
-        // Remove from hand and add to discard
         List<String> hand = new ArrayList<>(ps.getHand());
         hand.remove(cardId);
         ps.setHand(hand);
@@ -350,6 +412,13 @@ public class TurnManager {
      * Resolves the attack object and defender HP from the card cache before
      * building the context. After the pipeline resolves, processes between-turn
      * effects and switches to the opponent's turn.
+     *
+     * <p>If the pipeline is cancelled (e.g. insufficient energy, confusion flip),
+     * the turn does not end — the player keeps their turn and receives an error event.
+     *
+     * <p>If a KO occurred and the defender has bench Pokémon, the turn is suspended
+     * until the defender sends CHOOSE_BENCH_POKEMON. Between-turn effects and the
+     * turn switch happen only after the bench choice is resolved.
      */
     private BoardState handleDeclareAttack(BoardState state, GameAction action) {
         String attackName = action.getPayloadString("attackName");
@@ -359,10 +428,8 @@ public class TurnManager {
         ActivePokemon attacker = attackerState.getActivePokemon();
         if (attacker == null) return state;
 
-        // Resolve the attack object from the card cache
         Attack attack = findAttack(attacker.getCardId(), attackName);
 
-        // Resolve defender HP from the card cache
         String opponentId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
                 ? state.getPlayer2State().getPlayerId()
                 : state.getPlayer1State().getPlayerId();
@@ -383,9 +450,36 @@ public class TurnManager {
 
         attackPipeline.execute(ctx);
 
-        // Process between-turns effects on both active Pokémon
-        state = processBetweenTurns(ctx.getBoardState());
+        // If the pipeline was cancelled (e.g. insufficient energy, confusion flip)
+        // the turn does not end — the player keeps their turn and can act again.
+        if (ctx.isCancelled()) {
+            List<GameEvent> pending = new ArrayList<>(
+                    ctx.getBoardState().getPendingEvents() != null
+                            ? ctx.getBoardState().getPendingEvents() : new ArrayList<>());
+            pending.add(GameEvent.builder()
+                    .type(GameEventType.TURN_ENDED)
+                    .gameId(state.getGameId())
+                    .playerId(action.getPlayerId())
+                    .turnNumber(state.getTurnNumber())
+                    .data(Map.of("error", ctx.getCancellationReason() != null
+                            ? ctx.getCancellationReason()
+                            : "Attack was cancelled."))
+                    .occurredAt(Instant.now())
+                    .build());
+            return ctx.getBoardState().toBuilder()
+                    .pendingEvents(pending)
+                    .build();
+        }
 
+        // If a KO occurred and the defender has bench Pokémon, suspend the turn.
+        // Between-turn effects and turn switch will happen after CHOOSE_BENCH_POKEMON.
+        if (ctx.getBoardState().isPendingBenchChoice()) {
+            return ctx.getBoardState();
+        }
+
+        // Attack resolved with no pending bench choice — process between-turn effects
+        // and switch to the opponent's turn normally.
+        state = processBetweenTurns(ctx.getBoardState());
         state.getTurnFlags().setAttackedThisTurn(true);
 
         return state.toBuilder()
@@ -444,7 +538,7 @@ public class TurnManager {
         return cardLookupPort.getMaxHp(defender.getCardId());
     }
 
-    /** Chooses a Bench Pokémon to become Active after a KO. */
+    /** Chooses a Bench Pokémon to become Active after a KO, then resumes the turn switch. */
     private BoardState handleChooseBenchPokemon(BoardState state, GameAction action) {
         String instanceId = action.getPayloadString("instanceId");
         PlayerState ps    = state.getStateFor(action.getPlayerId());
@@ -472,6 +566,64 @@ public class TurnManager {
         bench.remove(chosen);
         ps.setBench(bench);
         ps.setActivePokemon(newActive);
+
+        // Clear the pending bench choice flag
+        state = state.toBuilder()
+                .pendingBenchChoicePlayerId(null)
+                .build();
+
+        // Now that the defender has a new Active, resume the suspended turn:
+        // process between-turn effects and pass control to the original attacker's opponent.
+        // The attacker is whoever is NOT the player who just chose.
+        String attackerId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
+                ? state.getPlayer2State().getPlayerId()
+                : state.getPlayer1State().getPlayerId();
+
+        state = processBetweenTurns(state);
+
+        return state.toBuilder()
+                .currentPlayerId(attackerId)
+                .turnPhase(TurnPhase.DRAW)
+                .turnNumber(state.getTurnNumber() + 1)
+                .turnFlags(TurnFlags.fresh())
+                .build();
+    }
+
+    /**
+     * Handles the player selecting a card from a set revealed by a card effect
+     * (e.g. Great Ball). The chosen card is moved to the player's hand and the
+     * remaining revealed cards are shuffled back into the deck.
+     */
+    private BoardState handleSelectFromDeck(BoardState state, GameAction action) {
+        String playerId = action.getPlayerId();
+        if (!state.isPendingDeckSelection() || !state.getPendingDeckSelectionPlayerId().equals(playerId)) {
+            return state;
+        }
+
+        String chosenCardId = action.getPayloadString("cardId");
+        List<String> pendingCards = state.getPendingDeckSelectionCardIds();
+        if (chosenCardId == null || pendingCards == null || !pendingCards.contains(chosenCardId)) {
+            return state;
+        }
+
+        PlayerState ps = state.getStateFor(playerId);
+
+        // Move chosen card to hand
+        List<String> hand = new ArrayList<>(ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        hand.add(chosenCardId);
+        ps.setHand(hand);
+
+        // Shuffle remaining cards back into deck
+        List<String> remaining = new ArrayList<>(pendingCards);
+        remaining.remove(chosenCardId);
+        List<String> deck = new ArrayList<>(ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
+        deck.addAll(remaining);
+        Collections.shuffle(deck);
+        ps.setDeck(deck);
+
+        // Clear pending state
+        state.setPendingDeckSelectionPlayerId(null);
+        state.setPendingDeckSelectionCardIds(new ArrayList<>());
 
         return state;
     }

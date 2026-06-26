@@ -46,7 +46,7 @@ public class DeckController {
     public ResponseEntity<DeckResponseDTO> updateDeck(@AuthenticationPrincipal Player player,
                                                       @PathVariable UUID deckId,
                                                       @Valid @RequestBody UpdateDeckRequest request) {
-        return ResponseEntity.ok(deckService.updateDeck(deckId, player.getId(), request.getName(), request.getCardBack(), request.getCoin()));
+        return ResponseEntity.ok(deckService.updateDeck(deckId, player.getId(), request.getName(), request.getCardBack(), request.getCoin(), request.getFeaturedCardId()));
     }
 
     /** Adds a new card to the deck. Fails if the card is already present — use PUT to update quantity. */

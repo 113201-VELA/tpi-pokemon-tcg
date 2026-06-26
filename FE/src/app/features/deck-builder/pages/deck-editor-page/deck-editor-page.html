@@ -40,8 +40,37 @@
       }
     </div>
 
-    <!-- Cosmetics: selector + preview de dorso, selector + preview de moneda -->
+    <!-- Cosmetics: selector + preview de featured, dorso y moneda -->
     <div class="editor-header__cosmetics">
+
+      <!-- Featured card selector + preview -->
+      <div class="cosmetic-group cosmetic-group--featured">
+        <div class="cosmetic-group__selector">
+          <label class="cosmetic-label" for="featuredCardSelect">Featured</label>
+          <select
+            id="featuredCardSelect"
+            class="cosmetic-select"
+            [ngModel]="selectedFeaturedCardId() ?? ''"
+            (ngModelChange)="saveFeaturedCard($event || null)"
+          >
+            <option value="">— None —</option>
+            @for (pokemon of deckPokemon(); track pokemon.id) {
+              <option [value]="pokemon.id">{{ pokemon.name }}</option>
+            }
+          </select>
+        </div>
+        <div class="cosmetic-preview">
+          @if (featuredCardImageUrl()) {
+            <img
+              class="cosmetic-preview__img cosmetic-preview__img--featured"
+              [src]="featuredCardImageUrl()!"
+              alt="Featured card"
+            />
+          } @else {
+            <div class="cosmetic-preview__placeholder">?</div>
+          }
+        </div>
+      </div>
 
       <div class="cosmetic-group">
         <div class="cosmetic-group__selector">
@@ -110,7 +139,12 @@
       <ul class="deck-card-list">
         @for (entry of deck()?.cards ?? []; track entry.id) {
           <li class="deck-entry">
-            <span class="deck-entry-name">{{ entry.card.name }}</span>
+            <span class="deck-entry-name">
+              {{ entry.card.name }}
+              @if (selectedFeaturedCardId() === entry.card.id) {
+                <span class="featured-star">⭐</span>
+              }
+            </span>
             <div class="deck-entry-controls">
               <button class="qty-btn" (click)="removeCard(entry.card)" [disabled]="getQuantityInDeck(entry.card.id) === 0">−</button>
               <span class="qty-value">{{ entry.quantity }}</span>
@@ -182,8 +216,11 @@
       }
 
       <div class="card-grid">
-        @for (card of filteredCards(); track card.id) {
+        @for (card of cards(); track card.id) {
           <div class="catalog-card">
+            @if (selectedFeaturedCardId() === card.id) {
+              <div class="featured-badge">⭐</div>
+            }
             <img
               class="catalog-card-img"
               [src]="card.imageSmall"
@@ -205,15 +242,6 @@
           </div>
         }
       </div>
-
-      <!-- Cargar más -->
-      @if (cardPage() + 1 < totalPages()) {
-        <div class="load-more">
-          <button class="btn-secondary" (click)="loadMoreCards()" [disabled]="loadingCards()">
-            {{ loadingCards() ? 'Cargando...' : 'Cargar más cartas' }}
-          </button>
-        </div>
-      }
 
     </section>
   </div>

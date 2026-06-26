@@ -33,5 +33,11 @@ export const routes: Routes = [
       import('./features/preferences/pages/preferences-page/preferences-page')
         .then(m => m.PreferencesPage)
   },
+  {
+    path: 'game/:id',
+    canActivate: [authGuard],
+    loadComponent: () =>
+      import('./features/game/pages/game-page/game-page').then(m => m.GamePage)
+  },
   { path: '**', redirectTo: 'home' }
 ];

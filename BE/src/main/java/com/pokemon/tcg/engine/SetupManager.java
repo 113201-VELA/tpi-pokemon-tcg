@@ -9,9 +9,11 @@ import java.util.*;
 public class SetupManager {
 
     private final CoinFlipService coinFlipService;
+    private final CardLookupPort cardLookupPort;
 
-    public SetupManager(CoinFlipService coinFlipService) {
+    public SetupManager(CoinFlipService coinFlipService, CardLookupPort cardLookupPort) {
         this.coinFlipService = coinFlipService;
+        this.cardLookupPort  = cardLookupPort;
     }
 
     /**
@@ -28,14 +30,14 @@ public class SetupManager {
 
         playerState.setDeck(deck);
         playerState.setHand(hand);
-        return true; // Basic Pokémon check handled by caller with card data
+        return hasBasicPokemon(hand);
     }
 
     /**
      * Separates the first 6 cards from the deck as prize cards.
      */
     public PlayerState setupPrizes(PlayerState playerState) {
-        List<String> deck = new ArrayList<>(playerState.getDeck());
+        List<String> deck   = new ArrayList<>(playerState.getDeck());
         List<String> prizes = new ArrayList<>();
 
         for (int i = 0; i < 6 && !deck.isEmpty(); i++) {
@@ -64,9 +66,89 @@ public class SetupManager {
     }
 
     /**
-     * Handles mulligan: if no Basic Pokémon in hand, shuffle back and redraw.
+     * Checks whether a player's current hand contains at least one Basic Pokémon.
      */
-    public BoardState handleMulligan(BoardState state) {
+    public boolean hasBasicPokemonInHand(PlayerState playerState) {
+        return hasBasicPokemon(playerState.getHand());
+    }
+
+    /**
+     * Handles a mulligan for the given player:
+     * - Shuffles the hand back into the deck and redraws 7 cards
+     * - Increments a raw mulligan counter on the player
+     * - After the mulligan, recalculates net bonus draws for both players:
+     *   if both have mulliganed, the counters cancel out (net = abs difference,
+     *   awarded to the player with fewer mulligans).
+     *
+     * <p>Per the rulebook: if both players mulligan simultaneously in the same
+     * round, neither receives a bonus. The bonus is only the net difference
+     * across all mulligan rounds.
+     */
+    public BoardState handleMulligan(BoardState state, String playerId) {
+        PlayerState ps       = state.getStateFor(playerId);
+        PlayerState opponent = state.getOpponentState(playerId);
+
+        // Shuffle hand back into deck and redraw
+        List<String> deck = new ArrayList<>(ps.getDeck());
+        if (ps.getHand() != null) {
+            deck.addAll(ps.getHand());
+        }
+        ps.setHand(new ArrayList<>());
+        ps.setDeck(deck);
+        shuffleDeck(ps);
+        drawInitialHand(ps);
+
+        // Increment raw mulligan counter on this player
+        ps.setTotalMulligans(ps.getTotalMulligans() + 1);
+
+        // Recalculate net bonus draws for both players based on total mulligans
+        // Net bonus = max(0, opponentTotalMulligans - myTotalMulligans)
+        int p1Total = state.getPlayer1State().getTotalMulligans();
+        int p2Total = state.getPlayer2State().getTotalMulligans();
+
+        state.getPlayer1State().setMulliganBonusDraws(Math.max(0, p2Total - p1Total));
+        state.getPlayer2State().setMulliganBonusDraws(Math.max(0, p1Total - p2Total));
+
         return state;
+    }
+
+    /**
+     * Awards bonus cards to a player based on their choice.
+     * The player chooses how many cards to draw (0 to mulliganBonusDraws).
+     * Resets the bonus counter after drawing regardless of how many were taken.
+     */
+    public void applyMulliganBonusDraws(PlayerState playerState, int cardsToDraw) {
+        int bonus = playerState.getMulliganBonusDraws();
+        if (bonus <= 0 || cardsToDraw <= 0) {
+            playerState.setMulliganBonusDraws(0);
+            return;
+        }
+
+        int actualDraw = Math.min(cardsToDraw, Math.min(bonus, playerState.getDeck().size()));
+
+        List<String> deck = new ArrayList<>(playerState.getDeck());
+        List<String> hand = new ArrayList<>(playerState.getHand());
+
+        for (int i = 0; i < actualDraw; i++) {
+            hand.add(deck.remove(0));
+        }
+
+        playerState.setDeck(deck);
+        playerState.setHand(hand);
+        playerState.setMulliganBonusDraws(0);
+    }
+
+    // ─── HELPERS ──────────────────────────────────────────────────────────────
+
+    private boolean hasBasicPokemon(List<String> cardIds) {
+        if (cardIds == null || cardIds.isEmpty()) return false;
+        return cardIds.stream().anyMatch(id -> {
+            var card = cardLookupPort.findCardById(id);
+            if (card.isEmpty()) return false;
+            var subtypes = card.get().getSubtypes();
+            return card.get().getSupertype() ==
+                    com.pokemon.tcg.domain.model.card.CardType.POKEMON
+                    && subtypes != null && subtypes.contains("Basic");
+        });
     }
 }

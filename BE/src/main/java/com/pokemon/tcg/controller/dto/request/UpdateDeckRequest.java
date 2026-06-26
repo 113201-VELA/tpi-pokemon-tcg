@@ -13,4 +13,5 @@ public class UpdateDeckRequest {
     private String name;
     private String cardBack;
     private String coin;
+    private String featuredCardId;
 }

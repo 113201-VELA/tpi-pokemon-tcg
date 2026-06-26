@@ -15,7 +15,8 @@ import java.util.Map;
 /**
  * Step 7 — Handles post-damage effects: checks for knockouts using the real
  * card HP resolved before the pipeline started, moves KO'd Pokémon to discard,
- * and awards prize cards to the attacker.
+ * awards prize cards to the attacker, and flags a pending bench choice if the
+ * defender still has Pokémon on the bench to replace the KO'd Active.
  */
 @Component
 public class PostDamageEffectStep implements AttackStep {
@@ -70,12 +71,18 @@ public class PostDamageEffectStep implements AttackStep {
         defenderState.setDiscard(discard);
         defenderState.setActivePokemon(null);
 
-        // Attacker takes one prize card
+        // Attacker takes one prize card into their hand
         List<String> prizes = new ArrayList<>(
                 attackerState.getPrizes() != null ? attackerState.getPrizes() : new ArrayList<>());
         if (!prizes.isEmpty()) {
-            prizes.remove(0);
+            String takenPrize = prizes.remove(0);
             attackerState.setPrizes(prizes);
+
+            // Prize goes directly to the attacker's hand
+            List<String> hand = new ArrayList<>(
+                    attackerState.getHand() != null ? attackerState.getHand() : new ArrayList<>());
+            hand.add(takenPrize);
+            attackerState.setHand(hand);
         }
 
         ctx.addEvent(GameEvent.builder()
@@ -95,5 +102,16 @@ public class PostDamageEffectStep implements AttackStep {
                 .data(Map.of("prizesRemaining", attackerState.getPrizes().size()))
                 .occurredAt(Instant.now())
                 .build());
+
+        // If the defender still has bench Pokémon, flag a pending bench choice.
+        // The turn will not advance until they send CHOOSE_BENCH_POKEMON.
+        // If the bench is empty, VictoryConditionChecker will detect the win condition.
+        boolean defenderHasBench = defenderState.getBench() != null
+                && !defenderState.getBench().isEmpty();
+        if (defenderHasBench) {
+            ctx.setBoardState(ctx.getBoardState().toBuilder()
+                    .pendingBenchChoicePlayerId(defenderState.getPlayerId())
+                    .build());
+        }
     }
 }

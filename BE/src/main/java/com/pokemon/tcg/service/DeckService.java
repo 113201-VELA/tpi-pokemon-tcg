@@ -124,6 +124,12 @@ public class DeckService {
         }
 
         deck.getCards().removeIf(dc -> dc.getCard().getId().equals(cardId));
+
+        // Clear featured card if the removed card was selected as featured
+        if (cardId.equals(deck.getFeaturedCardId())) {
+            deck.setFeaturedCardId(null);
+        }
+
         deck.setValid(isValidDeck(deck));
         return deckMapper.toResponseDTO(deckRepository.save(deck));
     }
@@ -148,7 +154,9 @@ public class DeckService {
         return hasBasic;
     }
 
-    public DeckResponseDTO updateDeck(UUID deckId, UUID playerId, String name, String cardBack, String coin) {
+    public DeckResponseDTO updateDeck(UUID deckId, UUID playerId,
+                                      String name, String cardBack,
+                                      String coin, String featuredCardId) {
         Deck deck = deckRepository.findWithCardsById(deckId)
                 .orElseThrow(() -> new IllegalArgumentException("Deck not found"));
 
@@ -164,6 +172,22 @@ public class DeckService {
         }
         if (coin != null) {
             deck.setCoin(coin);
+        }
+
+        // Validate featured card: must be a Pokémon present in the deck
+        if (featuredCardId != null) {
+            if (featuredCardId.isBlank()) {
+                deck.setFeaturedCardId(null);
+            } else {
+                boolean cardIsInDeck = deck.getCards().stream()
+                        .anyMatch(dc -> dc.getCard().getId().equals(featuredCardId)
+                                && dc.getCard().isPokemon());
+                if (!cardIsInDeck) {
+                    throw new IllegalArgumentException(
+                            "Featured card must be a Pokémon present in the deck");
+                }
+                deck.setFeaturedCardId(featuredCardId);
+            }
         }
 
         return deckMapper.toResponseDTO(deckRepository.save(deck));

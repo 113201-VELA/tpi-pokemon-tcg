@@ -31,8 +31,6 @@ export class DeckEditorPage implements OnInit {
   readonly cards           = signal<CardResponse[]>([]);
   readonly loadingCards    = signal(false);
   readonly loadingDeck     = signal(false);
-  readonly cardPage        = signal(0);
-  readonly totalPages      = signal(0);
   readonly selectedCard    = signal<CardResponse | null>(null);
   readonly deckNameEditing = signal(false);
   readonly deckName        = signal('');
@@ -44,6 +42,24 @@ export class DeckEditorPage implements OnInit {
   readonly selectedCardBack = signal<string>('DEFAULT');
   readonly selectedCoin     = signal<string>('DEFAULT');
   readonly savingCosmetics  = signal(false);
+
+  // Featured card state
+  readonly selectedFeaturedCardId = signal<string | null>(null);
+
+  /** Pokémon currently in the deck — available for featured card selection. */
+  readonly deckPokemon = computed(() => {
+    return this.deck()?.cards
+      .filter(entry => entry.card.supertype === 'POKEMON')
+      .map(entry => entry.card) ?? [];
+  });
+
+  /** Resolves the image URL for the currently selected featured card. */
+  readonly featuredCardImageUrl = computed(() => {
+    const id = this.selectedFeaturedCardId();
+    if (!id) return null;
+    const entry = this.deck()?.cards.find(e => e.card.id === id);
+    return entry?.card.imageSmall ?? null;
+  });
 
   /** Resolves the asset path for the currently selected card back. */
   readonly cardBackPreviewUrl = computed(() => {
@@ -100,19 +116,6 @@ export class DeckEditorPage implements OnInit {
     return this.totalCardCount() === 60 && this.hasNoExcessCopies() && this.hasBasicPokemon();
   });
 
-  readonly filteredCards = computed(() => {
-    const f   = this.filters();
-    const all = this.cards();
-
-    if (!f.energyType && !f.pokemonSubtype) return all;
-
-    return all.filter(c => {
-      if (f.energyType    && !c.types.includes(f.energyType))       return false;
-      if (f.pokemonSubtype && !c.subtypes.includes(f.pokemonSubtype)) return false;
-      return true;
-    });
-  });
-
   readonly supertypes: CardSupertype[] = ['POKEMON', 'ENERGY', 'TRAINER'];
   readonly energyTypes: EnergyType[]   = [
     'GRASS', 'FIRE', 'WATER', 'LIGHTNING', 'PSYCHIC',
@@ -123,7 +126,7 @@ export class DeckEditorPage implements OnInit {
   ngOnInit(): void {
     this.deckId = this.route.snapshot.paramMap.get('deckId')!;
     this.loadDeck();
-    this.loadCards(0);
+    this.loadCards();
     this.loadCosmeticsOptions();
   }
 
@@ -136,23 +139,18 @@ export class DeckEditorPage implements OnInit {
         this.deckName.set(found?.name ?? '');
         this.selectedCardBack.set(found?.cardBack ?? 'DEFAULT');
         this.selectedCoin.set(found?.coin ?? 'DEFAULT');
+        this.selectedFeaturedCardId.set(found?.featuredCardId ?? null);
         this.loadingDeck.set(false);
       },
       error: () => this.loadingDeck.set(false)
     });
   }
 
-  loadCards(page: number): void {
+  loadCards(): void {
     this.loadingCards.set(true);
-    this.cardService.searchCards(this.filters(), page).subscribe({
-      next: result => {
-        if (page === 0) {
-          this.cards.set(result.content);
-        } else {
-          this.cards.update(prev => [...prev, ...result.content]);
-        }
-        this.cardPage.set(result.number);
-        this.totalPages.set(result.totalPages);
+    this.cardService.searchCards(this.filters()).subscribe({
+      next: cards => {
+        this.cards.set(cards);
         this.loadingCards.set(false);
       },
       error: () => this.loadingCards.set(false)
@@ -170,13 +168,7 @@ export class DeckEditorPage implements OnInit {
 
   applyFilters(filters: CardFilters): void {
     this.filters.set(filters);
-    this.loadCards(0);
-  }
-
-  loadMoreCards(): void {
-    if (this.cardPage() + 1 < this.totalPages()) {
-      this.loadCards(this.cardPage() + 1);
-    }
+    this.loadCards();
   }
 
   getQuantityInDeck(cardId: string): number {
@@ -210,6 +202,11 @@ export class DeckEditorPage implements OnInit {
   }
 
   removeCard(card: CardResponse): void {
+    // Clear featured card if the removed card was the selected one
+    if (this.selectedFeaturedCardId() === card.id) {
+      this.saveFeaturedCard(null);
+    }
+
     const current = this.getQuantityInDeck(card.id);
     if (current <= 1) {
       this.deckService.removeCard(this.deckId, card.id).subscribe({
@@ -280,5 +277,17 @@ export class DeckEditorPage implements OnInit {
 
   goBackToDecks(): void {
     this.router.navigate(['/decks']);
+  }
+
+  saveFeaturedCard(cardId: string | null): void {
+    // Send empty string to clear, card ID to set
+    const featuredCardId = cardId ?? '';
+
+    this.deckService.updateDeck(this.deckId, { featuredCardId }).subscribe({
+      next: updatedDeck => {
+        this.deck.set(updatedDeck);
+        this.selectedFeaturedCardId.set(updatedDeck.featuredCardId);
+      }
+    });
   }
 }

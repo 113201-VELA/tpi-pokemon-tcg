@@ -37,7 +37,7 @@ export class RegisterPage {
       email: email!,
       password: password!
     }).subscribe({
-      next: () => this.router.navigate(['/decks']),
+      next: () => this.router.navigate(['/home']),
       error: (err) => {
         this.errorMessage.set(err.error?.message ?? 'Error al registrarse. Intentá de nuevo.');
         this.loading.set(false);
