@@ -1,6 +1,7 @@
 package com.pokemon.tcg.engine;
 
 import com.pokemon.tcg.domain.model.game.*;
+import com.pokemon.tcg.domain.state.GameStateHandler;
 import org.springframework.stereotype.Component;
 
 import java.util.*;
@@ -13,31 +14,33 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
     private final RuleValidator ruleValidator;
     private final VictoryConditionChecker victoryChecker;
     private final StatusEffectManager statusEffectManager;
+    private final Map<GameState, GameStateHandler> stateHandlers;
 
     public GameEngineFacadeImpl(SetupManager setupManager,
                                 TurnManager turnManager,
                                 RuleValidator ruleValidator,
                                 VictoryConditionChecker victoryChecker,
-                                StatusEffectManager statusEffectManager) {
+                                StatusEffectManager statusEffectManager,
+                                List<GameStateHandler> handlers) {
         this.setupManager        = setupManager;
         this.turnManager         = turnManager;
         this.ruleValidator       = ruleValidator;
         this.victoryChecker      = victoryChecker;
         this.statusEffectManager = statusEffectManager;
+
+        // Build a map of GameState → handler for O(1) dispatch
+        this.stateHandlers = new EnumMap<>(GameState.class);
+        for (GameStateHandler handler : handlers) {
+            this.stateHandlers.put(handler.getState(), handler);
+        }
     }
 
-    /**
-     * Initializes a new game: shuffles decks, deals hands, sets prizes,
-     * determines first player and sets the initial board state.
-     */
     @Override
     public EngineResult initializeGame(String gameId, PlayerState player1, PlayerState player2) {
         setupManager.shuffleDeck(player1);
         setupManager.shuffleDeck(player2);
-
         setupManager.drawInitialHand(player1);
         setupManager.drawInitialHand(player2);
-
         setupManager.setupPrizes(player1);
         setupManager.setupPrizes(player2);
 
@@ -68,12 +71,15 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
     }
 
     /**
-     * Processes a player action, validates it, advances the game state,
-     * and checks for victory conditions.
+     * Processes a player action by delegating to the appropriate
+     * {@link GameStateHandler} based on the current game state.
      *
-     * <p>Events generated inside the engine (e.g. pipeline cancellations stored
-     * in {@code BoardState.pendingEvents}) are collected here and included in the
-     * result so the WebSocket layer can broadcast them to clients.
+     * <p>The facade validates the action first, then dispatches to the
+     * correct handler. After the handler resolves the new state, victory
+     * conditions are checked and pending events are collected.
+     *
+     * <p>This is the core of the State pattern: the facade does not know
+     * how each state handles actions — it only knows which handler to call.
      */
     @Override
     public EngineResult processAction(BoardState currentState, GameAction action) {
@@ -92,13 +98,20 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
             ));
         }
 
-        // Advance state
-        BoardState newState = turnManager.advancePhase(currentState, action);
+        // Dispatch to the correct state handler
+        GameStateHandler handler = stateHandlers.get(currentState.getGameState());
+        if (handler == null) {
+            return EngineResult.of(currentState, List.of());
+        }
 
-        // Collect any events generated inside the engine (e.g. pipeline cancellations)
-        // that were stored in pendingEvents by TurnManager, then clear them so they
-        // are not re-emitted on the next action.
+        EngineResult handlerResult = handler.handle(currentState, action);
+        BoardState newState = handlerResult.newState();
+
+        // Collect pending events generated inside the handler
         List<GameEvent> events = new ArrayList<>();
+        if (handlerResult.events() != null) {
+            events.addAll(handlerResult.events());
+        }
         if (newState.getPendingEvents() != null && !newState.getPendingEvents().isEmpty()) {
             events.addAll(newState.getPendingEvents());
             newState = newState.toBuilder()

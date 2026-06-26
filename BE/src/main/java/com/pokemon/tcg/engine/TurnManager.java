@@ -132,25 +132,6 @@ public class TurnManager {
 
         ps.setActivePokemon(active);
 
-        // Both players have placed their Active Pokémon — setup placement is done.
-        // If any player has pending bonus draws, enter bonusDrawPending state so
-        // players can accept or decline before the game starts.
-        // This logic will be moved to SetupState when the State pattern is connected (step 4).
-        if (state.getPlayer1State().getActivePokemon() != null &&
-                state.getPlayer2State().getActivePokemon() != null) {
-
-            if (state.hasAnyPendingBonus()) {
-                return state.toBuilder()
-                        .bonusDrawPending(true)
-                        .build();
-            }
-
-            return state.toBuilder()
-                    .turnPhase(TurnPhase.DRAW)
-                    .gameState(GameState.ACTIVE)
-                    .build();
-        }
-
         return state;
     }
 
