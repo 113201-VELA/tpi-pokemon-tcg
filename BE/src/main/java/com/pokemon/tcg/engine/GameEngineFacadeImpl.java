@@ -119,13 +119,17 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
                     .build();
         }
 
-        // Check victory conditions
-        Optional<GameEvent> victoryEvent = victoryChecker.check(newState);
-        if (victoryEvent.isPresent()) {
-            events.add(victoryEvent.get());
-            newState = newState.toBuilder()
-                    .gameState(GameState.FINISHED)
-                    .build();
+        // Check victory conditions only if the game is still in progress.
+        // Skipping this when already FINISHED avoids emitting duplicate GAME_OVER events
+        // when a player attempts to act after the game has ended.
+        if (newState.getGameState() != GameState.FINISHED) {
+            Optional<GameEvent> victoryEvent = victoryChecker.check(newState);
+            if (victoryEvent.isPresent()) {
+                events.add(victoryEvent.get());
+                newState = newState.toBuilder()
+                        .gameState(GameState.FINISHED)
+                        .build();
+            }
         }
 
         return EngineResult.of(newState, events);
