@@ -41,4 +41,12 @@ public interface GameRepository extends JpaRepository<Game, UUID> {
     List<Game> findActiveGamesByPlayerId(
             @Param("playerId") UUID playerId,
             @Param("states") List<GameState> states);
+
+    /** Returns a game with its players and their decks eagerly loaded. */
+    @Query("SELECT DISTINCT g FROM Game g " +
+           "LEFT JOIN FETCH g.players gp " +
+           "LEFT JOIN FETCH gp.player " +
+           "LEFT JOIN FETCH gp.deck " +
+           "WHERE g.id = :gameId")
+    Optional<Game> findByIdWithPlayersAndDecks(@Param("gameId") UUID gameId);
 }

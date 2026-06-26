@@ -45,6 +45,8 @@ export interface BenchPokemonDTO {
 export interface OwnPlayerState {
   playerId: string;
   playerName: string;
+  cardBack: string;
+  coin: string;
   active: ActivePokemonDTO | null;
   bench: BenchPokemonDTO[];
   hand: CardResponse[];
@@ -56,6 +58,8 @@ export interface OwnPlayerState {
 export interface OpponentPlayerState {
   playerId: string;
   playerName: string;
+  cardBack: string;
+  coin: string;
   active: ActivePokemonDTO | null;
   bench: BenchPokemonDTO[];
   cardsInHand: number;

@@ -33,11 +33,15 @@ public class GameStateMapper {
             String requestingPlayerId,
             String requestingPlayerName,
             String opponentPlayerName,
+            String ownCardBack,
+            String ownCoin,
+            String opponentCardBack,
+            String opponentCoin,
             Map<String, Card> cardCache
     ) {
         if (boardState == null) return null;
 
-        PlayerState ownState = boardState.getStateFor(requestingPlayerId);
+        PlayerState ownState      = boardState.getStateFor(requestingPlayerId);
         PlayerState opponentState = boardState.getOpponentState(requestingPlayerId);
 
         return new GameStateResponseDTO(
@@ -49,17 +53,21 @@ public class GameStateMapper {
                 boardState.getActiveStadiumCardId(),
                 boardState.getTurnFlags(),
                 safeList(boardState.getPendingEvents()),
-                toOwnPlayerState(ownState, requestingPlayerName, cardCache),
-                toOpponentPlayerState(opponentState, opponentPlayerName, cardCache)
+                toOwnPlayerState(ownState, requestingPlayerName, ownCardBack, ownCoin, cardCache),
+                toOpponentPlayerState(opponentState, opponentPlayerName, opponentCardBack, opponentCoin, cardCache)
         );
     }
 
     private OwnPlayerStateResponseDTO toOwnPlayerState(
-            PlayerState state, String playerName, Map<String, Card> cardCache) {
+            PlayerState state, String playerName,
+            String cardBack, String coin,
+            Map<String, Card> cardCache) {
         if (state == null) return null;
         return new OwnPlayerStateResponseDTO(
                 state.getPlayerId(),
                 playerName,
+                cardBack,
+                coin,
                 toActivePokemonDTO(state.getActivePokemon(), cardCache),
                 toBenchPokemonDTOList(state.getBench(), cardCache),
                 resolveCards(state.getHand(), cardCache),
@@ -70,11 +78,15 @@ public class GameStateMapper {
     }
 
     private OpponentPlayerStateResponseDTO toOpponentPlayerState(
-            PlayerState state, String playerName, Map<String, Card> cardCache) {
+            PlayerState state, String playerName,
+            String cardBack, String coin,
+            Map<String, Card> cardCache) {
         if (state == null) return null;
         return new OpponentPlayerStateResponseDTO(
                 state.getPlayerId(),
                 playerName,
+                cardBack,
+                coin,
                 toActivePokemonDTO(state.getActivePokemon(), cardCache),
                 toBenchPokemonDTOList(state.getBench(), cardCache),
                 state.getHandSize(),
@@ -89,8 +101,8 @@ public class GameStateMapper {
             ActivePokemon ap, Map<String, Card> cardCache) {
         if (ap == null) return null;
 
-        Card card = cardCache != null ? cardCache.get(ap.getCardId()) : null;
-        int maxHp = card != null && card.getHp() != null ? card.getHp() : 0;
+        Card card  = cardCache != null ? cardCache.get(ap.getCardId()) : null;
+        int maxHp  = card != null && card.getHp() != null ? card.getHp() : 0;
 
         return new ActivePokemonDTO(
                 ap.getInstanceId(),

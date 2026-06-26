@@ -45,6 +45,10 @@ export class GamePage implements OnInit, OnDestroy {
   readonly showCoinFlip = signal(false);
   readonly coinResult   = signal<'HEADS' | 'TAILS' | null>(null);
 
+  // Surrender modal state
+  readonly showSurrenderModal = signal(false);
+  readonly surrendering       = signal(false);
+
   // ── Lifecycle ───────────────────────────────────────────────────────────
   ngOnInit(): void {
     this.gameId = this.route.snapshot.paramMap.get('id')!;
@@ -169,6 +173,11 @@ export class GamePage implements OnInit, OnDestroy {
     return pile.length > 0 ? pile[pile.length - 1] : null;
   }
 
+  /** Returns prize slots as fixed array of 6. */
+  getPrizeSlots(prizes: CardResponse[]): (CardResponse | null)[] {
+    return Array.from({ length: 6 }, (_, i) => prizes[i] ?? null);
+  }
+
   coinImageSrc(): string {
     return this.coinResult() === 'HEADS'
       ? 'assets/coin/defaultCoinHead.png'
@@ -177,5 +186,40 @@ export class GamePage implements OnInit, OnDestroy {
 
   goBackToLobby(): void {
     this.router.navigate(['/lobby']);
+  }
+
+  openSurrenderModal(): void {
+    this.showSurrenderModal.set(true);
+  }
+
+  closeSurrenderModal(): void {
+    this.showSurrenderModal.set(false);
+  }
+
+  confirmSurrender(): void {
+    this.surrendering.set(true);
+    this.gameStateService.surrender(this.gameId).subscribe({
+      next: () => {
+        this.surrendering.set(false);
+        this.showSurrenderModal.set(false);
+        this.router.navigate(['/lobby']);
+      },
+      error: () => {
+        this.surrendering.set(false);
+        this.showSurrenderModal.set(false);
+      },
+    });
+  }
+
+  /** Resolves the asset path for a card back skin. */
+  getCardBackUrl(skin: string): string {
+    const map: Record<string, string> = {
+      DEFAULT:    'assets/cardBack/defaultBack.png',
+      PIKACHU:    'assets/cardBack/pikachuBack.png',
+      BULBASAUR:  'assets/cardBack/bulbasaurBack.png',
+      CHARMANDER: 'assets/cardBack/charmanderBack.png',
+      SQUIRTLE:   'assets/cardBack/squirtleBack.png',
+    };
+    return map[skin] ?? map['DEFAULT'];
   }
 }

@@ -12,14 +12,12 @@
   @if (errorMessage()) {
     <div class="error-screen">
       <p>{{ errorMessage() }}</p>
-      <button class="btn-back" (click)="goBackToLobby()">← Back to lobby</button>
     </div>
   }
 
-  <!-- Board -->
   @if (!loading() && !errorMessage() && boardState()) {
 
-    <!-- Game header -->
+    <!-- ── Game header ──────────────────────────────────────────────── -->
     <header class="game-header">
       <div class="game-info">
         <span class="turn-badge" [class.turn-badge--active]="isMyTurn()">
@@ -28,40 +26,115 @@
         <span class="turn-number">Turn {{ boardState()!.turnNumber }}</span>
         <span class="phase-badge">{{ boardState()!.turnPhase }}</span>
       </div>
-      <button class="btn-back" (click)="goBackToLobby()">← Lobby</button>
+      <div class="header-players">
+        <span class="player-name player-name--own">
+          {{ boardState()!.ownState.playerName }}
+        </span>
+        <span class="vs-label">vs</span>
+        <span class="player-name player-name--opponent">
+          {{ boardState()!.opponentState.playerName }}
+        </span>
+      </div>
+      <button class="btn-surrender" (click)="openSurrenderModal()">
+        Surrender
+      </button>
     </header>
 
-    <!-- Board with perspective -->
-    <div class="board-perspective">
+    <!-- ── Opponent hand (fixed dorsos, outside board) ─────────────── -->
+    <div class="opponent-hand">
+      @for (i of [].constructor(boardState()!.opponentState.cardsInHand); track $index) {
+        <img
+          class="opponent-hand-card"
+          [src]="getCardBackUrl(boardState()!.opponentState.cardBack)"
+          alt="Card"
+        />
+      }
+    </div>
+
+    <!-- ── Main board ───────────────────────────────────────────────── -->
+    <div class="board-wrap">
       <div class="board">
 
-        <!-- ══ OPPONENT ZONE (top, rotated 180°) ══ -->
+        <!-- Logo decoration -->
+        <img
+          class="board-logo"
+          src="assets/logo/Logo.png"
+          alt="Pokémon TCG"
+        />
+
+        <!-- ══ OPPONENT ZONE ══ -->
         <div class="player-zone player-zone--opponent">
 
-          <!-- Prizes: 2 stacked columns of 3 -->
-          <div class="prizes-area">
-            <div class="prize-column">
-              @for (i of [0,1,2]; track i) {
-                <div class="prize-slot prize-slot--face-down">
-                  <div class="card-back-mini"></div>
+          <!-- Prizes (6 stacked vertically) -->
+          <div class="prizes-col">
+            <span class="zone-label">Prizes</span>
+            @for (slot of [0,1,2,3,4,5]; track slot) {
+              <div class="prize-slot prize-slot--face-down">
+                <img
+                  [src]="getCardBackUrl(boardState()!.opponentState.cardBack)"
+                  alt="Prize"
+                  class="card-img-full"
+                />
+              </div>
+            }
+          </div>
+
+          <!-- Play area -->
+          <div class="play-area">
+
+            <!-- Active + Tool -->
+            <div class="active-col">
+              <div class="active-slot-wrap">
+                @if (boardState()!.opponentState.active) {
+                  <app-active-pokemon-slot
+                    [pokemon]="boardState()!.opponentState.active!"
+                    (cardClick)="openCardDetail($event)"
+                  />
+                } @else {
+                  <span class="slot-empty">Active</span>
+                }
+              </div>
+              <div class="tool-slot">
+                @if (boardState()!.opponentState.active?.attachedTool) {
+                  <img
+                    [src]="boardState()!.opponentState.active!.attachedTool!.imageSmall"
+                    alt="Tool"
+                    class="card-img-full"
+                    (click)="openCardDetail(boardState()!.opponentState.active!.attachedTool)"
+                  />
+                } @else {
+                  <span class="slot-empty">Tool</span>
+                }
+              </div>
+            </div>
+
+            <!-- Bench (5 slots) -->
+            <div class="bench-row">
+              @for (slot of getBenchSlots(boardState()!.opponentState.bench); track $index) {
+                <div class="bench-slot-wrap">
+                  @if (slot) {
+                    <app-bench-pokemon-slot
+                      [pokemon]="slot"
+                      (cardClick)="openCardDetail($event)"
+                    />
+                  } @else {
+                    <span class="slot-empty">B{{ $index + 1 }}</span>
+                  }
                 </div>
               }
             </div>
-            <div class="prize-column">
-              @for (i of [0,1,2]; track i) {
-                <div class="prize-slot prize-slot--face-down">
-                  <div class="card-back-mini"></div>
-                </div>
-              }
-            </div>
-            <span class="prizes-label">{{ boardState()!.opponentState.prizesCount }} prizes</span>
+
           </div>
 
           <!-- Deck + Discard -->
-          <div class="deck-discard-area">
+          <div class="deck-col">
             <div class="zone-slot deck-slot">
-              <div class="card-back-mini"></div>
-              <span class="slot-label">{{ boardState()!.opponentState.deckCount }}</span>
+              <img
+                [src]="getCardBackUrl(boardState()!.opponentState.cardBack)"
+                alt="Deck"
+                class="card-img-full"
+              />
+              <span class="deck-count">{{ boardState()!.opponentState.deckCount }}</span>
             </div>
             <div
               class="zone-slot discard-slot"
@@ -71,7 +144,7 @@
                 <img
                   [src]="getDiscardTop(boardState()!.opponentState.discardPile)!.imageSmall"
                   alt="Discard"
-                  class="card-img-mini"
+                  class="card-img-full"
                 />
               } @else {
                 <span class="slot-empty">Discard</span>
@@ -79,59 +152,12 @@
             </div>
           </div>
 
-          <!-- Bench (5 slots) -->
-          <div class="bench-area">
-            @for (slot of getBenchSlots(boardState()!.opponentState.bench); track $index) {
-              <div class="bench-slot-wrap">
-                @if (slot) {
-                  <app-bench-pokemon-slot
-                    [pokemon]="slot"
-                    (cardClick)="openCardDetail($event)"
-                  />
-                } @else {
-                  <span class="slot-empty">B{{ $index + 1 }}</span>
-                }
-              </div>
-            }
-          </div>
-
-          <!-- Active Pokémon + Support Card -->
-          <div class="active-area">
-            <div class="support-card-slot">
-              @if (boardState()!.opponentState.active?.attachedTool) {
-                <img
-                  [src]="boardState()!.opponentState.active!.attachedTool!.imageSmall"
-                  alt="Tool"
-                  class="card-img-mini"
-                  (click)="openCardDetail(boardState()!.opponentState.active!.attachedTool)"
-                />
-              } @else {
-                <span class="slot-empty">Tool</span>
-              }
-            </div>
-            <div class="active-slot-wrap">
-              @if (boardState()!.opponentState.active) {
-                <app-active-pokemon-slot
-                  [pokemon]="boardState()!.opponentState.active!"
-                  (cardClick)="openCardDetail($event)"
-                />
-              } @else {
-                <span class="slot-empty">Active</span>
-              }
-            </div>
-          </div>
-
-          <!-- Hand count -->
-          <div class="hand-count-area">
-            <span class="hand-count__label">Hand</span>
-            <span class="hand-count__value">{{ boardState()!.opponentState.cardsInHand }}</span>
-          </div>
-
         </div>
 
-        <!-- ══ SHARED ZONE (center) ══ -->
-        <div class="shared-zone">
-          <div class="stadium-slot">
+        <!-- ══ DIVIDER with Stadium ══ -->
+        <div class="board-divider">
+          <div class="stadium-slot"
+               (click)="openCardDetail(null)">
             @if (boardState()!.activeStadiumCardId) {
               <span class="slot-label">Stadium</span>
             } @else {
@@ -140,68 +166,90 @@
           </div>
         </div>
 
-        <!-- ══ OWN ZONE (bottom) ══ -->
+        <!-- ══ OWN ZONE ══ -->
         <div class="player-zone player-zone--own">
 
-          <!-- Hand -->
-          <div class="hand-area">
-            @for (card of boardState()!.ownState.hand; track card.id) {
-              <img
-                class="hand-card"
-                [src]="card.imageSmall"
-                [alt]="card.name"
-                (click)="openCardDetail(card)"
-              />
-            }
-          </div>
-
-          <!-- Active Pokémon + Support Card -->
-          <div class="active-area">
-            <div class="support-card-slot">
-              @if (boardState()!.ownState.active?.attachedTool) {
-                <img
-                  [src]="boardState()!.ownState.active!.attachedTool!.imageSmall"
-                  alt="Tool"
-                  class="card-img-mini"
-                  (click)="openCardDetail(boardState()!.ownState.active!.attachedTool)"
-                />
-              } @else {
-                <span class="slot-empty">Tool</span>
-              }
-            </div>
-            <div class="active-slot-wrap">
-              @if (boardState()!.ownState.active) {
-                <app-active-pokemon-slot
-                  [pokemon]="boardState()!.ownState.active!"
-                  (cardClick)="openCardDetail($event)"
-                />
-              } @else {
-                <span class="slot-empty">Active</span>
-              }
-            </div>
-          </div>
-
-          <!-- Bench (5 slots) -->
-          <div class="bench-area">
-            @for (slot of getBenchSlots(boardState()!.ownState.bench); track $index) {
-              <div class="bench-slot-wrap">
+          <!-- Prizes (6 stacked vertically) -->
+          <div class="prizes-col">
+            <span class="zone-label">Prizes</span>
+            @for (slot of getPrizeSlots(boardState()!.ownState.prizes); track $index) {
+              <div
+                class="prize-slot"
+                (click)="openCardDetail(slot)"
+              >
                 @if (slot) {
-                  <app-bench-pokemon-slot
-                    [pokemon]="slot"
-                    (cardClick)="openCardDetail($event)"
+                  <img
+                    [src]="slot.imageSmall"
+                    alt="Prize"
+                    class="card-img-full"
                   />
                 } @else {
-                  <span class="slot-empty">B{{ $index + 1 }}</span>
+                  <img
+                    [src]="getCardBackUrl(boardState()!.ownState.cardBack)"
+                    alt="Prize"
+                    class="card-img-full"
+                  />
                 }
               </div>
             }
           </div>
 
+          <!-- Play area -->
+          <div class="play-area">
+
+            <!-- Active + Tool -->
+            <div class="active-col">
+              <div class="active-slot-wrap">
+                @if (boardState()!.ownState.active) {
+                  <app-active-pokemon-slot
+                    [pokemon]="boardState()!.ownState.active!"
+                    (cardClick)="openCardDetail($event)"
+                  />
+                } @else {
+                  <span class="slot-empty">Active</span>
+                }
+              </div>
+              <div class="tool-slot">
+                @if (boardState()!.ownState.active?.attachedTool) {
+                  <img
+                    [src]="boardState()!.ownState.active!.attachedTool!.imageSmall"
+                    alt="Tool"
+                    class="card-img-full"
+                    (click)="openCardDetail(boardState()!.ownState.active!.attachedTool)"
+                  />
+                } @else {
+                  <span class="slot-empty">Tool</span>
+                }
+              </div>
+            </div>
+
+            <!-- Bench (5 slots) -->
+            <div class="bench-row">
+              @for (slot of getBenchSlots(boardState()!.ownState.bench); track $index) {
+                <div class="bench-slot-wrap">
+                  @if (slot) {
+                    <app-bench-pokemon-slot
+                      [pokemon]="slot"
+                      (cardClick)="openCardDetail($event)"
+                    />
+                  } @else {
+                    <span class="slot-empty">B{{ $index + 1 }}</span>
+                  }
+                </div>
+              }
+            </div>
+
+          </div>
+
           <!-- Deck + Discard -->
-          <div class="deck-discard-area">
+          <div class="deck-col">
             <div class="zone-slot deck-slot">
-              <div class="card-back-mini"></div>
-              <span class="slot-label">{{ boardState()!.ownState.deckCount }}</span>
+              <img
+                [src]="getCardBackUrl(boardState()!.ownState.cardBack)"
+                alt="Deck"
+                class="card-img-full"
+              />
+              <span class="deck-count">{{ boardState()!.ownState.deckCount }}</span>
             </div>
             <div
               class="zone-slot discard-slot"
@@ -211,7 +259,7 @@
                 <img
                   [src]="getDiscardTop(boardState()!.ownState.discardPile)!.imageSmall"
                   alt="Discard"
-                  class="card-img-mini"
+                  class="card-img-full"
                 />
               } @else {
                 <span class="slot-empty">Discard</span>
@@ -219,47 +267,26 @@
             </div>
           </div>
 
-          <!-- Prizes: 2 stacked columns of 3 -->
-          <div class="prizes-area">
-            <span class="prizes-label">{{ boardState()!.ownState.prizes.length }} prizes</span>
-            <div class="prize-column">
-              @for (i of [0,1,2]; track i) {
-                <div class="prize-slot" (click)="openCardDetail(boardState()!.ownState.prizes[i] ?? null)">
-                  @if (boardState()!.ownState.prizes[i]) {
-                    <img
-                      [src]="boardState()!.ownState.prizes[i].imageSmall"
-                      alt="Prize"
-                      class="card-img-mini"
-                    />
-                  } @else {
-                    <div class="card-back-mini"></div>
-                  }
-                </div>
-              }
-            </div>
-            <div class="prize-column">
-              @for (i of [3,4,5]; track i) {
-                <div class="prize-slot" (click)="openCardDetail(boardState()!.ownState.prizes[i] ?? null)">
-                  @if (boardState()!.ownState.prizes[i]) {
-                    <img
-                      [src]="boardState()!.ownState.prizes[i].imageSmall"
-                      alt="Prize"
-                      class="card-img-mini"
-                    />
-                  } @else {
-                    <div class="card-back-mini"></div>
-                  }
-                </div>
-              }
-            </div>
-          </div>
-
         </div>
+
       </div>
     </div>
+
+    <!-- ── Own hand (outside board, hover to reveal) ────────────────── -->
+    <div class="own-hand">
+      @for (card of boardState()!.ownState.hand; track card.id) {
+        <img
+          class="own-hand-card"
+          [src]="card.imageSmall"
+          [alt]="card.name"
+          (click)="openCardDetail(card)"
+        />
+      }
+    </div>
+
   }
 
-  <!-- Card detail modal -->
+  <!-- ── Card detail modal ────────────────────────────────────────── -->
   @if (selectedCard()) {
     <div class="modal-overlay" (click)="closeCardDetail()">
       <div class="modal-content" (click)="$event.stopPropagation()">
@@ -273,7 +300,40 @@
     </div>
   }
 
-  <!-- Coin flip overlay -->
+  <!-- ── Surrender confirmation modal ─────────────────────────────── -->
+  @if (showSurrenderModal()) {
+    <div class="modal-overlay" (click)="closeSurrenderModal()">
+      <div class="modal-confirm" (click)="$event.stopPropagation()">
+        <h2 class="modal-confirm__title">Surrender game?</h2>
+        <p class="modal-confirm__body">
+          Your opponent will be declared the winner. This action cannot
+          be undone.
+        </p>
+        <div class="modal-confirm__actions">
+          <button
+            class="btn btn--ghost"
+            (click)="closeSurrenderModal()"
+            [disabled]="surrendering()"
+          >
+            Cancel
+          </button>
+          <button
+            class="btn btn--danger"
+            (click)="confirmSurrender()"
+            [disabled]="surrendering()"
+          >
+            @if (surrendering()) {
+              Surrendering...
+            } @else {
+              Yes, surrender
+            }
+          </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Coin flip overlay ─────────────────────────────────────────── -->
   @if (showCoinFlip()) {
     <div class="coin-overlay">
       <div class="coin-result">

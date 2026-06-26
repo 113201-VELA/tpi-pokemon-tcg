@@ -57,6 +57,14 @@ public class GameController {
         return ResponseEntity.ok(gameService.joinGame(gameId, player.getId(), request.getDeckId()));
     }
 
+    /** Surrenders the game. The opponent is declared the winner. */
+    @PostMapping("/{gameId}/surrender")
+    public ResponseEntity<Void> surrenderGame(@AuthenticationPrincipal Player player,
+                                               @PathVariable UUID gameId) {
+        gameService.surrenderGame(gameId, player.getId());
+        return ResponseEntity.noContent().build();
+    }
+
     /** Cancels a WAITING game. Only the creator (player 1) can cancel it. */
     @DeleteMapping("/{gameId}")
     public ResponseEntity<Void> cancelGame(@AuthenticationPrincipal Player player,

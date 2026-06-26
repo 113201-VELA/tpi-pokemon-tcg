@@ -5,6 +5,8 @@ import java.util.List;
 public record OwnPlayerStateResponseDTO(
         String playerId,
         String playerName,
+        String cardBack,
+        String coin,
         ActivePokemonDTO active,
         List<BenchPokemonDTO> bench,
         List<CardResponseDTO> hand,

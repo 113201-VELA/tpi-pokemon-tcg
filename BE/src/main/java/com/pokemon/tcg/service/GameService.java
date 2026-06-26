@@ -6,6 +6,7 @@ import com.pokemon.tcg.controller.mapper.GameMapper;
 import com.pokemon.tcg.controller.mapper.GameStateMapper;
 import com.pokemon.tcg.controller.dto.response.GameResponseDTO;
 import com.pokemon.tcg.controller.dto.response.GameStateResponseDTO;
+import com.pokemon.tcg.controller.websocket.GameEventPublisher;
 import com.pokemon.tcg.engine.GameEngineFacade;
 import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.domain.model.deck.Deck;
@@ -33,6 +34,7 @@ public class GameService {
     private final PlayerRepository playerRepository;
     private final DeckRepository deckRepository;
     private final PlayerMatchupRepository matchupRepository;
+    private final GameEventPublisher eventPublisher;
     private final GameStateMapper gameStateMapper;
     private final GameMapper gameMapper;
     private final GameLogMapper gameLogMapper;
@@ -44,7 +46,7 @@ public class GameService {
                        CardRepository cardRepository,
                        PlayerRepository playerRepository,
                        DeckRepository deckRepository,
-                       PlayerMatchupRepository matchupRepository,
+                       PlayerMatchupRepository matchupRepository, GameEventPublisher eventPublisher,
                        GameStateMapper gameStateMapper,
                        GameMapper gameMapper,
                        GameLogMapper gameLogMapper) {
@@ -56,6 +58,7 @@ public class GameService {
         this.playerRepository = playerRepository;
         this.deckRepository   = deckRepository;
         this.matchupRepository= matchupRepository;
+        this.eventPublisher = eventPublisher;
         this.gameStateMapper  = gameStateMapper;
         this.gameMapper       = gameMapper;
         this.gameLogMapper = gameLogMapper;
@@ -149,7 +152,14 @@ public class GameService {
                     .boardState(result.newState())
                     .build();
             stateRepository.save(snapshot);
-        }
+        };
+        // Notify lobby subscribers that the game has started
+        eventPublisher.publishLobbyUpdate(
+                GameEvent.builder()
+                        .type(GameEventType.GAME_STARTED)
+                        .data(Map.of("gameId", game.getId().toString()))
+                        .build()
+        );
 
         return gameRepository.save(game);
     }
@@ -174,6 +184,7 @@ public class GameService {
         Map<String, Card> cardCache = cardRepository.findAllById(allCardIds).stream()
                 .collect(Collectors.toMap(Card::getId, Function.identity()));
 
+        // Resolve player names and cosmetics from GamePlayer records
         String requestingPlayerName = playerRepository.findById(requestingPlayerId)
                 .map(Player::getUsername)
                 .orElse("Unknown");
@@ -183,11 +194,34 @@ public class GameService {
                 .map(Player::getUsername)
                 .orElse("Unknown");
 
+        // Load the game to access GamePlayer deck cosmetics
+        Game game = gameRepository.findByIdWithPlayersAndDecks(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        String ownCardBack      = "DEFAULT";
+        String ownCoin          = "DEFAULT";
+        String opponentCardBack = "DEFAULT";
+        String opponentCoin     = "DEFAULT";
+
+        for (GamePlayer gp : game.getPlayers()) {
+            if (gp.getPlayer().getId().equals(requestingPlayerId)) {
+                ownCardBack = gp.getDeck().getCardBack();
+                ownCoin     = gp.getDeck().getCoin();
+            } else {
+                opponentCardBack = gp.getDeck().getCardBack();
+                opponentCoin     = gp.getDeck().getCoin();
+            }
+        }
+
         return gameStateMapper.toGameStateResponse(
                 boardState,
                 requestingPlayerId.toString(),
                 requestingPlayerName,
                 opponentPlayerName,
+                ownCardBack,
+                ownCoin,
+                opponentCardBack,
+                opponentCoin,
                 cardCache
         );
     }
@@ -350,6 +384,42 @@ public class GameService {
 
         game.setState(GameState.CANCELLED);
         gameRepository.save(game);
+    }
+
+    /**
+     * Surrenders an active game on behalf of the requesting player.
+     * The opponent is declared the winner. Matchup records are updated.
+     * Valid for games in SETUP or ACTIVE state only.
+     */
+    public void surrenderGame(UUID gameId, UUID playerId) {
+        Game game = gameRepository.findById(gameId)
+                .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+        if (game.getState() != GameState.SETUP && game.getState() != GameState.ACTIVE) {
+            throw new IllegalArgumentException("Game is not in a surrenderable state");
+        }
+
+        boolean isParticipant = game.getPlayers().stream()
+                .anyMatch(gp -> gp.getPlayer().getId().equals(playerId));
+
+        if (!isParticipant) {
+            throw new IllegalArgumentException("Player is not a participant of this game");
+        }
+
+        // Find the opponent and declare them the winner
+        Player winner = game.getPlayers().stream()
+                .filter(gp -> !gp.getPlayer().getId().equals(playerId))
+                .map(GamePlayer::getPlayer)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Opponent not found"));
+
+        game.setState(GameState.FINISHED);
+        game.setWinner(winner);
+        game.setFinishReason(FinishReason.SURRENDER);
+        game.setFinishedAt(java.time.Instant.now());
+        gameRepository.save(game);
+
+        updateMatchups(game);
     }
 
     /**
