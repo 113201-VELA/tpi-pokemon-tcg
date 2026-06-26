@@ -387,6 +387,9 @@ public class RuleValidator {
      * - Only once per turn.
      * - Active Pokémon must not be Asleep or Paralyzed.
      * - There must be at least one Pokémon on the bench to switch to.
+     * - The player must discard exactly as many energies as the retreat cost,
+     *   unless Fairy Garden suppresses the cost to 0.
+     * - All specified energies must be attached to the Active Pokémon.
      */
     private ValidationResult validateRetreat(BoardState state, GameAction action) {
         if (state.getTurnPhase() != TurnPhase.MAIN) {
@@ -411,6 +414,35 @@ public class RuleValidator {
                 return ValidationResult.fail("Your Active Pokémon is Paralyzed and cannot retreat.");
             }
         }
+
+        // Fairy Garden suppresses retreat cost for Fairy Pokémon with a Fairy Energy attached
+        if (isFairyGardenActive(state) && isFairyPokemonWithFairyEnergy(active)) {
+            return ValidationResult.ok();
+        }
+
+        // Validate retreat cost
+        int retreatCost = resolveRetreatCost(active.getCardId());
+        List<String> energiesToDiscard = getEnergiesToDiscard(action);
+
+        if (energiesToDiscard.size() != retreatCost) {
+            return ValidationResult.fail(
+                    "You must discard exactly " + retreatCost + " Energy card(s) to retreat.");
+        }
+
+        List<String> attachedEnergies = active.getAttachedEnergyIds() != null
+                ? active.getAttachedEnergyIds()
+                : List.of();
+
+        // Verify each specified energy is actually attached to the Active Pokémon.
+        // Use a mutable copy to handle duplicates correctly.
+        List<String> attachedCopy = new java.util.ArrayList<>(attachedEnergies);
+        for (String energyId : energiesToDiscard) {
+            if (!attachedCopy.remove(energyId)) {
+                return ValidationResult.fail(
+                        "Energy card " + energyId + " is not attached to your Active Pokémon.");
+            }
+        }
+
         return ValidationResult.ok();
     }
 
@@ -502,6 +534,74 @@ public class RuleValidator {
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────
+
+    private static final String FAIRY_GARDEN = "xy1-117";
+
+    /**
+     * Returns true if Fairy Garden is the currently active Stadium.
+     */
+    private boolean isFairyGardenActive(BoardState state) {
+        return FAIRY_GARDEN.equals(state.getActiveStadiumCardId());
+    }
+
+    /**
+     * Returns true if the given Active Pokémon is a Fairy-type Pokémon
+     * with at least one Fairy Basic Energy attached.
+     *
+     * <p>Fairy type is checked via the Pokémon's {@code types} list.
+     * Fairy Energy is identified by looking up each attached card in the
+     * card cache and checking its type list for {@link EnergyType#FAIRY}.
+     */
+    private boolean isFairyPokemonWithFairyEnergy(ActivePokemon active) {
+        // Check that the Pokémon itself is Fairy type
+        if (active.getTypes() == null
+                || !active.getTypes().contains(com.pokemon.tcg.domain.model.card.EnergyType.FAIRY)) {
+            return false;
+        }
+        // Check that at least one attached energy is a Fairy Basic Energy
+        if (active.getAttachedEnergyIds() == null || active.getAttachedEnergyIds().isEmpty()) {
+            return false;
+        }
+        return active.getAttachedEnergyIds().stream().anyMatch(this::isFairyBasicEnergy);
+    }
+
+    /**
+     * Returns true if the card identified by the given ID is a Fairy Basic Energy.
+     */
+    private boolean isFairyBasicEnergy(String cardId) {
+        return cardLookupPort.findCardById(cardId)
+                .map(card -> card.isBasicEnergy()
+                        && card.getTypes() != null
+                        && card.getTypes().contains(
+                                com.pokemon.tcg.domain.model.card.EnergyType.FAIRY.name()))
+                .orElse(false);
+    }
+
+    /**
+     * Returns the retreat cost (number of energies to discard) for the given card.
+     * The retreat cost is the size of the card's retreatCost list.
+     * Falls back to 0 if the card is not found in the cache.
+     */
+    private int resolveRetreatCost(String cardId) {
+        return cardLookupPort.findCardById(cardId)
+                .map(card -> card.getRetreatCost() != null ? card.getRetreatCost().size() : 0)
+                .orElse(0);
+    }
+
+    /**
+     * Extracts the list of energy card IDs to discard from the action payload.
+     * Returns an empty list if the payload key is absent or null.
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> getEnergiesToDiscard(GameAction action) {
+        Object raw = action.getPayload() != null
+                ? action.getPayload().get("energyCardIdsToDiscard")
+                : null;
+        if (raw instanceof List<?> list) {
+            return (List<String>) list;
+        }
+        return List.of();
+    }
 
     /**
      * Verifies that a card is in the player's hand and is a Basic Pokémon.

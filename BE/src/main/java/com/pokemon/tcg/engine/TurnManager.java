@@ -360,7 +360,7 @@ public class TurnManager {
         return state;
     }
 
-    /** Retreats the Active Pokémon to the bench. */
+    /** Retreats the Active Pokémon to the bench, discarding energies as retreat cost. */
     private BoardState handleRetreat(BoardState state, GameAction action) {
         String replacementId = action.getPayloadString("replacementInstanceId");
         PlayerState ps       = state.getStateFor(action.getPlayerId());
@@ -373,6 +373,13 @@ public class TurnManager {
                 .findFirst().orElse(null);
 
         if (replacement == null) return state;
+
+        // Discard the energies paid as retreat cost,
+        // unless Fairy Garden suppresses the retreat cost for this Pokémon
+        if (!isFairyGardenRetreatFree(state, ps.getActivePokemon())) {
+            List<String> energiesToDiscard = getEnergiesToDiscard(action);
+            discardRetreatCostEnergies(ps, energiesToDiscard);
+        }
 
         ActivePokemon oldActive = ps.getActivePokemon();
         BenchPokemon newBench = BenchPokemon.builder()
@@ -629,6 +636,74 @@ public class TurnManager {
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────
+
+    private static final String FAIRY_GARDEN = "xy1-117";
+
+    /**
+     * Returns true if Fairy Garden is active and the given Pokémon qualifies
+     * for free retreat (Fairy type with at least one Fairy Basic Energy attached).
+     */
+    private boolean isFairyGardenRetreatFree(BoardState state, ActivePokemon active) {
+        if (!FAIRY_GARDEN.equals(state.getActiveStadiumCardId())) return false;
+        if (active == null) return false;
+        if (active.getTypes() == null
+                || !active.getTypes().contains(
+                        com.pokemon.tcg.domain.model.card.EnergyType.FAIRY)) return false;
+        if (active.getAttachedEnergyIds() == null
+                || active.getAttachedEnergyIds().isEmpty()) return false;
+        return active.getAttachedEnergyIds().stream()
+                .anyMatch(this::isFairyBasicEnergy);
+    }
+
+    /**
+     * Returns true if the card identified by the given ID is a Fairy Basic Energy.
+     */
+    private boolean isFairyBasicEnergy(String cardId) {
+        return cardLookupPort.findCardById(cardId)
+                .map(card -> card.isBasicEnergy()
+                        && card.getTypes() != null
+                        && card.getTypes().contains(
+                                com.pokemon.tcg.domain.model.card.EnergyType.FAIRY.name()))
+                .orElse(false);
+    }
+
+    /**
+     * Removes the specified energies from the Active Pokémon's attached energies
+     * and adds them to the player's discard pile.
+     */
+    private void discardRetreatCostEnergies(PlayerState ps, List<String> energiesToDiscard) {
+        if (energiesToDiscard == null || energiesToDiscard.isEmpty()) return;
+
+        ActivePokemon active = ps.getActivePokemon();
+        List<String> attached = new ArrayList<>(
+                active.getAttachedEnergyIds() != null
+                        ? active.getAttachedEnergyIds() : new ArrayList<>());
+
+        for (String energyId : energiesToDiscard) {
+            attached.remove(energyId);
+        }
+        active.setAttachedEnergyIds(attached);
+
+        List<String> discard = new ArrayList<>(
+                ps.getDiscard() != null ? ps.getDiscard() : new ArrayList<>());
+        discard.addAll(energiesToDiscard);
+        ps.setDiscard(discard);
+    }
+
+    /**
+     * Extracts the list of energy card IDs to discard from the action payload.
+     * Returns an empty list if the payload key is absent or null.
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> getEnergiesToDiscard(GameAction action) {
+        Object raw = action.getPayload() != null
+                ? action.getPayload().get("energyCardIdsToDiscard")
+                : null;
+        if (raw instanceof List<?> list) {
+            return (List<String>) list;
+        }
+        return List.of();
+    }
 
     private void attachEnergyToPokemon(PlayerState ps, String targetInstanceId, String cardId) {
         if (ps.getActivePokemon() != null &&
