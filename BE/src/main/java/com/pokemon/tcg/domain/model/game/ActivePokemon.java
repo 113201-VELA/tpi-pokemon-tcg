@@ -31,6 +31,9 @@ public class ActivePokemon {
     private boolean enteredThisTurn;
 
     @Builder.Default
+    private List<PokemonEffect> activeEffects = new ArrayList<>();
+
+    @Builder.Default
     private List<TypeModifier> weaknesses = new ArrayList<>();
 
     @Builder.Default

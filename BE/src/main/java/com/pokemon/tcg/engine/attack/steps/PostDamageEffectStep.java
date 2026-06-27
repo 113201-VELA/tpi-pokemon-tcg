@@ -37,7 +37,11 @@ public class PostDamageEffectStep implements AttackStep {
 
         ActivePokemon defender = defenderState.getActivePokemon();
 
-        if (defender != null && ctx.getDamageToApply() > 0) {
+        boolean defenderInvulnerable = defender != null
+                && defender.getActiveEffects() != null
+                && defender.getActiveEffects().contains(PokemonEffect.INVULNERABLE);
+
+        if (!defenderInvulnerable && defender != null && ctx.getDamageToApply() > 0) {
             checkAndHandleKnockout(ctx, attackerState, defenderState, defender);
         }
 

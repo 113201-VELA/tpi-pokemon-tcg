@@ -63,6 +63,7 @@ public class TurnManager {
             case CHOOSE_BENCH_POKEMON  -> handleChooseBenchPokemon(state, action);
             // ── Deck selection ───────────────────────────────────────
             case SELECT_FROM_DECK      -> handleSelectFromDeck(state, action);
+            case FORCED_SWITCH         -> handleForcedSwitch(state, action);
             default                    -> state;
         };
     }
@@ -525,9 +526,11 @@ public class TurnManager {
     private BoardState processBetweenTurns(BoardState state) {
         if (state.getPlayer1State().getActivePokemon() != null) {
             statusEffectManager.processBetweenTurns(state.getPlayer1State().getActivePokemon());
+            clearActiveEffects(state.getPlayer1State().getActivePokemon());
         }
         if (state.getPlayer2State().getActivePokemon() != null) {
             statusEffectManager.processBetweenTurns(state.getPlayer2State().getActivePokemon());
+            clearActiveEffects(state.getPlayer2State().getActivePokemon());
         }
         return state;
     }
@@ -607,37 +610,132 @@ public class TurnManager {
      * remaining revealed cards are shuffled back into the deck.
      */
     private BoardState handleSelectFromDeck(BoardState state, GameAction action) {
+        if (state.isPendingAttackSelection()) {
+            return handleAttackDrivenSelection(state, action);
+        }
+        if (state.isPendingDeckSelection()) {
+            return handleTrainerDrivenSelection(state, action);
+        }
+        return state;
+    }
+
+    private BoardState handleAttackDrivenSelection(BoardState state, GameAction action) {
         String playerId = action.getPlayerId();
-        if (!state.isPendingDeckSelection() || !state.getPendingDeckSelectionPlayerId().equals(playerId)) {
-            return state;
+        if (!state.getPendingAttackSelectionPlayerId().equals(playerId)) return state;
+
+        String chosenCardId       = action.getPayloadString("cardId");
+        List<String> pendingCards = state.getPendingDeckSelectionCardIds();
+        PlayerState ps            = state.getStateFor(playerId);
+
+        if (chosenCardId != null
+                && pendingCards != null
+                && pendingCards.contains(chosenCardId)) {
+            List<String> hand = new ArrayList<>(
+                    ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+            hand.add(chosenCardId);
+            ps.setHand(hand);
+
+            List<String> deck = new ArrayList<>(
+                    ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
+            deck.remove(chosenCardId);
+            Collections.shuffle(deck);
+            ps.setDeck(deck);
+        } else {
+            List<String> deck = new ArrayList<>(
+                    ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
+            Collections.shuffle(deck);
+            ps.setDeck(deck);
         }
 
-        String chosenCardId = action.getPayloadString("cardId");
+        return state.toBuilder()
+                .pendingAttackSelectionKey(null)
+                .pendingAttackSelectionPlayerId(null)
+                .pendingDeckSelectionCardIds(new ArrayList<>())
+                .build();
+    }
+
+    private BoardState handleTrainerDrivenSelection(BoardState state, GameAction action) {
+        String playerId = action.getPlayerId();
+        if (!state.getPendingDeckSelectionPlayerId().equals(playerId)) return state;
+
+        String chosenCardId       = action.getPayloadString("cardId");
         List<String> pendingCards = state.getPendingDeckSelectionCardIds();
-        if (chosenCardId == null || pendingCards == null || !pendingCards.contains(chosenCardId)) {
+
+        if (chosenCardId == null
+                || pendingCards == null
+                || !pendingCards.contains(chosenCardId)) {
             return state;
         }
 
         PlayerState ps = state.getStateFor(playerId);
 
-        // Move chosen card to hand
-        List<String> hand = new ArrayList<>(ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        List<String> hand = new ArrayList<>(
+                ps.getHand() != null ? ps.getHand() : new ArrayList<>());
         hand.add(chosenCardId);
         ps.setHand(hand);
 
-        // Shuffle remaining cards back into deck
         List<String> remaining = new ArrayList<>(pendingCards);
         remaining.remove(chosenCardId);
-        List<String> deck = new ArrayList<>(ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
+        List<String> deck = new ArrayList<>(
+                ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
         deck.addAll(remaining);
         Collections.shuffle(deck);
         ps.setDeck(deck);
 
-        // Clear pending state
-        state.setPendingDeckSelectionPlayerId(null);
-        state.setPendingDeckSelectionCardIds(new ArrayList<>());
+        return state.toBuilder()
+                .pendingDeckSelectionPlayerId(null)
+                .pendingDeckSelectionCardIds(new ArrayList<>())
+                .build();
+    }
 
-        return state;
+    private BoardState handleForcedSwitch(BoardState state, GameAction action) {
+        if (!state.isPendingForcedSwitch()) return state;
+        if (!state.getPendingForcedSwitchPlayerId().equals(action.getPlayerId())) return state;
+
+        String instanceId = action.getPayloadString("instanceId");
+        PlayerState ps    = state.getStateFor(action.getPlayerId());
+
+        if (instanceId == null || ps.getBench() == null) return state;
+
+        BenchPokemon chosen = ps.getBench().stream()
+                .filter(b -> b.getInstanceId().equals(instanceId))
+                .findFirst().orElse(null);
+
+        if (chosen == null) return state;
+
+        ActivePokemon oldActive = ps.getActivePokemon();
+
+        BenchPokemon newBench = BenchPokemon.builder()
+                .instanceId(oldActive.getInstanceId())
+                .cardId(oldActive.getCardId())
+                .attachedEnergyIds(oldActive.getAttachedEnergyIds())
+                .attachedToolId(oldActive.getAttachedToolId())
+                .evolutionStack(oldActive.getEvolutionStack())
+                .damageCounters(oldActive.getDamageCounters())
+                .enteredThisTurn(false)
+                .build();
+
+        ActivePokemon newActive = ActivePokemon.builder()
+                .instanceId(chosen.getInstanceId())
+                .cardId(chosen.getCardId())
+                .attachedEnergyIds(chosen.getAttachedEnergyIds())
+                .attachedToolId(chosen.getAttachedToolId())
+                .evolutionStack(chosen.getEvolutionStack())
+                .damageCounters(chosen.getDamageCounters())
+                .conditions(new HashSet<>())
+                .activeEffects(new ArrayList<>())
+                .enteredThisTurn(false)
+                .build();
+
+        List<BenchPokemon> bench = new ArrayList<>(ps.getBench());
+        bench.remove(chosen);
+        bench.add(newBench);
+        ps.setBench(bench);
+        ps.setActivePokemon(newActive);
+
+        return state.toBuilder()
+                .pendingForcedSwitchPlayerId(null)
+                .build();
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────
@@ -785,6 +883,12 @@ public class TurnManager {
                         stack.add(newCardId);
                         b.setEvolutionStack(stack);
                     });
+        }
+    }
+
+    private void clearActiveEffects(ActivePokemon pokemon) {
+        if (pokemon.getActiveEffects() != null) {
+            pokemon.getActiveEffects().clear();
         }
     }
 }

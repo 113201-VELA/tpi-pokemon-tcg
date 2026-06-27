@@ -53,6 +53,34 @@ public class RuleValidator {
             return validateAcceptMulliganBonus(state, action);
         }
 
+        // During pendingAttackSelection, only SELECT_FROM_DECK is allowed
+        // and only the affected player may act.
+        if (state.isPendingAttackSelection()) {
+            if (action.getType() != GameActionType.SELECT_FROM_DECK) {
+                return ValidationResult.fail(
+                        "You must select a card from your deck first.");
+            }
+            if (!state.getPendingAttackSelectionPlayerId().equals(action.getPlayerId())) {
+                return ValidationResult.fail(
+                        "It is not your turn to select from the deck.");
+            }
+            return validateSelectFromDeck(state, action);
+        }
+
+        // During pendingForcedSwitch, only the affected player may send FORCED_SWITCH.
+        // All other actions are blocked until the switch is resolved.
+        if (state.isPendingForcedSwitch()) {
+            if (action.getType() != GameActionType.FORCED_SWITCH) {
+                return ValidationResult.fail(
+                        "Waiting for the opponent to switch their Active Pokémon.");
+            }
+            if (!state.getPendingForcedSwitchPlayerId().equals(action.getPlayerId())) {
+                return ValidationResult.fail(
+                        "It is not your turn to switch your Active Pokémon.");
+            }
+            return validateForcedSwitch(state, action);
+        }
+
         // During pendingDeckSelection, only SELECT_FROM_DECK is allowed
         // and only the affected player may act.
         if (state.isPendingDeckSelection()) {
@@ -100,6 +128,7 @@ public class RuleValidator {
             case CHOOSE_BENCH_POKEMON  -> validateChooseBenchPokemon(state, action);
             // ── Deck selection ───────────────────────────────────────
             case SELECT_FROM_DECK      -> validateSelectFromDeck(state, action);
+            case FORCED_SWITCH         -> validateForcedSwitch(state, action);
             default                    -> ValidationResult.ok();
         };
     }
@@ -527,6 +556,31 @@ public class RuleValidator {
         List<String> pendingCards = state.getPendingDeckSelectionCardIds();
         if (pendingCards == null || !pendingCards.contains(cardId)) {
             return ValidationResult.fail("The specified card is not available for selection.");
+        }
+        return ValidationResult.ok();
+    }
+
+    // ─── FORCED SWITCH ─────────────────────────────────────────────────────────
+
+    /**
+     * FORCED_SWITCH is only valid when a forced switch is pending for this player.
+     * The specified instanceId must match a Pokémon on their bench.
+     */
+    private ValidationResult validateForcedSwitch(BoardState state, GameAction action) {
+        PlayerState ps    = state.getStateFor(action.getPlayerId());
+        String instanceId = action.getPayloadString("instanceId");
+
+        if (instanceId == null) {
+            return ValidationResult.fail(
+                    "You must specify the instanceId of the Bench Pokémon to bring forward.");
+        }
+        if (ps.getBench() == null || ps.getBench().isEmpty()) {
+            return ValidationResult.fail("You have no Pokémon on the bench to switch.");
+        }
+        boolean exists = ps.getBench().stream()
+                .anyMatch(b -> b.getInstanceId().equals(instanceId));
+        if (!exists) {
+            return ValidationResult.fail("The specified Pokémon is not on your bench.");
         }
         return ValidationResult.ok();
     }

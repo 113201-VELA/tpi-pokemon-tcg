@@ -7,6 +7,7 @@ import com.pokemon.tcg.engine.attack.AttackStep;
 import com.pokemon.tcg.domain.model.game.ActivePokemon;
 import com.pokemon.tcg.domain.model.game.GameEvent;
 import com.pokemon.tcg.domain.model.game.GameEventType;
+import com.pokemon.tcg.domain.model.game.PokemonEffect;
 import org.springframework.stereotype.Component;
 
 import java.time.Instant;
@@ -62,6 +63,8 @@ public class DamageApplicationStep implements AttackStep {
                 ctx.getBoardState().getActiveStadiumCardId()
         );
 
+        finalDamage = applyActiveEffects(defender, finalDamage);
+
         int counters = damageCalculator.toCounters(finalDamage);
         defender.setDamageCounters(defender.getDamageCounters() + counters);
         ctx.setDamageToApply(finalDamage);
@@ -79,5 +82,18 @@ public class DamageApplicationStep implements AttackStep {
                 .build());
 
         chain.next(ctx);
+    }
+
+    private int applyActiveEffects(ActivePokemon defender, int finalDamage) {
+        if (defender.getActiveEffects() == null || defender.getActiveEffects().isEmpty()) {
+            return finalDamage;
+        }
+        if (defender.getActiveEffects().contains(PokemonEffect.INVULNERABLE)) {
+            return 0;
+        }
+        if (defender.getActiveEffects().contains(PokemonEffect.HARDEN) && finalDamage <= 60) {
+            return 0;
+        }
+        return finalDamage;
     }
 }

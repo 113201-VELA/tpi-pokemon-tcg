@@ -62,6 +62,15 @@ public class BoardState {
     @Builder.Default
     private List<String> pendingDeckSelectionCardIds = new ArrayList<>();
 
+    @Builder.Default
+    private String pendingForcedSwitchPlayerId = null;
+
+    @Builder.Default
+    private String pendingAttackSelectionKey = null;
+
+    @Builder.Default
+    private String pendingAttackSelectionPlayerId = null;
+
     public PlayerState getStateFor(String playerId) {
         if (playerId.equals(player1State.getPlayerId())) return player1State;
         if (playerId.equals(player2State.getPlayerId())) return player2State;
@@ -97,5 +106,13 @@ public class BoardState {
      */
     public boolean isPendingDeckSelection() {
         return pendingDeckSelectionPlayerId != null;
+    }
+
+    public boolean isPendingForcedSwitch() {
+        return pendingForcedSwitchPlayerId != null;
+    }
+
+    public boolean isPendingAttackSelection() {
+        return pendingAttackSelectionPlayerId != null;
     }
 }
