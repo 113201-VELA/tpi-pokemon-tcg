@@ -72,6 +72,10 @@ public class PostDamageEffectStep implements AttackStep {
      * if one is registered, passing the preserved defender snapshot.
      */
     private void triggerPassiveAbility(AttackContext ctx, ActivePokemon defender) {
+        // Don't trigger if abilities are suppressed on this Pokémon
+        if (defender.getActiveEffects() != null
+                && defender.getActiveEffects().contains(PokemonEffect.NO_ABILITIES)) return;
+
         cardLookupPort.findCardById(defender.getCardId()).ifPresent(card -> {
             passiveAbilityRegistry.findAbility(card.getName())
                     .ifPresent(ability -> ability.onDamageReceived(ctx, defender));

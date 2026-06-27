@@ -581,10 +581,18 @@ public class RuleValidator {
         boolean inPlay = (ps.getActivePokemon() != null
                 && ps.getActivePokemon().getInstanceId().equals(instanceId))
                 || (ps.getBench() != null && ps.getBench().stream()
-                        .anyMatch(b -> b.getInstanceId().equals(instanceId)));
+                .anyMatch(b -> b.getInstanceId().equals(instanceId)));
 
         if (!inPlay) {
             return ValidationResult.fail("The specified Pokémon is not in play.");
+        }
+
+// Check if the Pokémon's abilities are suppressed (only applies to Active)
+        if (ps.getActivePokemon() != null
+                && ps.getActivePokemon().getInstanceId().equals(instanceId)
+                && ps.getActivePokemon().getActiveEffects() != null
+                && ps.getActivePokemon().getActiveEffects().contains(PokemonEffect.NO_ABILITIES)) {
+            return ValidationResult.fail("This Pokémon's Abilities are suppressed.");
         }
 
         if (state.getTurnFlags().isAbilityUsed(instanceId, abilityName)) {
