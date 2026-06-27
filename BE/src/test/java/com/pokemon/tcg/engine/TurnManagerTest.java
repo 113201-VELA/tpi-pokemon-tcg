@@ -371,4 +371,45 @@ class TurnManagerTest {
         assertThat(result.getGameState()).isEqualTo(GameState.ACTIVE);
         assertThat(result.isBonusDrawPending()).isFalse();
     }
+
+    @Test
+    void handleEvolvePokemon_shouldClearSpecialConditions() {
+        BoardState state = buildState("p1", TurnPhase.MAIN);
+        state.getPlayer1State().setHand(new ArrayList<>(List.of("xy1-2")));
+        ActivePokemon active = state.getPlayer1State().getActivePokemon();
+        active.setConditions(new HashSet<>(Set.of(
+                SpecialCondition.POISONED, SpecialCondition.CONFUSED)));
+        String activeInstanceId = active.getInstanceId();
+
+        when(cardLookupPort.findCardById("xy1-2")).thenReturn(Optional.empty());
+
+        GameAction action = buildAction("p1", GameActionType.EVOLVE_POKEMON,
+                Map.of("cardId", "xy1-2", "targetInstanceId", activeInstanceId));
+        BoardState result = turnManager.advancePhase(state, action);
+
+        assertThat(result.getPlayer1State().getActivePokemon().getConditions()).isEmpty();
+    }
+
+    @Test
+    void handleDrawCard_shouldResetEnteredThisTurnForAllPokemon() {
+        BoardState state = buildState("p1", TurnPhase.DRAW);
+        state.getPlayer1State().setDeck(new ArrayList<>(List.of("card-a")));
+        state.getPlayer1State().setHand(new ArrayList<>());
+
+        // Mark active and bench Pokémon as entered this turn
+        state.getPlayer1State().getActivePokemon().setEnteredThisTurn(true);
+        BenchPokemon bench = BenchPokemon.builder()
+                .instanceId("bench-inst").cardId("xy1-3")
+                .attachedEnergyIds(new ArrayList<>())
+                .evolutionStack(new ArrayList<>())
+                .enteredThisTurn(true)
+                .build();
+        state.getPlayer1State().setBench(new ArrayList<>(List.of(bench)));
+
+        GameAction action = buildAction("p1", GameActionType.DRAW_CARD, Map.of());
+        BoardState result = turnManager.advancePhase(state, action);
+
+        assertThat(result.getPlayer1State().getActivePokemon().isEnteredThisTurn()).isFalse();
+        assertThat(result.getPlayer1State().getBench().get(0).isEnteredThisTurn()).isFalse();
+    }
 }

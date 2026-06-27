@@ -1010,6 +1010,8 @@ public class TurnManager {
             if (ps.getActivePokemon().getActiveEffects() != null) {
                 ps.getActivePokemon().getActiveEffects().clear();
             }
+            // Evolving clears all special conditions per rulebook
+            ps.getActivePokemon().setConditions(new HashSet<>());
             List<String> stack = new ArrayList<>(ps.getActivePokemon().getEvolutionStack());
             stack.add(newCardId);
             ps.getActivePokemon().setEvolutionStack(stack);
