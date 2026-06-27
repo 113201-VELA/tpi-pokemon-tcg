@@ -302,6 +302,11 @@ public class TurnManager {
         attachEnergyToPokemon(ps, targetId, cardId);
         state.getTurnFlags().setEnergyAttachedThisTurn(true);
 
+        // Rainbow Energy places 1 damage counter on the Pokémon it is attached to
+        if (isRainbowEnergy(cardId)) {
+            applyRainbowEnergyDamage(ps, targetId);
+        }
+
         return state;
     }
 
@@ -703,6 +708,38 @@ public class TurnManager {
             return (List<String>) list;
         }
         return List.of();
+    }
+
+    private static final String RAINBOW_ENERGY_NAME = "rainbow energy";
+
+    /**
+     * Returns true if the given card ID corresponds to Rainbow Energy,
+     * identified by card name (case-insensitive) from the card cache.
+     */
+    private boolean isRainbowEnergy(String cardId) {
+        return cardLookupPort.findCardById(cardId)
+                .map(card -> RAINBOW_ENERGY_NAME.equals(
+                        card.getName() != null ? card.getName().toLowerCase() : ""))
+                .orElse(false);
+    }
+
+    /**
+     * Places 1 damage counter on the target Pokémon after Rainbow Energy is attached.
+     * Applies to both the Active Pokémon and Bench Pokémon.
+     */
+    private void applyRainbowEnergyDamage(PlayerState ps, String targetInstanceId) {
+        if (ps.getActivePokemon() != null &&
+                ps.getActivePokemon().getInstanceId().equals(targetInstanceId)) {
+            ps.getActivePokemon().setDamageCounters(
+                    ps.getActivePokemon().getDamageCounters() + 1);
+            return;
+        }
+        if (ps.getBench() != null) {
+            ps.getBench().stream()
+                    .filter(b -> b.getInstanceId().equals(targetInstanceId))
+                    .findFirst()
+                    .ifPresent(b -> b.setDamageCounters(b.getDamageCounters() + 1));
+        }
     }
 
     private void attachEnergyToPokemon(PlayerState ps, String targetInstanceId, String cardId) {
