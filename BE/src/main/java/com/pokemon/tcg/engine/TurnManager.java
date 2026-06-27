@@ -1,6 +1,7 @@
 package com.pokemon.tcg.engine;
 
 import com.pokemon.tcg.domain.model.card.Attack;
+import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.strategy.ability.ActiveAbilityRegistry;
 import com.pokemon.tcg.domain.strategy.trainer.TrainerEffectRegistry;
@@ -143,6 +144,7 @@ public class TurnManager {
                 .enteredThisTurn(true)
                 .build();
 
+        populatePokemonModifiers(active, cardId);
         ps.setActivePokemon(active);
 
         return state;
@@ -245,18 +247,25 @@ public class TurnManager {
     private BoardState handleDrawCard(BoardState state, GameAction action) {
         PlayerState ps = state.getStateFor(action.getPlayerId());
 
-        if (ps.getDeck() == null || ps.getDeck().isEmpty()) return state;
+        // The first player does not draw on turn 0 (their first turn) per rulebook
+        boolean isFirstPlayerFirstTurn = state.getTurnNumber() == 0
+                && action.getPlayerId().equals(state.getFirstPlayerId());
 
-        List<String> deck = new ArrayList<>(ps.getDeck());
-        List<String> hand = new ArrayList<>(
-                ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        if (!isFirstPlayerFirstTurn) {
+            if (ps.getDeck() == null || ps.getDeck().isEmpty()) return state;
 
-        hand.add(deck.remove(0));
-        ps.setDeck(deck);
-        ps.setHand(hand);
+            List<String> deck = new ArrayList<>(ps.getDeck());
+            List<String> hand = new ArrayList<>(
+                    ps.getHand() != null ? ps.getHand() : new ArrayList<>());
 
-        // Reset enteredThisTurn for all Pokémon of the current player
-        resetEnteredThisTurn(ps);
+            hand.add(deck.remove(0));
+            ps.setDeck(deck);
+            ps.setHand(hand);
+        }
+
+        // Reset enteredThisTurn for ALL players on every draw
+        resetEnteredThisTurn(state.getPlayer1State());
+        resetEnteredThisTurn(state.getPlayer2State());
 
         return state.toBuilder()
                 .turnPhase(TurnPhase.MAIN)
@@ -343,10 +352,18 @@ public class TurnManager {
         hand.remove(cardId);
         ps.setHand(hand);
 
-        List<String> discard = new ArrayList<>(
-                ps.getDiscard() != null ? ps.getDiscard() : new ArrayList<>());
-        discard.add(cardId);
-        ps.setDiscard(discard);
+        // Pokémon Tools stay attached to the Pokémon — do not discard them
+        boolean isPokemonTool = cardLookupPort.findCardById(cardId)
+                .map(card -> card.getSubtypes() != null
+                        && card.getSubtypes().contains("Pokémon Tool"))
+                .orElse(false);
+
+        if (!isPokemonTool) {
+            List<String> discard = new ArrayList<>(
+                    ps.getDiscard() != null ? ps.getDiscard() : new ArrayList<>());
+            discard.add(cardId);
+            ps.setDiscard(discard);
+        }
 
         // Look up and apply the card's effect via Strategy pattern
         String cardName = cardLookupPort.findCardById(cardId)
@@ -379,6 +396,26 @@ public class TurnManager {
         ps.setHand(hand);
 
         evolvePokemon(ps, targetId, cardId);
+
+        // If the evolution card is a MEGA, the turn ends immediately
+        boolean isMega = cardLookupPort.findCardById(cardId)
+                .map(card -> card.getSubtypes() != null && card.getSubtypes().contains("MEGA"))
+                .orElse(false);
+
+        if (isMega) {
+            String opponentId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
+                    ? state.getPlayer2State().getPlayerId()
+                    : state.getPlayer1State().getPlayerId();
+
+            state = processBetweenTurns(state);
+
+            return state.toBuilder()
+                    .currentPlayerId(opponentId)
+                    .turnPhase(TurnPhase.DRAW)
+                    .turnNumber(state.getTurnNumber() + 1)
+                    .turnFlags(TurnFlags.fresh())
+                    .build();
+        }
 
         return state;
     }
@@ -430,6 +467,7 @@ public class TurnManager {
         bench.remove(replacement);
         bench.add(newBench);
         ps.setBench(bench);
+        populatePokemonModifiers(newActive, replacement.getCardId());
         ps.setActivePokemon(newActive);
 
         state.getTurnFlags().setRetreatedThisTurn(true);
@@ -597,6 +635,7 @@ public class TurnManager {
         List<BenchPokemon> bench = new ArrayList<>(ps.getBench());
         bench.remove(chosen);
         ps.setBench(bench);
+        populatePokemonModifiers(newActive, chosen.getCardId());
         ps.setActivePokemon(newActive);
 
         // Clear the pending bench choice flag
@@ -796,6 +835,7 @@ public class TurnManager {
         bench.remove(chosen);
         bench.add(newBench);
         ps.setBench(bench);
+        populatePokemonModifiers(newActive, chosen.getCardId());
         ps.setActivePokemon(newActive);
 
         return state.toBuilder()
@@ -990,9 +1030,12 @@ public class TurnManager {
             if (ps.getActivePokemon().getActiveEffects() != null) {
                 ps.getActivePokemon().getActiveEffects().clear();
             }
+            // Evolving clears all special conditions per rulebook
+            ps.getActivePokemon().setConditions(new HashSet<>());
             List<String> stack = new ArrayList<>(ps.getActivePokemon().getEvolutionStack());
             stack.add(newCardId);
             ps.getActivePokemon().setEvolutionStack(stack);
+            populatePokemonModifiers(ps.getActivePokemon(), newCardId);
             return;
         }
         if (ps.getBench() != null) {
@@ -1035,5 +1078,34 @@ public class TurnManager {
             return (List<String>) list;
         }
         return List.of();
+    }
+
+    /**
+     * Resolves weaknesses, resistances and types from the card cache
+     * and applies them to the given ActivePokemon builder.
+     * Falls back to empty lists if the card is not found.
+     */
+    private void populatePokemonModifiers(ActivePokemon pokemon, String cardId) {
+        cardLookupPort.findCardById(cardId).ifPresent(card -> {
+            if (card.getWeaknesses() != null) {
+                pokemon.setWeaknesses(new ArrayList<>(card.getWeaknesses()));
+            }
+            if (card.getResistances() != null) {
+                pokemon.setResistances(new ArrayList<>(card.getResistances()));
+            }
+            if (card.getTypes() != null) {
+                List<EnergyType> energyTypes = card.getTypes().stream()
+                        .map(t -> {
+                            try {
+                                return EnergyType.valueOf(t.toUpperCase());
+                            } catch (IllegalArgumentException e) {
+                                return null;
+                            }
+                        })
+                        .filter(t -> t != null)
+                        .collect(java.util.stream.Collectors.toList());
+                pokemon.setTypes(energyTypes);
+            }
+        });
     }
 }
