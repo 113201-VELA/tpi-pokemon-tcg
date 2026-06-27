@@ -230,6 +230,9 @@
                 <exclude>com/pokemon/tcg/repository/cache/**</exclude>
                 <!-- Application entry point -->
                 <exclude>com/pokemon/tcg/TcgApplication.class</exclude>
+                <!-- Interfaces with no logic to test -->
+                <exclude>com/pokemon/tcg/engine/attack/AttackEffect.class</exclude>
+                <exclude>com/pokemon/tcg/engine/ability/PassiveAbilityEffect.class</exclude>
               </excludes>
               <rules>
                 <rule>
