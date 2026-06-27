@@ -3,7 +3,9 @@ package com.pokemon.tcg.engine;
 import com.pokemon.tcg.domain.model.card.Attack;
 import com.pokemon.tcg.domain.model.card.Card;
 
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 /**
  * Port (in the Ports & Adapters sense) that the game engine uses to look up
@@ -51,4 +53,6 @@ public interface CardLookupPort {
      * @return an Optional containing the Card, or empty if not found
      */
     Optional<Card> findCardById(String cardId);
+
+    Map<String, Card> findAllById(Set<String> cardIds);
 }

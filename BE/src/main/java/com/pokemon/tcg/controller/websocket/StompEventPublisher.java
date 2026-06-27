@@ -1,5 +1,7 @@
 package com.pokemon.tcg.controller.websocket;
 
+import com.pokemon.tcg.controller.dto.response.OwnPlayerStateResponseDTO;
+import com.pokemon.tcg.controller.dto.response.PublicBoardStateDTO;
 import com.pokemon.tcg.domain.model.game.BoardState;
 import com.pokemon.tcg.domain.model.game.GameEvent;
 import com.pokemon.tcg.domain.model.game.PlayerState;
@@ -22,11 +24,27 @@ public class StompEventPublisher implements GameEventPublisher {
     }
 
     @Override
+    public void publishBoardStateDTO(String gameId, PublicBoardStateDTO dto) {
+        messagingTemplate.convertAndSend(
+                "/topic/game/" + gameId + "/state", dto);
+    }
+
+    @Override
     public void publishPrivateState(String gameId, String playerId, PlayerState playerState) {
+        System.out.println("Publishing private state to playerId: " + playerId);
+
         messagingTemplate.convertAndSendToUser(
             playerId,
             "/queue/game/" + gameId + "/player",
             playerState);
+    }
+
+    @Override
+    public void publishPrivateStateDTO(String gameId, String playerId, OwnPlayerStateResponseDTO dto) {
+        messagingTemplate.convertAndSendToUser(
+                playerId,
+                "/queue/game/" + gameId + "/player",
+                dto);
     }
 
     @Override

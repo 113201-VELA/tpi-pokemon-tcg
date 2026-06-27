@@ -7,7 +7,10 @@ import com.pokemon.tcg.repository.CardRepository;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Infrastructure adapter that fulfils the {@link CardLookupPort} contract
@@ -69,5 +72,12 @@ public class CardLookupAdapter implements CardLookupPort {
     public Optional<Card> findCardById(String cardId) {
         if (cardId == null) return Optional.empty();
         return cardRepository.findById(cardId);
+    }
+
+    @Override
+    public Map<String, Card> findAllById(Set<String> cardIds) {
+        if (cardIds == null || cardIds.isEmpty()) return Map.of();
+        return cardRepository.findAllById(cardIds).stream()
+                .collect(Collectors.toMap(Card::getId, c -> c));
     }
 }

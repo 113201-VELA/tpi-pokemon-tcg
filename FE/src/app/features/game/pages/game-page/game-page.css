@@ -568,3 +568,216 @@
   from { transform: scale(0.5) rotateY(180deg); opacity: 0; }
   to   { transform: scale(1)   rotateY(0deg);   opacity: 1; }
 }
+
+/* ── Setup header ─────────────────────────────────────────────────────── */
+.setup-status {
+  flex: 1;
+  display: flex;
+  align-items: center;
+}
+
+.setup-status__msg {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  font-style: italic;
+}
+
+.setup-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.btn-setup {
+  padding: 0.3rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-family: 'Exo 2', sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s;
+}
+.btn-setup:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+.btn-setup--accent {
+  background: var(--accent);
+  color: var(--bg-base);
+}
+.btn-setup--accent:hover:not(:disabled) { opacity: 0.88; }
+.btn-setup--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-setup--ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+/* ── Own hand: setup state ────────────────────────────────────────────── */
+.own-hand-card--basic {
+  border-color: var(--accent);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.own-hand-card--non-basic {
+  opacity: 0.4;
+}
+
+/* ── Drop zone active state (applied by DropZoneDirective) ───────────── */
+.active-slot-wrap.drop-zone--active {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.bench-slot-wrap.drop-zone--active {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+/* ── Turn action buttons (header) ─────────────────────────────────────── */
+.turn-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+
+.btn-turn {
+  padding: 0.3rem 0.9rem;
+  border-radius: var(--radius-sm);
+  font-family: 'Exo 2', sans-serif;
+  font-style: italic;
+  font-weight: 700;
+  font-size: 0.8rem;
+  cursor: pointer;
+  border: none;
+  transition: opacity 0.15s, background 0.15s;
+}
+.btn-turn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+.btn-turn--accent {
+  background: var(--accent);
+  color: var(--bg-base);
+}
+.btn-turn--accent:hover:not(:disabled) { opacity: 0.88; }
+
+.btn-turn--ghost {
+  background: transparent;
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+}
+.btn-turn--ghost:hover:not(:disabled) { border-color: var(--accent); color: var(--accent); }
+
+/* ── Phase hint and action error ──────────────────────────────────────── */
+.phase-hint {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--accent);
+  font-style: italic;
+}
+
+.action-error {
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: var(--danger);
+  font-style: italic;
+}
+
+/* ── Deck slot: drawable state ────────────────────────────────────────── */
+.deck-slot--drawable {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+  cursor: pointer;
+}
+.deck-slot--drawable:hover {
+  background: var(--accent-glow);
+}
+
+/* ── Attack selection modal ───────────────────────────────────────────── */
+.modal-attacks {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  max-width: 420px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-attacks__title {
+  color: var(--text-primary);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-attacks__cancel {
+  margin-top: 0.25rem;
+  align-self: flex-end;
+}
+
+.attack-option {
+  background: var(--bg-surface-2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  text-align: left;
+  transition: border-color 0.15s, background 0.15s;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.attack-option:hover {
+  border-color: var(--accent);
+  background: var(--accent-glow);
+}
+
+.attack-option__header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.attack-option__name {
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--text-primary);
+}
+
+.attack-option__damage {
+  font-size: 1rem;
+  font-weight: 800;
+  color: var(--accent);
+}
+
+.attack-option__text {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
+  margin: 0;
+  line-height: 1.4;
+}
+
+.attack-option__cost {
+  display: flex;
+  gap: 0.25rem;
+  flex-wrap: wrap;
+}
+
+.energy-pip {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--text-muted);
+  background: var(--bg-base);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  padding: 1px 5px;
+  text-transform: uppercase;
+}

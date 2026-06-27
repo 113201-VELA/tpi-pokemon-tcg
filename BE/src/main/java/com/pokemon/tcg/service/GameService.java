@@ -1,12 +1,15 @@
 package com.pokemon.tcg.service;
 
 import com.pokemon.tcg.controller.dto.response.GameLogResponseDTO;
+import com.pokemon.tcg.controller.dto.response.OwnPlayerStateResponseDTO;
+import com.pokemon.tcg.controller.dto.response.PublicBoardStateDTO;
 import com.pokemon.tcg.controller.mapper.GameLogMapper;
 import com.pokemon.tcg.controller.mapper.GameMapper;
 import com.pokemon.tcg.controller.mapper.GameStateMapper;
 import com.pokemon.tcg.controller.dto.response.GameResponseDTO;
 import com.pokemon.tcg.controller.dto.response.GameStateResponseDTO;
 import com.pokemon.tcg.controller.websocket.GameEventPublisher;
+import com.pokemon.tcg.engine.CardLookupPort;
 import com.pokemon.tcg.engine.GameEngineFacade;
 import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.domain.model.deck.Deck;
@@ -38,6 +41,7 @@ public class GameService {
     private final GameStateMapper gameStateMapper;
     private final GameMapper gameMapper;
     private final GameLogMapper gameLogMapper;
+    private final CardLookupPort cardLookupPort;
 
     public GameService(GameEngineFacade engine,
                        GameRepository gameRepository,
@@ -50,7 +54,8 @@ public class GameService {
                        GameEventPublisher eventPublisher,
                        GameStateMapper gameStateMapper,
                        GameMapper gameMapper,
-                       GameLogMapper gameLogMapper) {
+                       GameLogMapper gameLogMapper,
+                       CardLookupPort cardLookupPort) {
         this.engine            = engine;
         this.gameRepository    = gameRepository;
         this.stateRepository   = stateRepository;
@@ -63,6 +68,7 @@ public class GameService {
         this.gameStateMapper   = gameStateMapper;
         this.gameMapper        = gameMapper;
         this.gameLogMapper     = gameLogMapper;
+        this.cardLookupPort    = cardLookupPort;
     }
 
     /**
@@ -314,6 +320,65 @@ public class GameService {
                     .resultData(resultData)
                     .build();
             logRepository.save(logEntry);
+
+            // ── Publish mapped DTOs to WebSocket subscribers ──────────────
+            Game gameForPublish = gameRepository.findByIdWithPlayersAndDecks(gameId)
+                    .orElseThrow(() -> new IllegalArgumentException("Game not found"));
+
+            String p1Id = result.newState().getPlayer1State().getPlayerId();
+            String p2Id = result.newState().getPlayer2State().getPlayerId();
+
+            String p1Name     = "Unknown";
+            String p2Name     = "Unknown";
+            String p1CardBack = "DEFAULT";
+            String p1Coin     = "DEFAULT";
+            String p2CardBack = "DEFAULT";
+            String p2Coin     = "DEFAULT";
+
+            for (GamePlayer gp : gameForPublish.getPlayers()) {
+                String gpPlayerId = gp.getPlayer().getId().toString();
+                if (gpPlayerId.equals(p1Id)) {
+                    p1Name     = gp.getPlayer().getUsername();
+                    p1CardBack = gp.getDeck().getCardBack();
+                    p1Coin     = gp.getDeck().getCoin();
+                } else if (gpPlayerId.equals(p2Id)) {
+                    p2Name     = gp.getPlayer().getUsername();
+                    p2CardBack = gp.getDeck().getCardBack();
+                    p2Coin     = gp.getDeck().getCoin();
+                }
+            }
+
+            Map<String, Card> cardCache = cardLookupPort.findAllById(
+                    collectCardIds(result.newState()));
+
+            BoardState sanitized = sanitizeForPublic(result.newState());
+
+            PublicBoardStateDTO publicDto = gameStateMapper.toPublicBoardStateDTO(
+                    sanitized,
+                    p1Name, p1CardBack, p1Coin,
+                    p2Name, p2CardBack, p2Coin,
+                    cardCache);
+            eventPublisher.publishBoardStateDTO(gameId.toString(), publicDto);
+
+            OwnPlayerStateResponseDTO p1Dto = gameStateMapper.toOwnPlayerStateDTO(
+                    result.newState().getPlayer1State(), cardCache);
+            OwnPlayerStateResponseDTO p2Dto = gameStateMapper.toOwnPlayerStateDTO(
+                    result.newState().getPlayer2State(), cardCache);
+
+            eventPublisher.publishPrivateStateDTO(
+                    gameId.toString(),
+                    result.newState().getPlayer1State().getPlayerId(),
+                    p1Dto);
+            eventPublisher.publishPrivateStateDTO(
+                    gameId.toString(),
+                    result.newState().getPlayer2State().getPlayerId(),
+                    p2Dto);
+
+            if (result.events() != null) {
+                for (GameEvent event : result.events()) {
+                    eventPublisher.publishEvent(gameId.toString(), event);
+                }
+            }
         }
 
         return result;
@@ -476,5 +541,85 @@ public class GameService {
         if (bp.getAttachedEnergyIds() != null) ids.addAll(bp.getAttachedEnergyIds());
         if (bp.getAttachedToolId() != null) ids.add(bp.getAttachedToolId());
         if (bp.getEvolutionStack() != null) ids.addAll(bp.getEvolutionStack());
+    }
+
+    private Set<String> collectCardIds(BoardState state) {
+        Set<String> ids = new HashSet<>();
+        for (PlayerState ps : List.of(state.getPlayer1State(), state.getPlayer2State())) {
+            if (ps == null) continue;
+            if (ps.getHand()    != null) ids.addAll(ps.getHand());
+            if (ps.getPrizes()  != null) ids.addAll(ps.getPrizes());
+            if (ps.getDiscard() != null) ids.addAll(ps.getDiscard());
+            if (ps.getDeck()    != null) ids.addAll(ps.getDeck());
+            if (ps.getActivePokemon() != null) {
+                ids.add(ps.getActivePokemon().getCardId());
+                if (ps.getActivePokemon().getAttachedEnergyIds() != null)
+                    ids.addAll(ps.getActivePokemon().getAttachedEnergyIds());
+                if (ps.getActivePokemon().getAttachedToolId() != null)
+                    ids.add(ps.getActivePokemon().getAttachedToolId());
+                if (ps.getActivePokemon().getEvolutionStack() != null)
+                    ids.addAll(ps.getActivePokemon().getEvolutionStack());
+            }
+            if (ps.getBench() != null) {
+                for (BenchPokemon bp : ps.getBench()) {
+                    if (bp == null) continue;
+                    ids.add(bp.getCardId());
+                    if (bp.getAttachedEnergyIds() != null)
+                        ids.addAll(bp.getAttachedEnergyIds());
+                    if (bp.getAttachedToolId() != null)
+                        ids.add(bp.getAttachedToolId());
+                    if (bp.getEvolutionStack() != null)
+                        ids.addAll(bp.getEvolutionStack());
+                }
+            }
+        }
+        ids.remove(null);
+        return ids;
+    }
+
+    private BoardState sanitizeForPublic(BoardState state) {
+        PlayerState p1 = PlayerState.builder()
+                .playerId(state.getPlayer1State().getPlayerId())
+                .activePokemon(state.getPlayer1State().getActivePokemon())
+                .bench(state.getPlayer1State().getBench())
+                .discard(state.getPlayer1State().getDiscard())
+                .hand(List.of())
+                .deck(List.of())
+                .prizes(List.of())
+                .totalMulligans(state.getPlayer1State().getTotalMulligans())
+                .mulliganBonusDraws(state.getPlayer1State().getMulliganBonusDraws())
+                .setupConfirmed(state.getPlayer1State().isSetupConfirmed())
+                .build();
+
+        PlayerState p2 = PlayerState.builder()
+                .playerId(state.getPlayer2State().getPlayerId())
+                .activePokemon(state.getPlayer2State().getActivePokemon())
+                .bench(state.getPlayer2State().getBench())
+                .discard(state.getPlayer2State().getDiscard())
+                .hand(List.of())
+                .deck(List.of())
+                .prizes(List.of())
+                .totalMulligans(state.getPlayer2State().getTotalMulligans())
+                .mulliganBonusDraws(state.getPlayer2State().getMulliganBonusDraws())
+                .setupConfirmed(state.getPlayer2State().isSetupConfirmed())
+                .build();
+
+        return BoardState.builder()
+                .gameId(state.getGameId())
+                .gameState(state.getGameState())
+                .turnPhase(state.getTurnPhase())
+                .currentPlayerId(state.getCurrentPlayerId())
+                .turnNumber(state.getTurnNumber())
+                .player1State(p1)
+                .player2State(p2)
+                .activeStadiumCardId(state.getActiveStadiumCardId())
+                .turnFlags(state.getTurnFlags())
+                .pendingEvents(state.getPendingEvents())
+                .bonusDrawPending(state.isBonusDrawPending())
+                .pendingBenchChoicePlayerId(state.getPendingBenchChoicePlayerId())
+                .pendingDeckSelectionPlayerId(state.getPendingDeckSelectionPlayerId())
+                .pendingDeckSelectionCardIds(state.getPendingDeckSelectionCardIds())
+                .firstPlayerId(state.getFirstPlayerId())
+                .build();
     }
 }

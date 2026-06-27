@@ -17,27 +17,90 @@
 
   @if (!loading() && !errorMessage() && boardState()) {
 
-    <!-- ── Game header ──────────────────────────────────────────────── -->
+    <!-- ── Header ───────────────────────────────────────────────────── -->
     <header class="game-header">
-      <div class="game-info">
-        <span class="turn-badge" [class.turn-badge--active]="isMyTurn()">
-          {{ isMyTurn() ? 'Your turn' : "Opponent's turn" }}
-        </span>
-        <span class="turn-number">Turn {{ boardState()!.turnNumber }}</span>
-        <span class="phase-badge">{{ boardState()!.turnPhase }}</span>
-      </div>
-      <div class="header-players">
-        <span class="player-name player-name--own">
-          {{ boardState()!.ownState.playerName }}
-        </span>
-        <span class="vs-label">vs</span>
-        <span class="player-name player-name--opponent">
-          {{ boardState()!.opponentState.playerName }}
-        </span>
-      </div>
-      <button class="btn-surrender" (click)="openSurrenderModal()">
-        Surrender
-      </button>
+
+      @if (isSetupPhase()) {
+
+        <!-- Setup: status message + actions -->
+        <div class="setup-status">
+          <span class="setup-status__msg">{{ setupStatusMessage() }}</span>
+        </div>
+
+        <div class="setup-actions">
+          @if (needsMulligan()) {
+            <button class="btn-setup btn-setup--accent" (click)="declareMulligan()">
+              Declare Mulligan
+            </button>
+          }
+          @if (bonusDrawPending()) {
+            @for (n of bonusDrawOptions(); track n) {
+              <button class="btn-setup btn-setup--ghost" (click)="acceptBonusDraws(n)">
+                Draw {{ n }}
+              </button>
+            }
+          }
+          @if (!needsMulligan() && !bonusDrawPending()) {
+            <button
+              class="btn-setup btn-setup--accent"
+              [disabled]="!canConfirmSetup()"
+              (click)="confirmSetup()"
+            >
+              Confirm Setup
+            </button>
+          }
+        </div>
+
+      } @else {
+
+        <!-- Normal turn header -->
+        <div class="game-info">
+          <span class="turn-badge" [class.turn-badge--active]="isMyTurn()">
+            {{ isMyTurn() ? 'Your turn' : "Opponent's turn" }}
+          </span>
+          <span class="turn-number">Turn {{ boardState()!.turnNumber }}</span>
+          <span class="phase-badge">{{ boardState()!.turnPhase }}</span>
+
+          <!-- Draw phase hint -->
+          @if (isDrawPhase()) {
+            <span class="phase-hint">Click your deck to draw a card</span>
+          }
+
+          <!-- Action error feedback -->
+          @if (actionError()) {
+            <span class="action-error">{{ actionError() }}</span>
+          }
+        </div>
+
+        <div class="turn-actions">
+          <!-- Attack button — only during MAIN phase when Active can attack -->
+          @if (canAttack()) {
+            <button class="btn-turn btn-turn--accent" (click)="openAttackModal()">
+              Attack
+            </button>
+          }
+          <!-- End turn button — only during MAIN phase -->
+          @if (isMainPhase()) {
+            <button class="btn-turn btn-turn--ghost" (click)="endTurn()">
+              End Turn
+            </button>
+          }
+        </div>
+
+        <div class="header-players">
+          <span class="player-name player-name--own">
+            {{ boardState()!.ownState.playerName }}
+          </span>
+          <span class="vs-label">vs</span>
+          <span class="player-name player-name--opponent">
+            {{ boardState()!.opponentState.playerName }}
+          </span>
+        </div>
+        <button class="btn-surrender" (click)="openSurrenderModal()">
+          Surrender
+        </button>
+
+      }
     </header>
 
     <!-- ── Opponent hand (fixed dorsos, outside board) ─────────────── -->
@@ -65,7 +128,6 @@
         <!-- ══ OPPONENT ZONE ══ -->
         <div class="player-zone player-zone--opponent">
 
-          <!-- Prizes (6 stacked vertically) -->
           <div class="prizes-col">
             <span class="zone-label">Prizes</span>
             @for (slot of [0,1,2,3,4,5]; track slot) {
@@ -79,10 +141,7 @@
             }
           </div>
 
-          <!-- Play area -->
           <div class="play-area">
-
-            <!-- Active + Tool -->
             <div class="active-col">
               <div class="active-slot-wrap">
                 @if (boardState()!.opponentState.active) {
@@ -107,8 +166,6 @@
                 }
               </div>
             </div>
-
-            <!-- Bench (5 slots) -->
             <div class="bench-row">
               @for (slot of getBenchSlots(boardState()!.opponentState.bench); track $index) {
                 <div class="bench-slot-wrap">
@@ -123,10 +180,8 @@
                 </div>
               }
             </div>
-
           </div>
 
-          <!-- Deck + Discard -->
           <div class="deck-col">
             <div class="zone-slot deck-slot">
               <img
@@ -156,8 +211,7 @@
 
         <!-- ══ DIVIDER with Stadium ══ -->
         <div class="board-divider">
-          <div class="stadium-slot"
-               (click)="openCardDetail(null)">
+          <div class="stadium-slot" (click)="openCardDetail(null)">
             @if (boardState()!.activeStadiumCardId) {
               <span class="slot-label">Stadium</span>
             } @else {
@@ -169,20 +223,12 @@
         <!-- ══ OWN ZONE ══ -->
         <div class="player-zone player-zone--own">
 
-          <!-- Prizes (6 stacked vertically) -->
           <div class="prizes-col">
             <span class="zone-label">Prizes</span>
             @for (slot of getPrizeSlots(boardState()!.ownState.prizes); track $index) {
-              <div
-                class="prize-slot"
-                (click)="openCardDetail(slot)"
-              >
+              <div class="prize-slot" (click)="openCardDetail(slot)">
                 @if (slot) {
-                  <img
-                    [src]="slot.imageSmall"
-                    alt="Prize"
-                    class="card-img-full"
-                  />
+                  <img [src]="slot.imageSmall" alt="Prize" class="card-img-full" />
                 } @else {
                   <img
                     [src]="getCardBackUrl(boardState()!.ownState.cardBack)"
@@ -194,19 +240,27 @@
             }
           </div>
 
-          <!-- Play area -->
           <div class="play-area">
 
-            <!-- Active + Tool -->
             <div class="active-col">
-              <div class="active-slot-wrap">
+              <!-- Active slot: drop zone during setup when empty -->
+              <div
+                class="active-slot-wrap"
+                appDropZone
+                [acceptDrop]="(isSetupPhase() && !boardState()!.ownState.active) || canAttachEnergy()"
+                (cardDropped)="isSetupPhase()
+                  ? onSetupDropActive($event)
+                  : onAttachEnergy($event, boardState()!.ownState.active!.instanceId)"
+              >
                 @if (boardState()!.ownState.active) {
                   <app-active-pokemon-slot
                     [pokemon]="boardState()!.ownState.active!"
                     (cardClick)="openCardDetail($event)"
                   />
                 } @else {
-                  <span class="slot-empty">Active</span>
+                  <span class="slot-empty">
+                    {{ isSetupPhase() ? 'Drop Basic here' : 'Active' }}
+                  </span>
                 }
               </div>
               <div class="tool-slot">
@@ -223,10 +277,17 @@
               </div>
             </div>
 
-            <!-- Bench (5 slots) -->
+            <!-- Bench: each empty slot is a drop zone during setup -->
             <div class="bench-row">
               @for (slot of getBenchSlots(boardState()!.ownState.bench); track $index) {
-                <div class="bench-slot-wrap">
+                <div
+                  class="bench-slot-wrap"
+                  appDropZone
+                  [acceptDrop]="(isSetupPhase() && !slot) || (canAttachEnergy() && !!slot)"
+                  (cardDropped)="isSetupPhase()
+                    ? onSetupDropBench($event, $index)
+                    : onAttachEnergy($event, slot!.instanceId)"
+                >
                   @if (slot) {
                     <app-bench-pokemon-slot
                       [pokemon]="slot"
@@ -241,9 +302,12 @@
 
           </div>
 
-          <!-- Deck + Discard -->
           <div class="deck-col">
-            <div class="zone-slot deck-slot">
+            <div
+              class="zone-slot deck-slot"
+              [class.deck-slot--drawable]="isDrawPhase()"
+              (click)="drawCard()"
+            >
               <img
                 [src]="getCardBackUrl(boardState()!.ownState.cardBack)"
                 alt="Deck"
@@ -272,13 +336,18 @@
       </div>
     </div>
 
-    <!-- ── Own hand (outside board, hover to reveal) ────────────────── -->
+    <!-- ── Own hand ──────────────────────────────────────────────────── -->
+    <!-- During setup: cards are draggable; Basic Pokémon are highlighted -->
     <div class="own-hand">
-      @for (card of boardState()!.ownState.hand; track card.id) {
+      @for (card of boardState()!.ownState.hand; track $index) {
         <img
           class="own-hand-card"
+          [class.own-hand-card--basic]="isSetupPhase() && isBasicPokemon(card)"
+          [class.own-hand-card--non-basic]="isSetupPhase() && !isBasicPokemon(card)"
           [src]="card.imageSmall"
           [alt]="card.name"
+          appDraggableCard
+          [cardId]="card.id"
           (click)="openCardDetail(card)"
         />
       }
@@ -306,8 +375,7 @@
       <div class="modal-confirm" (click)="$event.stopPropagation()">
         <h2 class="modal-confirm__title">Surrender game?</h2>
         <p class="modal-confirm__body">
-          Your opponent will be declared the winner. This action cannot
-          be undone.
+          Your opponent will be declared the winner. This action cannot be undone.
         </p>
         <div class="modal-confirm__actions">
           <button
@@ -322,13 +390,42 @@
             (click)="confirmSurrender()"
             [disabled]="surrendering()"
           >
-            @if (surrendering()) {
-              Surrendering...
-            } @else {
-              Yes, surrender
-            }
+            @if (surrendering()) { Surrendering... } @else { Yes, surrender }
           </button>
         </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Attack selection modal ────────────────────────────────────── -->
+  @if (showAttackModal()) {
+    <div class="modal-overlay" (click)="closeAttackModal()">
+      <div class="modal-attacks" (click)="$event.stopPropagation()">
+        <h2 class="modal-attacks__title">Choose an attack</h2>
+        @for (attack of availableAttacks(); track attack.name) {
+          <button
+            class="attack-option"
+            (click)="declareAttack(attack.name)"
+          >
+            <div class="attack-option__header">
+              <span class="attack-option__name">{{ attack.name }}</span>
+              <span class="attack-option__damage">
+                {{ attack.damage || '—' }}
+              </span>
+            </div>
+            @if (attack.text) {
+              <p class="attack-option__text">{{ attack.text }}</p>
+            }
+            <div class="attack-option__cost">
+              @for (energy of attack.cost; track $index) {
+                <span class="energy-pip">{{ energy }}</span>
+              }
+            </div>
+          </button>
+        }
+        <button class="btn btn--ghost modal-attacks__cancel" (click)="closeAttackModal()">
+          Cancel
+        </button>
       </div>
     </div>
   }
@@ -337,11 +434,7 @@
   @if (showCoinFlip()) {
     <div class="coin-overlay">
       <div class="coin-result">
-        <img
-          class="coin-img"
-          [src]="coinImageSrc()"
-          [alt]="coinResult()!"
-        />
+        <img class="coin-img" [src]="coinImageSrc()" [alt]="coinResult()!" />
         <p class="coin-label">{{ coinResult() }}</p>
       </div>
     </div>
