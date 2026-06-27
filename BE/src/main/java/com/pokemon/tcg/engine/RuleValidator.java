@@ -460,6 +460,10 @@ public class RuleValidator {
             if (active.getConditions().contains(SpecialCondition.PARALYZED)) {
                 return ValidationResult.fail("Your Active Pokémon is Paralyzed and cannot retreat.");
             }
+            if (active.getActiveEffects() != null
+                    && active.getActiveEffects().contains(PokemonEffect.CANT_RETREAT)) {
+                return ValidationResult.fail("Your Active Pokémon cannot retreat this turn.");
+            }
         }
 
         // Fairy Garden suppresses retreat cost for Fairy Pokémon with a Fairy Energy attached
