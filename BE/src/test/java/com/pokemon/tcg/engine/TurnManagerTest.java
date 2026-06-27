@@ -412,4 +412,36 @@ class TurnManagerTest {
         assertThat(result.getPlayer1State().getActivePokemon().isEnteredThisTurn()).isFalse();
         assertThat(result.getPlayer1State().getBench().get(0).isEnteredThisTurn()).isFalse();
     }
+
+    @Test
+    void handlePlayTrainer_pokemonTool_shouldAttachAndNotDiscard() {
+        BoardState state = buildState("p1", TurnPhase.MAIN);
+        state.getPlayer1State().setHand(new ArrayList<>(List.of("xy1-121")));
+        String activeInstanceId = state.getPlayer1State().getActivePokemon().getInstanceId();
+
+        // Mock card lookup: xy1-121 is a Pokémon Tool
+        com.pokemon.tcg.domain.model.card.Card toolCard =
+                com.pokemon.tcg.domain.model.card.Card.builder()
+                        .id("xy1-121")
+                        .name("Muscle Band")
+                        .subtypes(List.of("Pokémon Tool"))
+                        .build();
+        when(cardLookupPort.findCardById("xy1-121")).thenReturn(Optional.of(toolCard));
+
+        // Mock trainer effect registry: return MuscleBandEffect
+        com.pokemon.tcg.domain.strategy.trainer.item.MuscleBandEffect muscleBand =
+                new com.pokemon.tcg.domain.strategy.trainer.item.MuscleBandEffect();
+        when(trainerEffectRegistry.findEffect("Muscle Band"))
+                .thenReturn(Optional.of(muscleBand));
+
+        GameAction action = buildAction("p1", GameActionType.PLAY_TRAINER,
+                Map.of("cardId", "xy1-121", "targetInstanceId", activeInstanceId));
+        BoardState result = turnManager.advancePhase(state, action);
+
+        // Tool should be attached, not in discard
+        assertThat(result.getPlayer1State().getActivePokemon().getAttachedToolId())
+                .isEqualTo("xy1-121");
+        assertThat(result.getPlayer1State().getDiscard()).doesNotContain("xy1-121");
+        assertThat(result.getPlayer1State().getHand()).doesNotContain("xy1-121");
+    }
 }

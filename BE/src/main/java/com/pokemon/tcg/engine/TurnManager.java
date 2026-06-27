@@ -343,10 +343,18 @@ public class TurnManager {
         hand.remove(cardId);
         ps.setHand(hand);
 
-        List<String> discard = new ArrayList<>(
-                ps.getDiscard() != null ? ps.getDiscard() : new ArrayList<>());
-        discard.add(cardId);
-        ps.setDiscard(discard);
+        // Pokémon Tools stay attached to the Pokémon — do not discard them
+        boolean isPokemonTool = cardLookupPort.findCardById(cardId)
+                .map(card -> card.getSubtypes() != null
+                        && card.getSubtypes().contains("Pokémon Tool"))
+                .orElse(false);
+
+        if (!isPokemonTool) {
+            List<String> discard = new ArrayList<>(
+                    ps.getDiscard() != null ? ps.getDiscard() : new ArrayList<>());
+            discard.add(cardId);
+            ps.setDiscard(discard);
+        }
 
         // Look up and apply the card's effect via Strategy pattern
         String cardName = cardLookupPort.findCardById(cardId)
