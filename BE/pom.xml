@@ -211,14 +211,18 @@
                 <exclude>com/pokemon/tcg/domain/model/game/**</exclude>
                 <!-- State pattern implementations: require integration tests -->
                 <exclude>com/pokemon/tcg/domain/state/**</exclude>
-                <!-- Strategy base interface and registry -->
-                <exclude>com/pokemon/tcg/domain/strategy/TrainerEffect.class</exclude>
-                <exclude>com/pokemon/tcg/domain/strategy/TrainerEffectRegistry.class</exclude>
-                <!-- Attack pipeline infrastructure: wiring, not logic -->
+                <!-- Strategy base interfaces: no logic -->
+                <exclude>com/pokemon/tcg/domain/strategy/trainer/TrainerEffect.class</exclude>
+                <exclude>com/pokemon/tcg/domain/strategy/trainer/TrainerEffectRegistry.class</exclude>
+                <!-- Attack pipeline infrastructure -->
+                <exclude>com/pokemon/tcg/domain/strategy/attack/AttackEffect.class</exclude>
+                <exclude>com/pokemon/tcg/domain/strategy/attack/AttackContext.class</exclude>
+                <exclude>com/pokemon/tcg/domain/strategy/attack/DamageModifier.class</exclude>
                 <exclude>com/pokemon/tcg/engine/attack/AttackChain.class</exclude>
-                <exclude>com/pokemon/tcg/engine/attack/AttackContext.class</exclude>
                 <exclude>com/pokemon/tcg/engine/attack/AttackPipeline.class</exclude>
                 <exclude>com/pokemon/tcg/engine/attack/AttackStep.class</exclude>
+                <!-- Ability interfaces -->
+                <exclude>com/pokemon/tcg/domain/strategy/ability/PassiveAbilityEffect.class</exclude>
                 <!-- Services: require Spring + PostgreSQL integration tests -->
                 <exclude>com/pokemon/tcg/service/**</exclude>
                 <!-- Security service: requires Spring context -->
@@ -230,9 +234,6 @@
                 <exclude>com/pokemon/tcg/repository/cache/**</exclude>
                 <!-- Application entry point -->
                 <exclude>com/pokemon/tcg/TcgApplication.class</exclude>
-                <!-- Interfaces with no logic to test -->
-                <exclude>com/pokemon/tcg/engine/attack/AttackEffect.class</exclude>
-                <exclude>com/pokemon/tcg/engine/ability/PassiveAbilityEffect.class</exclude>
               </excludes>
               <rules>
                 <rule>
