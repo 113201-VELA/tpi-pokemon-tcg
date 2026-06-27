@@ -27,6 +27,9 @@ public class AttackContext {
     private List<DamageModifier> modifiers;
     private List<GameEvent> events;
 
+    @Builder.Default
+    private boolean ignoreDefenderEffects = false;
+
     public void cancel(String reason) {
         this.cancelled = true;
         this.cancellationReason = reason;

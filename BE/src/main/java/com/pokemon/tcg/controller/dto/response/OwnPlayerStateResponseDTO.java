@@ -12,5 +12,8 @@ public record OwnPlayerStateResponseDTO(
         List<CardResponseDTO> hand,
         int deckCount,
         List<CardResponseDTO> prizes,
-        List<CardResponseDTO> discardPile
+        List<CardResponseDTO> discardPile,
+        int totalMulligans,
+        int mulliganBonusDraws,
+        boolean setupConfirmed
 ) {}

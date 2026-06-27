@@ -308,7 +308,10 @@ public class RuleValidator {
         PlayerState ps = state.getStateFor(action.getPlayerId());
         String cardId   = action.getPayloadString("cardId");
         String targetId = action.getPayloadString("targetInstanceId");
-
+        if (state.getTurnFlags().hasEvolvedThisTurn(targetId)) {
+            return ValidationResult.fail(
+                    "This Pokémon has already evolved this turn.");
+        }
         if (cardId == null || !ps.getHand().contains(cardId)) {
             return ValidationResult.fail("The evolution card is not in your hand.");
         }
@@ -423,6 +426,21 @@ public class RuleValidator {
                     && state.getTurnFlags().isStadiumPlayedThisTurn()) {
                 return ValidationResult.fail("You can only play one Stadium per turn.");
             }
+
+            // Forest's Curse: if the opponent's Active Pokémon is Trevenant,
+            // Item cards cannot be played.
+            PlayerState opponentState = state.getOpponentState(action.getPlayerId());
+            if (opponentState.getActivePokemon() != null
+                    && subtypes != null && subtypes.contains("Item")) {
+                String opponentCardId = opponentState.getActivePokemon().getCardId();
+                boolean isTrevenant = cardLookupPort.findCardById(opponentCardId)
+                        .map(c -> "Trevenant".equalsIgnoreCase(c.getName()))
+                        .orElse(false);
+                if (isTrevenant) {
+                    return ValidationResult.fail(
+                            "Forest's Curse: you cannot play Item cards while your opponent's Trevenant is Active.");
+                }
+            }
         }
 
         return ValidationResult.ok();
@@ -459,6 +477,10 @@ public class RuleValidator {
             }
             if (active.getConditions().contains(SpecialCondition.PARALYZED)) {
                 return ValidationResult.fail("Your Active Pokémon is Paralyzed and cannot retreat.");
+            }
+            if (active.getActiveEffects() != null
+                    && active.getActiveEffects().contains(PokemonEffect.CANT_RETREAT)) {
+                return ValidationResult.fail("Your Active Pokémon cannot retreat this turn.");
             }
         }
 
@@ -581,10 +603,18 @@ public class RuleValidator {
         boolean inPlay = (ps.getActivePokemon() != null
                 && ps.getActivePokemon().getInstanceId().equals(instanceId))
                 || (ps.getBench() != null && ps.getBench().stream()
-                        .anyMatch(b -> b.getInstanceId().equals(instanceId)));
+                .anyMatch(b -> b.getInstanceId().equals(instanceId)));
 
         if (!inPlay) {
             return ValidationResult.fail("The specified Pokémon is not in play.");
+        }
+
+// Check if the Pokémon's abilities are suppressed (only applies to Active)
+        if (ps.getActivePokemon() != null
+                && ps.getActivePokemon().getInstanceId().equals(instanceId)
+                && ps.getActivePokemon().getActiveEffects() != null
+                && ps.getActivePokemon().getActiveEffects().contains(PokemonEffect.NO_ABILITIES)) {
+            return ValidationResult.fail("This Pokémon's Abilities are suppressed.");
         }
 
         if (state.getTurnFlags().isAbilityUsed(instanceId, abilityName)) {

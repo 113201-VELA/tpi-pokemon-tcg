@@ -31,7 +31,7 @@ import { CardResponse } from '../../../deck-builder/domain/models/card.models';
           [style.width.%]="hpPercent()"
         ></div>
       </div>
-      @if (pokemon().attachedEnergies?.length) {
+      @if (pokemon().attachedEnergies.length) {
         <div class="energies-row">
           @for (group of energyGroups(); track group.type) {
             <span class="energy-chip-sm">{{ group.icon }}{{ group.count }}</span>

@@ -6,6 +6,8 @@ import com.pokemon.tcg.controller.dto.response.CardResponseDTO;
 import com.pokemon.tcg.controller.dto.response.GameStateResponseDTO;
 import com.pokemon.tcg.controller.dto.response.OpponentPlayerStateResponseDTO;
 import com.pokemon.tcg.controller.dto.response.OwnPlayerStateResponseDTO;
+import com.pokemon.tcg.controller.dto.response.PublicBoardStateDTO;
+import com.pokemon.tcg.controller.dto.response.PublicPlayerStateDTO;
 import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.domain.model.game.ActivePokemon;
 import com.pokemon.tcg.domain.model.game.BenchPokemon;
@@ -58,6 +60,27 @@ public class GameStateMapper {
         );
     }
 
+    public OwnPlayerStateResponseDTO toOwnPlayerStateDTO(
+            PlayerState state,
+            Map<String, Card> cardCache) {
+        if (state == null) return null;
+        return new OwnPlayerStateResponseDTO(
+                state.getPlayerId(),
+                "",
+                "",
+                "",
+                toActivePokemonDTO(state.getActivePokemon(), cardCache),
+                toBenchPokemonDTOList(state.getBench(), cardCache),
+                resolveCards(state.getHand(), cardCache),
+                state.getDeckSize(),
+                resolveCards(state.getPrizes(), cardCache),
+                resolveCards(state.getDiscard(), cardCache),
+                state.getTotalMulligans(),
+                state.getMulliganBonusDraws(),
+                state.isSetupConfirmed()
+        );
+    }
+
     private OwnPlayerStateResponseDTO toOwnPlayerState(
             PlayerState state, String playerName,
             String cardBack, String coin,
@@ -73,7 +96,10 @@ public class GameStateMapper {
                 resolveCards(state.getHand(), cardCache),
                 state.getDeckSize(),
                 resolveCards(state.getPrizes(), cardCache),
-                resolveCards(state.getDiscard(), cardCache)
+                resolveCards(state.getDiscard(), cardCache),
+                state.getTotalMulligans(),
+                state.getMulliganBonusDraws(),
+                state.isSetupConfirmed()
         );
     }
 
@@ -177,6 +203,52 @@ public class GameStateMapper {
                 .filter(Objects::nonNull)
                 .map(cardMapper::toResponseDTO)
                 .collect(Collectors.toList());
+    }
+
+    public PublicBoardStateDTO toPublicBoardStateDTO(
+            BoardState sanitized,
+            String p1Name, String p1CardBack, String p1Coin,
+            String p2Name, String p2CardBack, String p2Coin,
+            Map<String, Card> cardCache) {
+
+        return new PublicBoardStateDTO(
+                sanitized.getGameId(),
+                sanitized.getGameState(),
+                sanitized.getTurnPhase(),
+                sanitized.getCurrentPlayerId(),
+                sanitized.getTurnNumber(),
+                sanitized.getActiveStadiumCardId(),
+                sanitized.getTurnFlags(),
+                sanitized.isBonusDrawPending(),
+                sanitized.getPendingBenchChoicePlayerId(),
+                sanitized.getFirstPlayerId(),
+                toPublicPlayerStateDTO(sanitized.getPlayer1State(),
+                        p1Name, p1CardBack, p1Coin, cardCache),
+                toPublicPlayerStateDTO(sanitized.getPlayer2State(),
+                        p2Name, p2CardBack, p2Coin, cardCache)
+        );
+    }
+
+    private PublicPlayerStateDTO toPublicPlayerStateDTO(
+            PlayerState state, String playerName,
+            String cardBack, String coin,
+            Map<String, Card> cardCache) {
+        if (state == null) return null;
+        return new PublicPlayerStateDTO(
+                state.getPlayerId(),
+                playerName,
+                cardBack,
+                coin,
+                toActivePokemonDTO(state.getActivePokemon(), cardCache),
+                toBenchPokemonDTOList(state.getBench(), cardCache),
+                resolveCards(state.getDiscard(), cardCache),
+                state.getHandSize(),
+                state.getDeckSize(),
+                state.getPrizeCount(),
+                state.getTotalMulligans(),
+                state.getMulliganBonusDraws(),
+                state.isSetupConfirmed()
+        );
     }
 
     private <T> List<T> safeList(List<T> list) {

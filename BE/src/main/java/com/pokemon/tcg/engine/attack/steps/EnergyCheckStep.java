@@ -130,12 +130,13 @@ public class EnergyCheckStep implements AttackStep {
         for (String cardId : attachedIds) {
             Optional<Card> cardOpt = cardLookupPort.findCardById(cardId);
             if (cardOpt.isEmpty()) {
+                System.out.println("ENERGY SLOT: card not found for " + cardId + " → COLORLESS");
                 slots.add(EnergySlot.colorless());
                 continue;
             }
             Card card = cardOpt.get();
             String name = card.getName() != null ? card.getName().toLowerCase() : "";
-
+            System.out.println("ENERGY SLOT: " + cardId + " name=" + name + " types=" + card.getTypes());
             if (DOUBLE_COLORLESS.equals(name)) {
                 slots.add(EnergySlot.colorless());
                 slots.add(EnergySlot.colorless());
@@ -151,12 +152,29 @@ public class EnergyCheckStep implements AttackStep {
 
     /** Resolves the primary energy type from a card's types list. Falls back to COLORLESS. */
     private EnergyType resolveEnergyType(Card card) {
-        if (card.getTypes() == null || card.getTypes().isEmpty()) return EnergyType.COLORLESS;
-        try {
-            return EnergyType.valueOf(card.getTypes().get(0));
-        } catch (IllegalArgumentException e) {
-            return EnergyType.COLORLESS;
+        // Try types field first
+        if (card.getTypes() != null && !card.getTypes().isEmpty()) {
+            try {
+                return EnergyType.valueOf(card.getTypes().get(0));
+            } catch (IllegalArgumentException e) {
+                // fall through to name-based inference
+            }
         }
+        // Infer type from card name for basic energies (e.g. "Fire Energy" → FIRE)
+        if (card.getName() != null) {
+            String nameLower = card.getName().toLowerCase();
+            if (nameLower.contains("fire"))      return EnergyType.FIRE;
+            if (nameLower.contains("water"))     return EnergyType.WATER;
+            if (nameLower.contains("grass"))     return EnergyType.GRASS;
+            if (nameLower.contains("lightning")) return EnergyType.LIGHTNING;
+            if (nameLower.contains("psychic"))   return EnergyType.PSYCHIC;
+            if (nameLower.contains("fighting"))  return EnergyType.FIGHTING;
+            if (nameLower.contains("darkness"))  return EnergyType.DARKNESS;
+            if (nameLower.contains("metal"))     return EnergyType.METAL;
+            if (nameLower.contains("fairy"))     return EnergyType.FAIRY;
+            if (nameLower.contains("dragon"))    return EnergyType.DRAGON;
+        }
+        return EnergyType.COLORLESS;
     }
 
     /** Consumes one unused slot that exactly matches the required type. */

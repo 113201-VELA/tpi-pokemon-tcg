@@ -38,7 +38,7 @@ import { CardResponse } from '../../../deck-builder/domain/models/card.models';
       <span class="hp-text">{{ pokemon().currentHp }}/{{ pokemon().maxHp }}</span>
 
       <!-- Special conditions -->
-      @if (pokemon().conditions?.length) {
+      @if (pokemon().conditions.length) {
         <div class="conditions-row">
           @for (cond of pokemon().conditions; track cond) {
             <span
@@ -50,7 +50,7 @@ import { CardResponse } from '../../../deck-builder/domain/models/card.models';
       }
 
       <!-- Attached energies -->
-      @if (pokemon().attachedEnergies?.length) {
+      @if (pokemon().attachedEnergies.length) {
         <div class="energies-row">
           @for (group of energyGroups(); track group.type) {
             <span class="energy-chip">{{ group.icon }} {{ group.count }}</span>

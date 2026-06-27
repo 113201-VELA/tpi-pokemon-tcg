@@ -53,6 +53,10 @@ export interface OwnPlayerState {
   deckCount: number;
   prizes: CardResponse[];
   discardPile: CardResponse[];
+  // ── Setup fields (present when gameState === 'SETUP') ──────────────
+  totalMulligans?: number;
+  mulliganBonusDraws?: number;
+  setupConfirmed?: boolean;
 }
 
 export interface OpponentPlayerState {
@@ -66,6 +70,17 @@ export interface OpponentPlayerState {
   deckCount: number;
   prizesCount: number;
   discardPile: CardResponse[];
+  // ── Setup fields (present when gameState === 'SETUP') ──────────────
+  totalMulligans?: number;
+  mulliganBonusDraws?: number;
+  setupConfirmed?: boolean;
+}
+
+/** Setup-phase info visible about the opponent (public state). */
+export interface OpponentSetupState {
+  totalMulligans: number;
+  mulliganBonusDraws: number;
+  setupConfirmed: boolean;
 }
 
 export interface GameStateResponse {
@@ -78,6 +93,84 @@ export interface GameStateResponse {
   turnFlags: TurnFlags;
   ownState: OwnPlayerState;
   opponentState: OpponentPlayerState;
+  // ── Setup field ────────────────────────────────────────────────────
+  bonusDrawPending?: boolean;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Public DTOs emitted by WebSocket (FE Spec 19)
+// ─────────────────────────────────────────────────────────────────────────────
+
+export interface PublicPlayerStateDTO {
+  playerId: string;
+  playerName: string;
+  cardBack: string;
+  coin: string;
+  active: ActivePokemonDTO | null;
+  bench: BenchPokemonDTO[];
+  deckCount: number;
+  discardPile: CardResponse[];
+  cardsInHand: number;
+  prizesCount: number;
+  totalMulligans?: number;
+  mulliganBonusDraws?: number;
+  setupConfirmed?: boolean;
+}
+
+export interface PublicBoardStateDTO {
+  gameId: string;
+  gameState: GameState;
+  turnPhase: TurnPhase;
+  currentPlayerId: string;
+  turnNumber: number;
+  activeStadiumCardId: string | null;
+  turnFlags: TurnFlags;
+  bonusDrawPending: boolean;
+  pendingBenchChoicePlayerId: string | null;
+  firstPlayerId: string | null;
+  player1State: PublicPlayerStateDTO;
+  player2State: PublicPlayerStateDTO;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// WebSocket action types
+// ─────────────────────────────────────────────────────────────────────────────
+
+/** All action types the client can send to /app/game/{id}/action. */
+export type GameActionType =
+  // Setup
+  | 'MULLIGAN_CONFIRM'
+  | 'SETUP_PLACE_ACTIVE'
+  | 'SETUP_PLACE_BENCH'
+  | 'ACCEPT_MULLIGAN_BONUS'
+  | 'CONFIRM_SETUP'
+  // Draw
+  | 'DRAW_CARD'
+  // Main phase
+  | 'PLACE_BASIC_POKEMON'
+  | 'ATTACH_ENERGY'
+  | 'PLAY_TRAINER'
+  | 'EVOLVE_POKEMON'
+  | 'RETREAT'
+  | 'DECLARE_ATTACK'
+  | 'END_TURN'
+  // Post-KO
+  | 'CHOOSE_BENCH_POKEMON';
+
+/** Generic action payload sent over WebSocket. */
+export interface GameAction {
+  type: GameActionType;
+  payload: Record<string, unknown>;
+}
+
+/** Game event received from /topic/game/{id}/events. */
+export interface GameEvent {
+  type: string;
+  gameId: string;
+  playerId: string;
+  turnNumber: number;
+  data: Record<string, unknown>;
+  occurredAt: number;
 }
 
 /** Maps energy type strings to display icons. */
