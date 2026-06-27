@@ -46,22 +46,23 @@ public class GameService {
                        CardRepository cardRepository,
                        PlayerRepository playerRepository,
                        DeckRepository deckRepository,
-                       PlayerMatchupRepository matchupRepository, GameEventPublisher eventPublisher,
+                       PlayerMatchupRepository matchupRepository,
+                       GameEventPublisher eventPublisher,
                        GameStateMapper gameStateMapper,
                        GameMapper gameMapper,
                        GameLogMapper gameLogMapper) {
-        this.engine           = engine;
-        this.gameRepository   = gameRepository;
-        this.stateRepository  = stateRepository;
-        this.logRepository    = logRepository;
-        this.cardRepository   = cardRepository;
-        this.playerRepository = playerRepository;
-        this.deckRepository   = deckRepository;
-        this.matchupRepository= matchupRepository;
-        this.eventPublisher = eventPublisher;
-        this.gameStateMapper  = gameStateMapper;
-        this.gameMapper       = gameMapper;
-        this.gameLogMapper = gameLogMapper;
+        this.engine            = engine;
+        this.gameRepository    = gameRepository;
+        this.stateRepository   = stateRepository;
+        this.logRepository     = logRepository;
+        this.cardRepository    = cardRepository;
+        this.playerRepository  = playerRepository;
+        this.deckRepository    = deckRepository;
+        this.matchupRepository = matchupRepository;
+        this.eventPublisher    = eventPublisher;
+        this.gameStateMapper   = gameStateMapper;
+        this.gameMapper        = gameMapper;
+        this.gameLogMapper     = gameLogMapper;
     }
 
     /**
@@ -142,18 +143,21 @@ public class GameService {
                 .build();
 
         EngineResult result = engine.initializeGame(game.getId().toString(), ps1, ps2);
+
         if (result != null && result.newState() != null) {
+            BoardState initialState = result.newState();
+            
             game.setState(GameState.SETUP);
             GameStateSnapshot snapshot = GameStateSnapshot.builder()
                     .game(game)
-                    .turnNumber(result.newState().getTurnNumber())
-                    .turnPhase(result.newState().getTurnPhase())
+                    .turnNumber(initialState.getTurnNumber())
+                    .turnPhase(initialState.getTurnPhase())
                     .currentPlayer(player)
-                    .boardState(result.newState())
+                    .boardState(initialState)
                     .build();
             stateRepository.save(snapshot);
-        };
-        // Notify lobby subscribers that the game has started
+        }
+
         eventPublisher.publishLobbyUpdate(
                 GameEvent.builder()
                         .type(GameEventType.GAME_STARTED)
@@ -175,7 +179,7 @@ public class GameService {
                 .orElseThrow(() -> new IllegalArgumentException("No state found for game: " + gameId));
 
         BoardState boardState = snapshot.getBoardState();
-        PlayerState ownState = boardState.getStateFor(requestingPlayerId.toString());
+        PlayerState ownState      = boardState.getStateFor(requestingPlayerId.toString());
         PlayerState opponentState = boardState.getOpponentState(requestingPlayerId.toString());
 
         Set<String> allCardIds = collectVisibleCardIds(ownState);
@@ -184,7 +188,6 @@ public class GameService {
         Map<String, Card> cardCache = cardRepository.findAllById(allCardIds).stream()
                 .collect(Collectors.toMap(Card::getId, Function.identity()));
 
-        // Resolve player names and cosmetics from GamePlayer records
         String requestingPlayerName = playerRepository.findById(requestingPlayerId)
                 .map(Player::getUsername)
                 .orElse("Unknown");
@@ -194,7 +197,6 @@ public class GameService {
                 .map(Player::getUsername)
                 .orElse("Unknown");
 
-        // Load the game to access GamePlayer deck cosmetics
         Game game = gameRepository.findByIdWithPlayersAndDecks(gameId)
                 .orElseThrow(() -> new IllegalArgumentException("Game not found"));
 
@@ -240,12 +242,6 @@ public class GameService {
     /**
      * Processes a player action through the game engine, persists the resulting
      * board state as a new snapshot in the database, and logs the action to the game log.
-     *
-     * <p>Every action is logged regardless of outcome:
-     * <ul>
-     *   <li>{@code SUCCESS} — the action was valid and the engine processed it.</li>
-     *   <li>{@code FAILED} — the action was rejected by the rule validator.</li>
-     * </ul>
      */
     public EngineResult processAction(UUID gameId, UUID playerId, GameAction action) {
         BoardState currentState = getCurrentState(gameId);
@@ -258,7 +254,6 @@ public class GameService {
                 .orElseThrow(() -> new IllegalArgumentException("Player not found"));
 
         if (result != null && result.newState() != null) {
-            // Persist new board state snapshot
             GameStateSnapshot snapshot = GameStateSnapshot.builder()
                     .game(game)
                     .turnNumber(result.newState().getTurnNumber())
@@ -268,11 +263,9 @@ public class GameService {
                     .build();
             stateRepository.save(snapshot);
 
-            // Update Game entity if the game finished
             if (result.newState().getGameState() == GameState.FINISHED) {
                 game.setState(GameState.FINISHED);
 
-                // Find the winner from the GAME_OVER event if present
                 result.events().stream()
                         .filter(e -> e.getType() == GameEventType.GAME_OVER)
                         .findFirst()
@@ -291,18 +284,15 @@ public class GameService {
                 }
             }
 
-            // Determine log result: FAILED if there's an error event, SUCCESS otherwise
             boolean hasPipelineError = result.events().stream()
                     .anyMatch(e -> e.getType() == GameEventType.TURN_ENDED
                             && e.getData().containsKey("error"));
             String logResult = hasPipelineError ? "FAILED" : "SUCCESS";
 
-            // Build action data from payload
             Map<String, Object> actionData = action.getPayload() != null
                     ? new java.util.HashMap<>(action.getPayload())
                     : new java.util.HashMap<>();
 
-            // Build result data from events
             Map<String, Object> resultData = new java.util.HashMap<>();
             if (hasPipelineError) {
                 result.events().stream()
@@ -311,11 +301,9 @@ public class GameService {
                         .ifPresent(e -> resultData.put("error", e.getData().get("error")));
             } else {
                 result.events().forEach(e ->
-                        resultData.put(e.getType().name().toLowerCase(),
-                                e.getData()));
+                        resultData.put(e.getType().name().toLowerCase(), e.getData()));
             }
 
-            // Persist log entry
             GameLogEntry logEntry = GameLogEntry.builder()
                     .game(game)
                     .turnNumber(currentState.getTurnNumber())
@@ -349,8 +337,6 @@ public class GameService {
 
     /**
      * Returns the most recent active game for the given player, if any.
-     * Active states: WAITING, SETUP, ACTIVE.
-     * Returns empty if the player has no active game.
      */
     @Transactional(readOnly = true)
     public Optional<GameResponseDTO> getActiveGame(UUID playerId) {
@@ -359,7 +345,6 @@ public class GameService {
                 GameState.SETUP,
                 GameState.ACTIVE
         );
-
         return gameRepository.findActiveGamesByPlayerId(playerId, activeStates)
                 .stream()
                 .findFirst()
@@ -368,7 +353,6 @@ public class GameService {
 
     /**
      * Cancels a WAITING game. Only the creator (player 1) can cancel it.
-     * Transitions the game state to CANCELLED without affecting matchup records.
      */
     public void cancelGame(UUID gameId, UUID playerId) {
         Game game = gameRepository.findByIdAndState(gameId, GameState.WAITING)
@@ -388,8 +372,6 @@ public class GameService {
 
     /**
      * Surrenders an active game on behalf of the requesting player.
-     * The opponent is declared the winner. Matchup records are updated.
-     * Valid for games in SETUP or ACTIVE state only.
      */
     public void surrenderGame(UUID gameId, UUID playerId) {
         Game game = gameRepository.findById(gameId)
@@ -406,7 +388,6 @@ public class GameService {
             throw new IllegalArgumentException("Player is not a participant of this game");
         }
 
-        // Find the opponent and declare them the winner
         Player winner = game.getPlayers().stream()
                 .filter(gp -> !gp.getPlayer().getId().equals(playerId))
                 .map(GamePlayer::getPlayer)
@@ -424,7 +405,6 @@ public class GameService {
 
     /**
      * Updates win/loss records for both players after a game finishes.
-     * Uses upsert logic: creates the matchup record if it does not exist yet.
      */
     private void updateMatchups(Game game) {
         UUID winnerId = game.getWinner().getId();

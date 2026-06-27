@@ -120,6 +120,10 @@ public class GameActionHandler {
                 .turnFlags(state.getTurnFlags())
                 .pendingEvents(state.getPendingEvents())
                 .bonusDrawPending(state.isBonusDrawPending())
+                .pendingBenchChoicePlayerId(state.getPendingBenchChoicePlayerId())
+                .pendingDeckSelectionPlayerId(state.getPendingDeckSelectionPlayerId())
+                .pendingDeckSelectionCardIds(state.getPendingDeckSelectionCardIds())
+                .firstPlayerId(state.getFirstPlayerId())
                 .build();
     }
 }
