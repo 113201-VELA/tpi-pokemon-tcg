@@ -623,33 +623,35 @@ public class TurnManager {
         String playerId = action.getPlayerId();
         if (!state.getPendingAttackSelectionPlayerId().equals(playerId)) return state;
 
-        String chosenCardId       = action.getPayloadString("cardId");
-        List<String> pendingCards = state.getPendingDeckSelectionCardIds();
-        PlayerState ps            = state.getStateFor(playerId);
+        List<String> chosenCardIds = getChosenCardIds(action);
+        List<String> pendingCards  = state.getPendingDeckSelectionCardIds();
+        PlayerState ps             = state.getStateFor(playerId);
+        int maxCards               = state.getPendingAttackSelectionMaxCards();
 
-        if (chosenCardId != null
-                && pendingCards != null
-                && pendingCards.contains(chosenCardId)) {
-            List<String> hand = new ArrayList<>(
-                    ps.getHand() != null ? ps.getHand() : new ArrayList<>());
-            hand.add(chosenCardId);
-            ps.setHand(hand);
+        List<String> hand = new ArrayList<>(
+                ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        List<String> deck = new ArrayList<>(
+                ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
 
-            List<String> deck = new ArrayList<>(
-                    ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
-            deck.remove(chosenCardId);
-            Collections.shuffle(deck);
-            ps.setDeck(deck);
-        } else {
-            List<String> deck = new ArrayList<>(
-                    ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
-            Collections.shuffle(deck);
-            ps.setDeck(deck);
+        int moved = 0;
+        for (String cardId : chosenCardIds) {
+            if (moved >= maxCards) break;
+            if (pendingCards != null && pendingCards.contains(cardId)
+                    && deck.contains(cardId)) {
+                deck.remove(cardId);
+                hand.add(cardId);
+                moved++;
+            }
         }
+
+        Collections.shuffle(deck);
+        ps.setHand(hand);
+        ps.setDeck(deck);
 
         return state.toBuilder()
                 .pendingAttackSelectionKey(null)
                 .pendingAttackSelectionPlayerId(null)
+                .pendingAttackSelectionMaxCards(1)
                 .pendingDeckSelectionCardIds(new ArrayList<>())
                 .build();
     }
@@ -895,5 +897,16 @@ public class TurnManager {
             pokemon.getActiveEffects().clear();
         }
         pokemon.setBlockedAttackName(null);
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> getChosenCardIds(GameAction action) {
+        Object raw = action.getPayload() != null
+                ? action.getPayload().get("chosenCardIds")
+                : null;
+        if (raw instanceof List<?> list) {
+            return (List<String>) list;
+        }
+        return List.of();
     }
 }

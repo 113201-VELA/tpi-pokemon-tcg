@@ -560,14 +560,27 @@ public class RuleValidator {
      * The specified cardId must be among the pending selection cards.
      */
     private ValidationResult validateSelectFromDeck(BoardState state, GameAction action) {
-        String cardId = action.getPayloadString("cardId");
-        if (cardId == null) {
-            return ValidationResult.fail("You must specify a cardId to select.");
-        }
+        List<String> chosenIds  = getChosenCardIds(action);
         List<String> pendingCards = state.getPendingDeckSelectionCardIds();
-        if (pendingCards == null || !pendingCards.contains(cardId)) {
-            return ValidationResult.fail("The specified card is not available for selection.");
+
+        int maxCards = state.isPendingAttackSelection()
+                ? state.getPendingAttackSelectionMaxCards()
+                : 1;
+
+        if (chosenIds.size() > maxCards) {
+            return ValidationResult.fail(
+                    "You may choose at most " + maxCards + " card(s).");
         }
+
+        if (pendingCards != null) {
+            for (String cardId : chosenIds) {
+                if (!pendingCards.contains(cardId)) {
+                    return ValidationResult.fail(
+                            "Card " + cardId + " is not available for selection.");
+                }
+            }
+        }
+
         return ValidationResult.ok();
     }
 
@@ -686,5 +699,16 @@ public class RuleValidator {
             return ValidationResult.fail("You can only place Basic Pokémon.");
         }
         return ValidationResult.ok();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> getChosenCardIds(GameAction action) {
+        Object raw = action.getPayload() != null
+                ? action.getPayload().get("chosenCardIds")
+                : null;
+        if (raw instanceof List<?> list) {
+            return (List<String>) list;
+        }
+        return List.of();
     }
 }
