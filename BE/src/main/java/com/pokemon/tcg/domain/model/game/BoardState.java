@@ -3,7 +3,6 @@ package com.pokemon.tcg.domain.model.game;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -29,8 +28,7 @@ public class BoardState {
      * one player has pending mulligan bonus draws to accept or decline.
      * Cleared once all bonus decisions are made and the game transitions to DRAW.
      */
-    @Builder.Default
-    private boolean bonusDrawPending = false;
+    private boolean bonusDrawPending;
 
     /**
      * Set to the defending player's ID when their Active Pokémon was knocked out
@@ -38,15 +36,13 @@ public class BoardState {
      * All actions are blocked until that player sends CHOOSE_BENCH_POKEMON.
      * Null when no bench choice is pending.
      */
-    @Builder.Default
-    private String pendingBenchChoicePlayerId = null;
+    private String pendingBenchChoicePlayerId;
 
     /**
      * ID of the player who goes first, determined by coin flip during initialization.
      * Used to block attacks on the very first turn of the game.
      */
-    @Builder.Default
-    private String firstPlayerId = null;
+    private String firstPlayerId;
 
     /**
      * Set to the player's ID when a card effect (e.g. Great Ball) requires them
@@ -54,15 +50,28 @@ public class BoardState {
      * blocked until that player sends SELECT_FROM_DECK.
      * Null when no deck selection is pending.
      */
-    @Builder.Default
-    private String pendingDeckSelectionPlayerId = null;
+    private String pendingDeckSelectionPlayerId;
 
     /**
      * The card IDs from the top of the deck that are set aside for the player
      * to choose from. Only meaningful when pendingDeckSelectionPlayerId is set.
      */
+    private List<String> pendingDeckSelectionCardIds;
+
     @Builder.Default
-    private List<String> pendingDeckSelectionCardIds = new ArrayList<>();
+    private String pendingForcedSwitchPlayerId = null;
+
+    @Builder.Default
+    private String pendingAttackSelectionKey = null;
+
+    @Builder.Default
+    private String pendingAttackSelectionPlayerId = null;
+
+    @Builder.Default
+    private int pendingAttackSelectionMaxCards = 1;
+
+    @Builder.Default
+    private AttackSelectionType pendingAttackSelectionType = AttackSelectionType.PICK;
 
     public PlayerState getStateFor(String playerId) {
         if (playerId.equals(player1State.getPlayerId())) return player1State;
@@ -99,5 +108,13 @@ public class BoardState {
      */
     public boolean isPendingDeckSelection() {
         return pendingDeckSelectionPlayerId != null;
+    }
+
+    public boolean isPendingForcedSwitch() {
+        return pendingForcedSwitchPlayerId != null;
+    }
+
+    public boolean isPendingAttackSelection() {
+        return pendingAttackSelectionPlayerId != null;
     }
 }

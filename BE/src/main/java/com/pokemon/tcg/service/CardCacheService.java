@@ -27,6 +27,14 @@ public class CardCacheService {
     @Value("${pokemon-tcg.cache.set-id:xy1}")
     private String defaultSetId;
 
+    /**
+     * When false, the card cache is not initialized on startup.
+     * Set to false in the test profile to avoid hitting the database
+     * with PostgreSQL-specific queries that H2 cannot handle.
+     */
+    @Value("${pokemon-tcg.cache.enabled:true}")
+    private boolean cacheEnabled;
+
     public CardCacheService(CardRepository cardRepository,
                             PokemonTcgApiClient apiClient,
                             ObjectMapper objectMapper,
@@ -39,6 +47,7 @@ public class CardCacheService {
 
     @PostConstruct
     public void initCache() {
+        if (!cacheEnabled) return;
         long count = cardRepository.countBySetId(defaultSetId);
         if (count < 100) {
             cardRepository.deleteAll(cardRepository.findBySetId(defaultSetId));
@@ -64,10 +73,10 @@ public class CardCacheService {
     }
 
     public List<CardResponseDTO> searchCards(String setId,
-                                              String name,
-                                              CardType supertype,
-                                              String energyType,
-                                              String pokemonSubtype) {
+                                             String name,
+                                             CardType supertype,
+                                             String energyType,
+                                             String pokemonSubtype) {
         List<Card> cards;
 
         boolean hasName      = name != null && !name.isBlank();
@@ -151,7 +160,7 @@ public class CardCacheService {
             }
         }
 
-        List<TypeModifier> weaknesses = parseTypeModifiers(raw.get("weaknesses"));
+        List<TypeModifier> weaknesses  = parseTypeModifiers(raw.get("weaknesses"));
         List<TypeModifier> resistances = parseTypeModifiers(raw.get("resistances"));
 
         List<Ability> abilities = new ArrayList<>();

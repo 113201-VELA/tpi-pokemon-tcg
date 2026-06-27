@@ -67,14 +67,40 @@
 <script>
     let stompClient = null;
 
+    /**
+     * Custom JSON formatter that compacts arrays of strings (card IDs, energy IDs, etc.)
+     * onto a single line instead of expanding each element vertically.
+     * Arrays of objects are still expanded normally.
+     */
     function formatJson(text) {
         try {
             const obj = JSON.parse(text);
-            return JSON.stringify(obj, null, 2)
-                .replace(
-                    /"([^"]+)":/g,
-                    '<span class="json-key">"$1"</span>:'
-                );
+            const raw = JSON.stringify(obj, null, 2);
+
+            // Collapse arrays that contain only strings (card IDs) onto one line.
+            // Matches multiline arrays like:
+            //   [
+            //     "xy1-1",
+            //     "xy1-2"
+            //   ]
+            // and replaces them with: ["xy1-1", "xy1-2"]
+            const compacted = raw.replace(
+                /\[\s*\n(\s*"[^"]*"\s*,?\s*\n)+\s*\]/g,
+                match => {
+                    const items = match
+                        .replace(/[\[\]\n]/g, '')
+                        .split(',')
+                        .map(s => s.trim())
+                        .filter(s => s.length > 0);
+                    return '[' + items.join(', ') + ']';
+                }
+            );
+
+            // Highlight JSON keys
+            return compacted.replace(
+                /"([^"]+)":/g,
+                '<span class="json-key">"$1"</span>:'
+            );
         } catch {
             return text;
         }
@@ -85,7 +111,7 @@
         const entry = document.createElement('div');
         entry.className = 'log-entry ' + (type === 'ok' ? 'log-ok' : type === 'err' ? 'log-err' : '');
         const time = new Date().toISOString().slice(11, 23);
-        const match = msg.match(/^(\[[^\]]+\])\s*(.*)$/);
+        const match = msg.match(/^(\[[^\]]+\])\s*(.*)$/s);
         if (match) {
             const prefix = match[1];
             const body = match[2];

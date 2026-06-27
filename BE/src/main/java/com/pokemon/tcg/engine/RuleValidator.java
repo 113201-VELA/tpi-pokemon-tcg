@@ -53,6 +53,34 @@ public class RuleValidator {
             return validateAcceptMulliganBonus(state, action);
         }
 
+        // During pendingAttackSelection, only SELECT_FROM_DECK is allowed
+        // and only the affected player may act.
+        if (state.isPendingAttackSelection()) {
+            if (action.getType() != GameActionType.SELECT_FROM_DECK) {
+                return ValidationResult.fail(
+                        "You must select a card from your deck first.");
+            }
+            if (!state.getPendingAttackSelectionPlayerId().equals(action.getPlayerId())) {
+                return ValidationResult.fail(
+                        "It is not your turn to select from the deck.");
+            }
+            return validateSelectFromDeck(state, action);
+        }
+
+        // During pendingForcedSwitch, only the affected player may send FORCED_SWITCH.
+        // All other actions are blocked until the switch is resolved.
+        if (state.isPendingForcedSwitch()) {
+            if (action.getType() != GameActionType.FORCED_SWITCH) {
+                return ValidationResult.fail(
+                        "Waiting for the opponent to switch their Active Pokémon.");
+            }
+            if (!state.getPendingForcedSwitchPlayerId().equals(action.getPlayerId())) {
+                return ValidationResult.fail(
+                        "It is not your turn to switch your Active Pokémon.");
+            }
+            return validateForcedSwitch(state, action);
+        }
+
         // During pendingDeckSelection, only SELECT_FROM_DECK is allowed
         // and only the affected player may act.
         if (state.isPendingDeckSelection()) {
@@ -95,11 +123,13 @@ public class RuleValidator {
             case PLAY_TRAINER          -> validatePlayTrainer(state, action);
             case RETREAT               -> validateRetreat(state, action);
             case DECLARE_ATTACK        -> validateAttack(state, action);
+            case USE_ABILITY           -> validateUseAbility(state, action);
             case END_TURN              -> validateEndTurn(state, action);
             // ── Post-KO ──────────────────────────────────────────────
             case CHOOSE_BENCH_POKEMON  -> validateChooseBenchPokemon(state, action);
             // ── Deck selection ───────────────────────────────────────
             case SELECT_FROM_DECK      -> validateSelectFromDeck(state, action);
+            case FORCED_SWITCH         -> validateForcedSwitch(state, action);
             default                    -> ValidationResult.ok();
         };
     }
@@ -115,10 +145,8 @@ public class RuleValidator {
         if (state.getTurnPhase() != TurnPhase.DRAW) {
             return ValidationResult.fail("You can only draw a card at the start of your turn.");
         }
-        PlayerState ps = state.getStateFor(action.getPlayerId());
-        if (ps.getDeck() == null || ps.getDeck().isEmpty()) {
-            return ValidationResult.fail("Your deck is empty. You lose.");
-        }
+        // Empty deck is NOT rejected here — it's a loss condition detected by
+        // VictoryConditionChecker after the action processes, not a validation error.
         return ValidationResult.ok();
     }
 
@@ -287,9 +315,11 @@ public class RuleValidator {
 
         // Find the target Pokémon (Active or Bench)
         boolean targetEnteredThisTurn = false;
+        String targetCardId = null;
         if (ps.getActivePokemon() != null &&
                 ps.getActivePokemon().getInstanceId().equals(targetId)) {
             targetEnteredThisTurn = ps.getActivePokemon().isEnteredThisTurn();
+            targetCardId = ps.getActivePokemon().getCardId();
         } else if (ps.getBench() != null) {
             var benchTarget = ps.getBench().stream()
                     .filter(b -> b.getInstanceId().equals(targetId))
@@ -298,6 +328,7 @@ public class RuleValidator {
                 return ValidationResult.fail("Target Pokémon is not in play.");
             }
             targetEnteredThisTurn = benchTarget.isEnteredThisTurn();
+            targetCardId = benchTarget.getCardId();
         } else {
             return ValidationResult.fail("Target Pokémon is not in play.");
         }
@@ -305,6 +336,22 @@ public class RuleValidator {
         if (targetEnteredThisTurn) {
             return ValidationResult.fail(
                     "You cannot evolve a Pokémon the same turn it entered play.");
+        }
+
+        // Validate that the evolution card actually evolves from the target Pokémon's current form
+        var evolutionCard = cardLookupPort.findCardById(cardId);
+        if (evolutionCard.isPresent() && evolutionCard.get().getEvolvesFrom() != null
+                && targetCardId != null) {
+            String evolvesFrom = evolutionCard.get().getEvolvesFrom();
+            var targetCard = cardLookupPort.findCardById(targetCardId);
+            if (targetCard.isPresent()) {
+                String targetName = targetCard.get().getName();
+                if (!evolvesFrom.equalsIgnoreCase(targetName)) {
+                    return ValidationResult.fail(
+                            evolutionCard.get().getName() + " evolves from "
+                                    + evolvesFrom + ", not " + targetName + ".");
+                }
+            }
         }
 
         return ValidationResult.ok();
@@ -387,6 +434,9 @@ public class RuleValidator {
      * - Only once per turn.
      * - Active Pokémon must not be Asleep or Paralyzed.
      * - There must be at least one Pokémon on the bench to switch to.
+     * - The player must discard exactly as many energies as the retreat cost,
+     *   unless Fairy Garden suppresses the cost to 0.
+     * - All specified energies must be attached to the Active Pokémon.
      */
     private ValidationResult validateRetreat(BoardState state, GameAction action) {
         if (state.getTurnPhase() != TurnPhase.MAIN) {
@@ -411,14 +461,44 @@ public class RuleValidator {
                 return ValidationResult.fail("Your Active Pokémon is Paralyzed and cannot retreat.");
             }
         }
+
+        // Fairy Garden suppresses retreat cost for Fairy Pokémon with a Fairy Energy attached
+        if (isFairyGardenActive(state) && isFairyPokemonWithFairyEnergy(active)) {
+            return ValidationResult.ok();
+        }
+
+        // Validate retreat cost
+        int retreatCost = resolveRetreatCost(active.getCardId());
+        List<String> energiesToDiscard = getEnergiesToDiscard(action);
+
+        if (energiesToDiscard.size() != retreatCost) {
+            return ValidationResult.fail(
+                    "You must discard exactly " + retreatCost + " Energy card(s) to retreat.");
+        }
+
+        List<String> attachedEnergies = active.getAttachedEnergyIds() != null
+                ? active.getAttachedEnergyIds()
+                : List.of();
+
+        // Verify each specified energy is actually attached to the Active Pokémon.
+        // Use a mutable copy to handle duplicates correctly.
+        List<String> attachedCopy = new java.util.ArrayList<>(attachedEnergies);
+        for (String energyId : energiesToDiscard) {
+            if (!attachedCopy.remove(energyId)) {
+                return ValidationResult.fail(
+                        "Energy card " + energyId + " is not attached to your Active Pokémon.");
+            }
+        }
+
         return ValidationResult.ok();
     }
 
     /**
      * Attack rules:
-     * - The player who goes first cant attack on the first turn.
+     * - The player who goes first cannot attack on turn 1.
      * - Only during MAIN phase.
      * - Active Pokémon must not be Asleep or Paralyzed.
+     * - The declared attack must not be blocked by Torment.
      * Energy sufficiency is checked inside EnergyCheckStep in the pipeline,
      * not here, to keep the pipeline as the single source of truth for energy logic.
      */
@@ -448,6 +528,16 @@ public class RuleValidator {
                 return ValidationResult.fail("Your Active Pokémon is Paralyzed and cannot attack.");
             }
         }
+
+        // Check if the declared attack is blocked by Torment
+        String attackName = action.getPayloadString("attackName");
+        if (attackName != null
+                && active.getBlockedAttackName() != null
+                && attackName.equalsIgnoreCase(active.getBlockedAttackName())) {
+            return ValidationResult.fail(
+                    "That attack is blocked by Torment and cannot be used this turn.");
+        }
+
         return ValidationResult.ok();
     }
 
@@ -458,6 +548,50 @@ public class RuleValidator {
         if (state.getTurnPhase() != TurnPhase.MAIN) {
             return ValidationResult.fail("You can only end your turn during the main phase.");
         }
+        return ValidationResult.ok();
+    }
+
+    // ─── USE_ABILITY ───────────────────────────────────────────────────────────
+
+    /**
+     * USE_ABILITY rules:
+     * - Only during MAIN phase.
+     * - The Pokémon using the ability must be in play (Active or Bench).
+     * - instanceId and abilityName must be present in the payload.
+     * - Each active ability can only be used once per turn per Pokémon instance.
+     */
+    private ValidationResult validateUseAbility(BoardState state, GameAction action) {
+        if (state.getTurnPhase() != TurnPhase.MAIN) {
+            return ValidationResult.fail(
+                    "You can only use abilities during your main phase.");
+        }
+        String instanceId  = action.getPayloadString("instanceId");
+        String abilityName = action.getPayloadString("abilityName");
+
+        if (instanceId == null) {
+            return ValidationResult.fail(
+                    "You must specify the instanceId of the Pokémon using the ability.");
+        }
+        if (abilityName == null) {
+            return ValidationResult.fail(
+                    "You must specify the abilityName to use.");
+        }
+
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        boolean inPlay = (ps.getActivePokemon() != null
+                && ps.getActivePokemon().getInstanceId().equals(instanceId))
+                || (ps.getBench() != null && ps.getBench().stream()
+                        .anyMatch(b -> b.getInstanceId().equals(instanceId)));
+
+        if (!inPlay) {
+            return ValidationResult.fail("The specified Pokémon is not in play.");
+        }
+
+        if (state.getTurnFlags().isAbilityUsed(instanceId, abilityName)) {
+            return ValidationResult.fail(
+                    "This ability has already been used this turn.");
+        }
+
         return ValidationResult.ok();
     }
 
@@ -490,18 +624,124 @@ public class RuleValidator {
      * The specified cardId must be among the pending selection cards.
      */
     private ValidationResult validateSelectFromDeck(BoardState state, GameAction action) {
-        String cardId = action.getPayloadString("cardId");
-        if (cardId == null) {
-            return ValidationResult.fail("You must specify a cardId to select.");
-        }
+        List<String> chosenIds  = getChosenCardIds(action);
         List<String> pendingCards = state.getPendingDeckSelectionCardIds();
-        if (pendingCards == null || !pendingCards.contains(cardId)) {
-            return ValidationResult.fail("The specified card is not available for selection.");
+
+        int maxCards = state.isPendingAttackSelection()
+                ? state.getPendingAttackSelectionMaxCards()
+                : 1;
+
+        if (chosenIds.size() > maxCards) {
+            return ValidationResult.fail(
+                    "You may choose at most " + maxCards + " card(s).");
+        }
+
+        if (pendingCards != null) {
+            for (String cardId : chosenIds) {
+                if (!pendingCards.contains(cardId)) {
+                    return ValidationResult.fail(
+                            "Card " + cardId + " is not available for selection.");
+                }
+            }
+        }
+
+        return ValidationResult.ok();
+    }
+
+    // ─── FORCED SWITCH ─────────────────────────────────────────────────────────
+
+    /**
+     * FORCED_SWITCH is only valid when a forced switch is pending for this player.
+     * The specified instanceId must match a Pokémon on their bench.
+     */
+    private ValidationResult validateForcedSwitch(BoardState state, GameAction action) {
+        PlayerState ps    = state.getStateFor(action.getPlayerId());
+        String instanceId = action.getPayloadString("instanceId");
+
+        if (instanceId == null) {
+            return ValidationResult.fail(
+                    "You must specify the instanceId of the Bench Pokémon to bring forward.");
+        }
+        if (ps.getBench() == null || ps.getBench().isEmpty()) {
+            return ValidationResult.fail("You have no Pokémon on the bench to switch.");
+        }
+        boolean exists = ps.getBench().stream()
+                .anyMatch(b -> b.getInstanceId().equals(instanceId));
+        if (!exists) {
+            return ValidationResult.fail("The specified Pokémon is not on your bench.");
         }
         return ValidationResult.ok();
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────
+
+    private static final String FAIRY_GARDEN = "xy1-117";
+
+    /**
+     * Returns true if Fairy Garden is the currently active Stadium.
+     */
+    private boolean isFairyGardenActive(BoardState state) {
+        return FAIRY_GARDEN.equals(state.getActiveStadiumCardId());
+    }
+
+    /**
+     * Returns true if the given Active Pokémon is a Fairy-type Pokémon
+     * with at least one Fairy Basic Energy attached.
+     *
+     * <p>Fairy type is checked via the Pokémon's {@code types} list.
+     * Fairy Energy is identified by looking up each attached card in the
+     * card cache and checking its type list for @link EnergyType#FAIRY.
+     */
+    private boolean isFairyPokemonWithFairyEnergy(ActivePokemon active) {
+        // Check that the Pokémon itself is Fairy type
+        if (active.getTypes() == null
+                || !active.getTypes().contains(com.pokemon.tcg.domain.model.card.EnergyType.FAIRY)) {
+            return false;
+        }
+        // Check that at least one attached energy is a Fairy Basic Energy
+        if (active.getAttachedEnergyIds() == null || active.getAttachedEnergyIds().isEmpty()) {
+            return false;
+        }
+        return active.getAttachedEnergyIds().stream().anyMatch(this::isFairyBasicEnergy);
+    }
+
+    /**
+     * Returns true if the card identified by the given ID is a Fairy Basic Energy.
+     */
+    private boolean isFairyBasicEnergy(String cardId) {
+        return cardLookupPort.findCardById(cardId)
+                .map(card -> card.isBasicEnergy()
+                        && card.getTypes() != null
+                        && card.getTypes().contains(
+                                com.pokemon.tcg.domain.model.card.EnergyType.FAIRY.name()))
+                .orElse(false);
+    }
+
+    /**
+     * Returns the retreat cost (number of energies to discard) for the given card.
+     * The retreat cost is the size of the card's retreatCost list.
+     * Falls back to 0 if the card is not found in the cache.
+     */
+    private int resolveRetreatCost(String cardId) {
+        return cardLookupPort.findCardById(cardId)
+                .map(card -> card.getRetreatCost() != null ? card.getRetreatCost().size() : 0)
+                .orElse(0);
+    }
+
+    /**
+     * Extracts the list of energy card IDs to discard from the action payload.
+     * Returns an empty list if the payload key is absent or null.
+     */
+    @SuppressWarnings("unchecked")
+    private List<String> getEnergiesToDiscard(GameAction action) {
+        Object raw = action.getPayload() != null
+                ? action.getPayload().get("energyCardIdsToDiscard")
+                : null;
+        if (raw instanceof List<?> list) {
+            return (List<String>) list;
+        }
+        return List.of();
+    }
 
     /**
      * Verifies that a card is in the player's hand and is a Basic Pokémon.
@@ -523,5 +763,16 @@ public class RuleValidator {
             return ValidationResult.fail("You can only place Basic Pokémon.");
         }
         return ValidationResult.ok();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> getChosenCardIds(GameAction action) {
+        Object raw = action.getPayload() != null
+                ? action.getPayload().get("chosenCardIds")
+                : null;
+        if (raw instanceof List<?> list) {
+            return (List<String>) list;
+        }
+        return List.of();
     }
 }
