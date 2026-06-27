@@ -448,7 +448,7 @@ class TurnManagerTest {
     @Test
     void handleDrawCard_firstPlayerShouldNotDrawOnTurn1() {
         BoardState state = buildState("p1", TurnPhase.DRAW);
-        state = state.toBuilder().turnNumber(1).firstPlayerId("p1").build();
+        state = state.toBuilder().turnNumber(0).firstPlayerId("p1").build();
         state.getPlayer1State().setDeck(new ArrayList<>(List.of("card-a", "card-b")));
         state.getPlayer1State().setHand(new ArrayList<>());
 
