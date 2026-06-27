@@ -322,6 +322,10 @@ public class TurnManager {
         if (state.getTurnFlags().isEnergyAttachedThisTurn()) return state;
         if (!ps.getHand().contains(cardId)) return state;
 
+        System.out.println("ATTACH hand: " + ps.getHand());
+        System.out.println("ATTACH cardId: " + cardId + " targetId: " + targetId);
+        System.out.println("ATTACH contains: " + ps.getHand().contains(cardId));
+
         List<String> hand = new ArrayList<>(ps.getHand());
         hand.remove(cardId);
         ps.setHand(hand);

@@ -370,6 +370,7 @@ export class GamePage implements OnInit, OnDestroy {
     }
     console.log('sending ATTACH_ENERGY', cardId, targetInstanceId);
     this.gameActionService.sendAction('ATTACH_ENERGY', { cardId, targetInstanceId });
+    console.log('ATTACH_ENERGY payload:', { cardId, targetInstanceId });
   }
 
   /** Opens the attack selection modal. */
