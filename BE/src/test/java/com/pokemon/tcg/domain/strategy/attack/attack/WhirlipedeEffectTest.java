@@ -3,6 +3,7 @@ package com.pokemon.tcg.domain.strategy.attack.attack;
 import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
+import com.pokemon.tcg.engine.CoinFlipService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -10,54 +11,79 @@ import java.util.*;
 
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.*;
 
-class GreninjaEffectTest {
+class WhirlipedeEffectTest {
 
-    private GreninjaEffect effect;
+    private CoinFlipService coinFlipService;
+    private WhirlipedeEffect effect;
 
     @BeforeEach
     void setUp() {
-        effect = new GreninjaEffect();
+        coinFlipService = mock(CoinFlipService.class);
+        effect = new WhirlipedeEffect(coinFlipService);
     }
 
     @Test
-    void shouldSupportMistSlash() {
-        assertThat(effect.getSupportedAttacks()).containsExactly("greninja|mist slash");
+    void shouldSupportContinuousTumble() {
+        assertThat(effect.getSupportedAttacks())
+                .containsExactly("whirlipede|continuous tumble");
     }
 
     @Test
-    void mistSlash_shouldSetIgnoreDefenderEffects() {
-        AttackContext ctx = buildContext("mist slash");
+    void continuousTumble_shouldAdd90Damage_when3Heads() {
+        when(coinFlipService.flip())
+                .thenReturn(CoinResult.HEADS)
+                .thenReturn(CoinResult.HEADS)
+                .thenReturn(CoinResult.HEADS)
+                .thenReturn(CoinResult.TAILS);
+        AttackContext ctx = buildContext("continuous tumble");
 
         effect.apply(ctx);
 
-        assertThat(ctx.isIgnoreDefenderEffects()).isTrue();
+        assertThat(ctx.getModifiers()).hasSize(1);
+        assertThat(ctx.getModifiers().get(0).amount()).isEqualTo(90);
     }
 
     @Test
-    void unknownAttack_shouldNotSetIgnoreDefenderEffects() {
-        AttackContext ctx = buildContext("unknown");
-
-        effect.apply(ctx);
-
-        assertThat(ctx.isIgnoreDefenderEffects()).isFalse();
-    }
-
-    @Test
-    void mistSlash_shouldNotAddModifiers() {
-        AttackContext ctx = buildContext("mist slash");
+    void continuousTumble_shouldAdd0Damage_whenFirstFlipIsTails() {
+        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        AttackContext ctx = buildContext("continuous tumble");
 
         effect.apply(ctx);
 
         assertThat(ctx.getModifiers()).isEmpty();
     }
 
+    @Test
+    void continuousTumble_shouldStopFlipping_afterFirstTails() {
+        when(coinFlipService.flip())
+                .thenReturn(CoinResult.HEADS)
+                .thenReturn(CoinResult.TAILS);
+        AttackContext ctx = buildContext("continuous tumble");
+
+        effect.apply(ctx);
+
+        verify(coinFlipService, times(2)).flip();
+        assertThat(ctx.getModifiers().get(0).amount()).isEqualTo(30);
+    }
+
+    @Test
+    void unknownAttack_shouldDoNothing() {
+        AttackContext ctx = buildContext("unknown");
+
+        effect.apply(ctx);
+
+        verifyNoInteractions(coinFlipService);
+        assertThat(ctx.getModifiers()).isEmpty();
+    }
+
     private AttackContext buildContext(String attackName) {
-        ActivePokemon greninja = ActivePokemon.builder()
-                .instanceId("greninja-1")
-                .cardId("xy1-41")
-                .types(new ArrayList<>(List.of(EnergyType.WATER)))
-                .attachedEnergyIds(new ArrayList<>(List.of("xy1-131")))
+        ActivePokemon whirlipede = ActivePokemon.builder()
+                .instanceId("whirlipede-1")
+                .cardId("xy1-52")
+                .types(new ArrayList<>(List.of(EnergyType.PSYCHIC)))
+                .attachedEnergyIds(new ArrayList<>(List.of("xy1-95", "xy1-95")))
                 .evolutionStack(new ArrayList<>())
                 .weaknesses(new ArrayList<>())
                 .resistances(new ArrayList<>())
@@ -80,7 +106,7 @@ class GreninjaEffectTest {
                 .build();
 
         PlayerState attackerState = playerState(PLAYER_1, List.of(), cardIds(5));
-        attackerState.setActivePokemon(greninja);
+        attackerState.setActivePokemon(whirlipede);
         PlayerState defenderState = playerState(PLAYER_2, List.of(), cardIds(5));
         defenderState.setActivePokemon(defender);
 

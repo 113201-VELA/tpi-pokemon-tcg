@@ -11,53 +11,66 @@ import java.util.*;
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
-class GreninjaEffectTest {
+class VenipedeEffectTest {
 
-    private GreninjaEffect effect;
+    private VenipedeEffect effect;
 
     @BeforeEach
     void setUp() {
-        effect = new GreninjaEffect();
+        effect = new VenipedeEffect();
     }
 
     @Test
-    void shouldSupportMistSlash() {
-        assertThat(effect.getSupportedAttacks()).containsExactly("greninja|mist slash");
+    void shouldSupportPoisonSting() {
+        assertThat(effect.getSupportedAttacks()).containsExactly("venipede|poison sting");
     }
 
     @Test
-    void mistSlash_shouldSetIgnoreDefenderEffects() {
-        AttackContext ctx = buildContext("mist slash");
+    void poisonSting_shouldPoisonDefender() {
+        AttackContext ctx = buildContext("poison sting");
 
         effect.apply(ctx);
 
-        assertThat(ctx.isIgnoreDefenderEffects()).isTrue();
+        assertThat(ctx.getBoardState().getStateFor(PLAYER_2)
+                .getActivePokemon().getConditions())
+                .contains(SpecialCondition.POISONED);
     }
 
     @Test
-    void unknownAttack_shouldNotSetIgnoreDefenderEffects() {
-        AttackContext ctx = buildContext("unknown");
+    void poisonSting_shouldNotAffectAttacker() {
+        AttackContext ctx = buildContext("poison sting");
 
         effect.apply(ctx);
 
-        assertThat(ctx.isIgnoreDefenderEffects()).isFalse();
+        assertThat(ctx.getBoardState().getStateFor(PLAYER_1)
+                .getActivePokemon().getConditions()).isEmpty();
     }
 
     @Test
-    void mistSlash_shouldNotAddModifiers() {
-        AttackContext ctx = buildContext("mist slash");
+    void poisonSting_shouldNotAddModifiers() {
+        AttackContext ctx = buildContext("poison sting");
 
         effect.apply(ctx);
 
         assertThat(ctx.getModifiers()).isEmpty();
     }
 
+    @Test
+    void unknownAttack_shouldDoNothing() {
+        AttackContext ctx = buildContext("unknown");
+
+        effect.apply(ctx);
+
+        assertThat(ctx.getBoardState().getStateFor(PLAYER_2)
+                .getActivePokemon().getConditions()).isEmpty();
+    }
+
     private AttackContext buildContext(String attackName) {
-        ActivePokemon greninja = ActivePokemon.builder()
-                .instanceId("greninja-1")
-                .cardId("xy1-41")
-                .types(new ArrayList<>(List.of(EnergyType.WATER)))
-                .attachedEnergyIds(new ArrayList<>(List.of("xy1-131")))
+        ActivePokemon venipede = ActivePokemon.builder()
+                .instanceId("venipede-1")
+                .cardId("xy1-51")
+                .types(new ArrayList<>(List.of(EnergyType.PSYCHIC)))
+                .attachedEnergyIds(new ArrayList<>(List.of("xy1-95", "xy1-95")))
                 .evolutionStack(new ArrayList<>())
                 .weaknesses(new ArrayList<>())
                 .resistances(new ArrayList<>())
@@ -80,7 +93,7 @@ class GreninjaEffectTest {
                 .build();
 
         PlayerState attackerState = playerState(PLAYER_1, List.of(), cardIds(5));
-        attackerState.setActivePokemon(greninja);
+        attackerState.setActivePokemon(venipede);
         PlayerState defenderState = playerState(PLAYER_2, List.of(), cardIds(5));
         defenderState.setActivePokemon(defender);
 
