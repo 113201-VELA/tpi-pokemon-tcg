@@ -125,6 +125,9 @@ export interface PublicBoardStateDTO {
   turnNumber: number;
   activeStadiumCardId: string | null;
   turnFlags: TurnFlags;
+  bonusDrawPending: boolean;
+  pendingBenchChoicePlayerId: string | null;
+  firstPlayerId: string | null;
   player1State: PublicPlayerStateDTO;
   player2State: PublicPlayerStateDTO;
 }

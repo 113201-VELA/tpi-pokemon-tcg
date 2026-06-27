@@ -23,6 +23,8 @@ public class TurnFlags {
     private boolean stadiumPlayedThisTurn;
     private boolean attackedThisTurn;
     private boolean isFirstTurnOfGame;
+    @Builder.Default
+    private Set<String> evolvedThisTurn = new HashSet<>();
 
     /**
      * Tracks which active abilities have been used this turn.
@@ -53,5 +55,13 @@ public class TurnFlags {
     public void markAbilityUsed(String instanceId, String abilityName) {
         String key = instanceId.toLowerCase() + "|" + abilityName.toLowerCase();
         abilitiesUsedThisTurn.add(key);
+    }
+
+    public boolean hasEvolvedThisTurn(String instanceId) {
+        return evolvedThisTurn != null && evolvedThisTurn.contains(instanceId);
+    }
+    public void markEvolved(String instanceId) {
+        if (evolvedThisTurn == null) evolvedThisTurn = new HashSet<>();
+        evolvedThisTurn.add(instanceId);
     }
 }

@@ -308,7 +308,10 @@ public class RuleValidator {
         PlayerState ps = state.getStateFor(action.getPlayerId());
         String cardId   = action.getPayloadString("cardId");
         String targetId = action.getPayloadString("targetInstanceId");
-
+        if (state.getTurnFlags().hasEvolvedThisTurn(targetId)) {
+            return ValidationResult.fail(
+                    "This Pokémon has already evolved this turn.");
+        }
         if (cardId == null || !ps.getHand().contains(cardId)) {
             return ValidationResult.fail("The evolution card is not in your hand.");
         }

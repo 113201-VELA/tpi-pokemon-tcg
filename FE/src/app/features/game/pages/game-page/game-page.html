@@ -247,10 +247,27 @@
               <div
                 class="active-slot-wrap"
                 appDropZone
-                [acceptDrop]="(isSetupPhase() && !boardState()!.ownState.active) || canAttachEnergy()"
+                [acceptDrop]="(isSetupPhase() && !boardState()!.ownState.active)
+                  || canAttachEnergy()
+                  || canEvolveTarget(
+                      draggedCardId(),
+                      boardState()!.ownState.active?.card ?? null,
+                      boardState()!.ownState.active?.enteredThisTurn ?? false
+                     )"
                 (cardDropped)="isSetupPhase()
                   ? onSetupDropActive($event)
-                  : onAttachEnergy($event, boardState()!.ownState.active!.instanceId)"
+                  : canEvolveTarget(
+                      $event,
+                      boardState()!.ownState.active?.card ?? null,
+                      boardState()!.ownState.active?.enteredThisTurn ?? false
+                    )
+                    ? onEvolve(
+                        $event,
+                        boardState()!.ownState.active!.instanceId,
+                        boardState()!.ownState.active?.card ?? null,
+                        boardState()!.ownState.active?.enteredThisTurn ?? false
+                      )
+                    : onAttachEnergy($event, boardState()!.ownState.active!.instanceId)"
               >
                 @if (boardState()!.ownState.active) {
                   <app-active-pokemon-slot
@@ -283,10 +300,25 @@
                 <div
                   class="bench-slot-wrap"
                   appDropZone
-                  [acceptDrop]="(isSetupPhase() && !slot) || (canAttachEnergy() && !!slot)"
+                  [acceptDrop]="(isSetupPhase() && !slot)
+                    || (canAttachEnergy() && !!slot)
+                    || (canPlaceBasic() && !slot)
+                    || (!!slot && canEvolveTarget(
+                          draggedCardId(),
+                          slot.card ?? null,
+                          slot.enteredThisTurn
+                        ))"
                   (cardDropped)="isSetupPhase()
                     ? onSetupDropBench($event, $index)
-                    : onAttachEnergy($event, slot!.instanceId)"
+                    : !slot
+                      ? onPlaceBasic($event)
+                      : canEvolveTarget(
+                            $event,
+                            slot.card ?? null,
+                            slot.enteredThisTurn
+                          )
+                        ? onEvolve($event, slot!.instanceId, slot.card ?? null, slot.enteredThisTurn)
+                        : onAttachEnergy($event, slot!.instanceId)"
                 >
                   @if (slot) {
                     <app-bench-pokemon-slot
@@ -392,6 +424,38 @@
           >
             @if (surrendering()) { Surrendering... } @else { Yes, surrender }
           </button>
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Bench choice modal (after KO) ─────────────────────────────── -->
+  @if (showBenchChoiceModal() && mustChooseBench()) {
+    <div class="modal-overlay">
+      <div class="modal-bench-choice">
+        <h2 class="modal-bench-choice__title">Your Active Pokémon was knocked out!</h2>
+        <p class="modal-bench-choice__subtitle">Choose a Pokémon from your bench to send out.</p>
+        <div class="bench-choice-options">
+          @for (pokemon of benchChoiceOptions(); track pokemon.instanceId) {
+            <button
+              class="bench-choice-option"
+              (click)="chooseBenchPokemon(pokemon.instanceId)"
+            >
+              @if (pokemon.card) {
+                <img
+                  class="bench-choice-option__img"
+                  [src]="pokemon.card.imageSmall"
+                  [alt]="pokemon.card.name"
+                />
+                <span class="bench-choice-option__name">{{ pokemon.card.name }}</span>
+              } @else {
+                <span class="bench-choice-option__name">{{ pokemon.cardId }}</span>
+              }
+              <div class="bench-choice-option__hp">
+                <span>HP: {{ pokemon.currentHp }}/{{ pokemon.maxHp }}</span>
+              </div>
+            </button>
+          }
         </div>
       </div>
     </div>

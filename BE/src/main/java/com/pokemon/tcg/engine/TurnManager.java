@@ -401,6 +401,9 @@ public class TurnManager {
 
         evolvePokemon(ps, targetId, cardId);
 
+        // Mark this Pokémon as evolved this turn to prevent double evolution
+        state.getTurnFlags().markEvolved(targetId);
+
         // If the evolution card is a MEGA, the turn ends immediately
         boolean isMega = cardLookupPort.findCardById(cardId)
                 .map(card -> card.getSubtypes() != null && card.getSubtypes().contains("MEGA"))
@@ -647,17 +650,12 @@ public class TurnManager {
                 .pendingBenchChoicePlayerId(null)
                 .build();
 
-        // Now that the defender has a new Active, resume the suspended turn:
-        // process between-turn effects and pass control to the original attacker's opponent.
-        // The attacker is whoever is NOT the player who just chose.
-        String attackerId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
-                ? state.getPlayer2State().getPlayerId()
-                : state.getPlayer1State().getPlayerId();
+
 
         state = processBetweenTurns(state);
 
         return state.toBuilder()
-                .currentPlayerId(attackerId)
+                .currentPlayerId(action.getPlayerId())
                 .turnPhase(TurnPhase.DRAW)
                 .turnNumber(state.getTurnNumber() + 1)
                 .turnFlags(TurnFlags.fresh())

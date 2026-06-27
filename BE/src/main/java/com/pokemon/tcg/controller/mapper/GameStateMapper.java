@@ -220,6 +220,8 @@ public class GameStateMapper {
                 sanitized.getActiveStadiumCardId(),
                 sanitized.getTurnFlags(),
                 sanitized.isBonusDrawPending(),
+                sanitized.getPendingBenchChoicePlayerId(),
+                sanitized.getFirstPlayerId(),
                 toPublicPlayerStateDTO(sanitized.getPlayer1State(),
                         p1Name, p1CardBack, p1Coin, cardCache),
                 toPublicPlayerStateDTO(sanitized.getPlayer2State(),

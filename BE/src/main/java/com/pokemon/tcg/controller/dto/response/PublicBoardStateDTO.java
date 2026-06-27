@@ -13,6 +13,8 @@ public record PublicBoardStateDTO(
         String activeStadiumCardId,
         TurnFlags turnFlags,
         boolean bonusDrawPending,
+        String pendingBenchChoicePlayerId,
+        String firstPlayerId,
         PublicPlayerStateDTO player1State,
         PublicPlayerStateDTO player2State
 ) {}

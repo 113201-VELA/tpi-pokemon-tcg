@@ -776,6 +776,7 @@ public class GameService {
                 .pendingEvents(state.getPendingEvents())
                 .bonusDrawPending(state.isBonusDrawPending())
                 .pendingBenchChoicePlayerId(state.getPendingBenchChoicePlayerId())
+                .firstPlayerId(state.getFirstPlayerId())
                 .pendingDeckSelectionPlayerId(state.getPendingDeckSelectionPlayerId())
                 .pendingDeckSelectionCardIds(state.getPendingDeckSelectionCardIds())
                 .firstPlayerId(state.getFirstPlayerId())

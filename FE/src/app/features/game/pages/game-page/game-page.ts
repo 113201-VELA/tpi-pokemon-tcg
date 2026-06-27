@@ -24,6 +24,7 @@ import { ActivePokemonSlot } from '../../components/active-pokemon-slot/active-p
 import { BenchPokemonSlot } from '../../components/bench-pokemon-slot/bench-pokemon-slot';
 import { DraggableCardDirective } from '../../../../shared/directives/draggable-card.directive';
 import { DropZoneDirective } from '../../../../shared/directives/drop-zone.directive';
+import { DragStateService } from '../../../../shared/services/drag-state.service';
 
 @Component({
   selector: 'app-game-page',
@@ -37,6 +38,7 @@ export class GamePage implements OnInit, OnDestroy {
   private readonly router           = inject(Router);
   private readonly authService      = inject(AuthService);
   private readonly gameStateService = inject(GameStateService);
+  private readonly dragStateService = inject(DragStateService);
   readonly gameActionService        = inject(GameActionService);
 
   private gameId = '';
@@ -62,6 +64,9 @@ export class GamePage implements OnInit, OnDestroy {
 
   // Error feedback (action rejected by backend)
   readonly actionError = signal<string | null>(null);
+
+  // Bench choice modal (after KO)
+  readonly showBenchChoiceModal = signal(false);
 
   /**
    * Combined board state: starts from the public broadcast and merges in
@@ -246,11 +251,81 @@ export class GamePage implements OnInit, OnDestroy {
     return this.boardState()?.ownState.active?.card?.attacks ?? [];
   });
 
+  /**
+   * True when this player must choose a bench Pokémon to replace their KO'd Active.
+   * Blocks all other actions until resolved.
+   */
+  readonly mustChooseBench = computed(() => {
+    const pub = this.gameActionService.boardState();
+    const me  = this.authService.currentUser();
+    if (!pub || !me) return false;
+    return pub.pendingBenchChoicePlayerId === me.id;
+  });
+
+  /**
+   * Bench Pokémon available to choose from after a KO.
+   * Only relevant when mustChooseBench() is true.
+   */
+  readonly benchChoiceOptions = computed(() => {
+    return this.boardState()?.ownState.bench ?? [];
+  });
+
+  /** True when the player can place a Basic Pokémon on the bench. */
+  readonly canPlaceBasic = computed(() => {
+    const state = this.boardState();
+    if (!state) return false;
+    return (
+      this.isMainPhase() &&
+      (state.ownState.bench ?? []).length < 5
+    );
+  });
+
+  /** The card ID currently being dragged, for use in acceptDrop evaluations. */
+  readonly draggedCardId = computed(
+    () => this.dragStateService.draggedCardId() ?? ''
+  );
+
+  /** True when the player can evolve Pokémon (MAIN phase, player's turn). */
+  readonly canEvolve = computed(() => this.isMainPhase());
+
   // ── Lifecycle ────────────────────────────────────────────────────────────
   constructor() {
     effect(() => {
       const event = this.gameActionService.lastEvent();
       if (event) this.handleGameEvent(event);
+    });
+
+    // Open bench choice modal when pendingBenchChoicePlayerId is set for this player
+    effect(() => {
+      if (this.mustChooseBench()) {
+        this.showBenchChoiceModal.set(true);
+      }
+    });
+
+    // Close bench choice modal when the requirement clears (e.g. timeout / auto-resolve)
+    effect(() => {
+      if (!this.mustChooseBench()) {
+        this.showBenchChoiceModal.set(false);
+      }
+    });
+
+    // Auto-send DRAW_CARD on turn 0 for the first player (no draw on first turn per rulebook)
+    effect(() => {
+      const state = this.boardState();
+      const me    = this.authService.currentUser();
+      if (!state || !me) return;
+
+      const pub = this.gameActionService.boardState();
+      if (!pub) return;
+
+      const isFirstPlayer  = pub.firstPlayerId === me.id;
+      const isDrawPhase    = state.turnPhase === 'DRAW';
+      const isTurnZero     = state.turnNumber === 0;
+      const isCurrentPlayer = state.currentPlayerId === me.id;
+
+      if (isFirstPlayer && isDrawPhase && isTurnZero && isCurrentPlayer) {
+        this.gameActionService.sendAction('DRAW_CARD', {});
+      }
     });
   }
 
@@ -290,6 +365,11 @@ export class GamePage implements OnInit, OnDestroy {
         this.coinResult.set(event.data['result'] as 'HEADS' | 'TAILS');
         this.showCoinFlip.set(true);
         setTimeout(() => this.showCoinFlip.set(false), 3000);
+        break;
+      case 'POKEMON_KNOCKED_OUT':
+        if (this.mustChooseBench()) {
+          this.showBenchChoiceModal.set(true);
+        }
         break;
       case 'TURN_ENDED':
         if (event.data['error']) {
@@ -373,6 +453,53 @@ export class GamePage implements OnInit, OnDestroy {
     console.log('ATTACH_ENERGY payload:', { cardId, targetInstanceId });
   }
 
+  /** Called when a Basic Pokémon is dropped onto an empty bench slot during MAIN phase. */
+  onPlaceBasic(cardId: string): void {
+    if (!this.canPlaceBasic()) return;
+    const card = this.boardState()?.ownState.hand.find(c => c.id === cardId);
+    if (!card || !this.isBasicPokemon(card)) return;
+    this.gameActionService.sendAction('PLACE_BASIC_POKEMON', { cardId });
+  }
+
+  /**
+   * Returns true if the given evolution card can be played onto the target Pokémon.
+   * Used to control which slots accept the drop.
+   */
+  canEvolveTarget(
+    evolutionCardId: string,
+    targetCard: CardResponse | null,
+    enteredThisTurn: boolean
+  ): boolean {
+    if (!this.canEvolve()) return false;
+    if (!targetCard) return false;
+    if (enteredThisTurn) return false;
+
+    const evolutionCard = this.boardState()?.ownState.hand.find(
+      c => c.id === evolutionCardId
+    );
+    if (!evolutionCard) return false;
+    if (!evolutionCard.evolvesFrom) return false;
+
+    return targetCard.name === evolutionCard.evolvesFrom;
+  }
+
+  /**
+   * Called when an evolution card is dropped onto a Pokémon slot.
+   * Validates the evolution is legal before sending the action.
+   */
+  onEvolve(
+    cardId: string,
+    targetInstanceId: string,
+    targetCard: CardResponse | null,
+    enteredThisTurn: boolean
+  ): void {
+    if (!this.canEvolveTarget(cardId, targetCard, enteredThisTurn)) return;
+    this.gameActionService.sendAction('EVOLVE_POKEMON', {
+      cardId,
+      targetInstanceId,
+    });
+  }
+
   /** Opens the attack selection modal. */
   openAttackModal(): void {
     if (!this.canAttack()) return;
@@ -397,6 +524,17 @@ export class GamePage implements OnInit, OnDestroy {
   endTurn(): void {
     if (!this.isMainPhase()) return;
     this.gameActionService.sendAction('END_TURN', {});
+  }
+
+  /** Opens the bench choice modal when a KO requires it. */
+  openBenchChoiceModal(): void {
+    this.showBenchChoiceModal.set(true);
+  }
+
+  /** Sends CHOOSE_BENCH_POKEMON with the selected instanceId. */
+  chooseBenchPokemon(instanceId: string): void {
+    this.gameActionService.sendAction('CHOOSE_BENCH_POKEMON', { instanceId });
+    this.showBenchChoiceModal.set(false);
   }
 
   // ── Card detail modal ─────────────────────────────────────────────────────
@@ -465,6 +603,12 @@ export class GamePage implements OnInit, OnDestroy {
    */
   isBasicPokemon(card: CardResponse): boolean {
     return card.supertype === 'POKEMON' && (card.subtypes ?? []).includes('Basic');
+  }
+
+  isEvolutionCard(card: CardResponse): boolean {
+    if (card.supertype !== 'POKEMON') return false;
+    const subtypes = card.subtypes ?? [];
+    return !subtypes.includes('Basic');
   }
 
   /** Resolves the asset path for a card back skin. */
