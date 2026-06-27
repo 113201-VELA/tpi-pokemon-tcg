@@ -146,7 +146,7 @@ public class GameService {
 
         if (result != null && result.newState() != null) {
             BoardState initialState = result.newState();
-            
+
             game.setState(GameState.SETUP);
             GameStateSnapshot snapshot = GameStateSnapshot.builder()
                     .game(game)
