@@ -3,7 +3,6 @@ package com.pokemon.tcg.domain.model.game;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
@@ -29,8 +28,7 @@ public class BoardState {
      * one player has pending mulligan bonus draws to accept or decline.
      * Cleared once all bonus decisions are made and the game transitions to DRAW.
      */
-    @Builder.Default
-    private boolean bonusDrawPending = false;
+    private boolean bonusDrawPending;
 
     /**
      * Set to the defending player's ID when their Active Pokémon was knocked out
@@ -52,15 +50,13 @@ public class BoardState {
      * blocked until that player sends SELECT_FROM_DECK.
      * Null when no deck selection is pending.
      */
-    @Builder.Default
-    private String pendingDeckSelectionPlayerId = null;
+    private String pendingDeckSelectionPlayerId;
 
     /**
      * The card IDs from the top of the deck that are set aside for the player
      * to choose from. Only meaningful when pendingDeckSelectionPlayerId is set.
      */
-    @Builder.Default
-    private List<String> pendingDeckSelectionCardIds = new ArrayList<>();
+    private List<String> pendingDeckSelectionCardIds;
 
     public PlayerState getStateFor(String playerId) {
         if (playerId.equals(player1State.getPlayerId())) return player1State;
