@@ -55,15 +55,23 @@ public class DamageApplicationStep implements AttackStep {
             return;
         }
 
+        // Mist Slash and similar attacks ignore weakness, resistance and defender effects
+        ActivePokemon attackerForCalc = ctx.isIgnoreDefenderEffects()
+                ? stripModifiers(attacker) : attacker;
+        ActivePokemon defenderForCalc = ctx.isIgnoreDefenderEffects()
+                ? stripModifiers(defender) : defender;
+
         int finalDamage = damageCalculator.calculate(
-                attacker,
-                defender,
+                attackerForCalc,
+                defenderForCalc,
                 baseDamage,
                 ctx.getModifiers() != null ? ctx.getModifiers() : new ArrayList<>(),
                 ctx.getBoardState().getActiveStadiumCardId()
         );
 
-        finalDamage = applyActiveEffects(defender, finalDamage);
+        if (!ctx.isIgnoreDefenderEffects()) {
+            finalDamage = applyActiveEffects(defender, finalDamage);
+        }
 
         int counters = damageCalculator.toCounters(finalDamage);
         defender.setDamageCounters(defender.getDamageCounters() + counters);
@@ -82,6 +90,27 @@ public class DamageApplicationStep implements AttackStep {
                 .build());
 
         chain.next(ctx);
+    }
+
+    /**
+     * Returns a copy of the Pokémon with empty weaknesses, resistances and
+     * active effects, used when an attack ignores all defender modifiers
+     * (e.g. Mist Slash).
+     */
+    private ActivePokemon stripModifiers(ActivePokemon pokemon) {
+        return ActivePokemon.builder()
+                .instanceId(pokemon.getInstanceId())
+                .cardId(pokemon.getCardId())
+                .attachedEnergyIds(pokemon.getAttachedEnergyIds())
+                .attachedToolId(pokemon.getAttachedToolId())
+                .evolutionStack(pokemon.getEvolutionStack())
+                .damageCounters(pokemon.getDamageCounters())
+                .conditions(pokemon.getConditions())
+                .types(pokemon.getTypes())
+                .weaknesses(new java.util.ArrayList<>())
+                .resistances(new java.util.ArrayList<>())
+                .activeEffects(new java.util.ArrayList<>())
+                .build();
     }
 
     private int applyActiveEffects(ActivePokemon defender, int finalDamage) {
