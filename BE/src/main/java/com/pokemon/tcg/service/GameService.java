@@ -242,6 +242,13 @@ public class GameService {
     /**
      * Processes a player action through the game engine, persists the resulting
      * board state as a new snapshot in the database, and logs the action to the game log.
+     *
+     * <p>After persisting, checks for terminal events:
+     * <ul>
+     *   <li>{@code GAME_OVER} — marks the game FINISHED and records the winner.</li>
+     *   <li>{@code SUDDEN_DEATH_STARTED} — marks the parent game FINISHED with no winner,
+     *       then creates a new Sudden Death game and notifies both players via WebSocket.</li>
+     * </ul>
      */
     public EngineResult processAction(UUID gameId, UUID playerId, GameAction action) {
         BoardState currentState = getCurrentState(gameId);
@@ -263,24 +270,40 @@ public class GameService {
                     .build();
             stateRepository.save(snapshot);
 
+            // ── GAME_OVER: normal victory ──────────────────────────────────────
             if (result.newState().getGameState() == GameState.FINISHED) {
-                game.setState(GameState.FINISHED);
+                boolean isSuddenDeathEvent = result.events().stream()
+                        .anyMatch(e -> e.getType() == GameEventType.SUDDEN_DEATH_STARTED);
 
-                result.events().stream()
-                        .filter(e -> e.getType() == GameEventType.GAME_OVER)
-                        .findFirst()
-                        .ifPresent(e -> {
-                            String winnerId = (String) e.getData().get("winnerId");
-                            if (winnerId != null && !winnerId.equals("none")) {
-                                playerRepository.findById(UUID.fromString(winnerId))
-                                        .ifPresent(game::setWinner);
-                            }
-                        });
+                if (isSuddenDeathEvent) {
+                    // ── SUDDEN_DEATH_STARTED: tie — create a new 1-prize game ──
+                    game.setState(GameState.FINISHED);
+                    game.setFinishReason(FinishReason.SUDDEN_DEATH);
+                    game.setFinishedAt(java.time.Instant.now());
+                    gameRepository.save(game);
 
-                gameRepository.save(game);
+                    createSuddenDeathGame(game);
 
-                if (game.getWinner() != null) {
-                    updateMatchups(game);
+                } else {
+                    // Normal win: record winner and update matchup stats
+                    game.setState(GameState.FINISHED);
+
+                    result.events().stream()
+                            .filter(e -> e.getType() == GameEventType.GAME_OVER)
+                            .findFirst()
+                            .ifPresent(e -> {
+                                String winnerId = (String) e.getData().get("winnerId");
+                                if (winnerId != null && !winnerId.equals("none")) {
+                                    playerRepository.findById(UUID.fromString(winnerId))
+                                            .ifPresent(game::setWinner);
+                                }
+                            });
+
+                    gameRepository.save(game);
+
+                    if (game.getWinner() != null) {
+                        updateMatchups(game);
+                    }
                 }
             }
 
@@ -317,6 +340,142 @@ public class GameService {
         }
 
         return result;
+    }
+
+    /**
+     * Creates a new Sudden Death game from an existing finished game.
+     *
+     * <p>Per the rulebook, Sudden Death is a complete new game played with the
+     * same players and decks, but each player starts with only 1 Prize card
+     * instead of 6. The new game is linked to the parent via {@code parentGame}.
+     *
+     * <p>The new game is initialized immediately (no WAITING state) and jumps
+     * directly to SETUP so both players can place their Pokémon. A
+     * {@code GAME_STARTED} lobby event is published so the frontend can redirect
+     * both players to the new board.
+     */
+    private void createSuddenDeathGame(Game parentGame) {
+        // Retrieve both players and their decks from the parent game
+        GamePlayer gp1 = parentGame.getPlayers().stream()
+                .filter(gp -> gp.getPlayerNumber() == 1)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Player 1 not found in parent game"));
+        GamePlayer gp2 = parentGame.getPlayers().stream()
+                .filter(gp -> gp.getPlayerNumber() == 2)
+                .findFirst()
+                .orElseThrow(() -> new IllegalArgumentException("Player 2 not found in parent game"));
+
+        Player player1 = gp1.getPlayer();
+        Player player2 = gp2.getPlayer();
+
+        Deck deck1 = deckRepository.findWithCardsById(gp1.getDeck().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Deck 1 not found"));
+        Deck deck2 = deckRepository.findWithCardsById(gp2.getDeck().getId())
+                .orElseThrow(() -> new IllegalArgumentException("Deck 2 not found"));
+
+        // Create the new Sudden Death game entity
+        Game sdGame = Game.builder()
+                .state(GameState.SETUP)
+                .suddenDeath(true)
+                .parentGame(parentGame)
+                .build();
+        sdGame = gameRepository.save(sdGame);
+
+        GamePlayer sdGp1 = GamePlayer.builder()
+                .game(sdGame)
+                .player(player1)
+                .deck(deck1)
+                .playerNumber(1)
+                .build();
+        GamePlayer sdGp2 = GamePlayer.builder()
+                .game(sdGame)
+                .player(player2)
+                .deck(deck2)
+                .playerNumber(2)
+                .build();
+        sdGame.getPlayers().add(sdGp1);
+        sdGame.getPlayers().add(sdGp2);
+        gameRepository.save(sdGame);
+
+        // Build initial player states and run the engine initialization
+        List<String> deck1CardIds = buildDeckCardIds(deck1);
+        List<String> deck2CardIds = buildDeckCardIds(deck2);
+
+        PlayerState ps1 = PlayerState.builder()
+                .playerId(player1.getId().toString())
+                .deck(deck1CardIds)
+                .hand(new ArrayList<>())
+                .discard(new ArrayList<>())
+                .prizes(new ArrayList<>())
+                .bench(new ArrayList<>())
+                .build();
+
+        PlayerState ps2 = PlayerState.builder()
+                .playerId(player2.getId().toString())
+                .deck(deck2CardIds)
+                .hand(new ArrayList<>())
+                .discard(new ArrayList<>())
+                .prizes(new ArrayList<>())
+                .bench(new ArrayList<>())
+                .build();
+
+        EngineResult result = engine.initializeGame(sdGame.getId().toString(), ps1, ps2);
+
+        if (result != null && result.newState() != null) {
+            BoardState initialState = result.newState();
+
+            // Truncate prizes to 1 per player — the only difference from a normal game
+            truncatePrizesToOne(initialState.getPlayer1State());
+            truncatePrizesToOne(initialState.getPlayer2State());
+
+            GameStateSnapshot snapshot = GameStateSnapshot.builder()
+                    .game(sdGame)
+                    .turnNumber(initialState.getTurnNumber())
+                    .turnPhase(initialState.getTurnPhase())
+                    .currentPlayer(player1)
+                    .boardState(initialState)
+                    .build();
+            stateRepository.save(snapshot);
+        }
+
+        // Notify both players so the frontend can redirect them to the new board
+        final Game savedSdGame = sdGame;
+        eventPublisher.publishLobbyUpdate(
+                GameEvent.builder()
+                        .type(GameEventType.SUDDEN_DEATH_STARTED)
+                        .data(Map.of(
+                                "parentGameId", parentGame.getId().toString(),
+                                "newGameId",    savedSdGame.getId().toString()
+                        ))
+                        .build()
+        );
+    }
+
+    /**
+     * Reduces a player's prize list to exactly 1 card for Sudden Death.
+     * The remaining prizes are moved back to the bottom of the deck and shuffled.
+     *
+     * <p>Moving the discarded prizes back into the deck rather than discarding
+     * them outright gives both players the full card pool for the tiebreaker,
+     * which is the fairest interpretation of the rulebook.
+     */
+    private void truncatePrizesToOne(PlayerState ps) {
+        List<String> prizes = new ArrayList<>(
+                ps.getPrizes() != null ? ps.getPrizes() : new ArrayList<>());
+
+        if (prizes.size() <= 1) return;
+
+        // Keep only the first prize; return the rest to the deck
+        String keptPrize = prizes.get(0);
+        List<String> returnedToDeck = prizes.subList(1, prizes.size());
+
+        List<String> deck = new ArrayList<>(
+                ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
+        deck.addAll(returnedToDeck);
+        Collections.shuffle(deck);
+
+        ps.setPrizes(new ArrayList<>(List.of(keptPrize)));
+        ps.setDeck(deck);
     }
 
     /**
