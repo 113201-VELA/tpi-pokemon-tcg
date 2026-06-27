@@ -1,6 +1,7 @@
 package com.pokemon.tcg.engine;
 
 import com.pokemon.tcg.domain.model.card.Attack;
+import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.strategy.ability.ActiveAbilityRegistry;
 import com.pokemon.tcg.domain.strategy.trainer.TrainerEffectRegistry;
@@ -143,6 +144,7 @@ public class TurnManager {
                 .enteredThisTurn(true)
                 .build();
 
+        populatePokemonModifiers(active, cardId);
         ps.setActivePokemon(active);
 
         return state;
@@ -465,6 +467,7 @@ public class TurnManager {
         bench.remove(replacement);
         bench.add(newBench);
         ps.setBench(bench);
+        populatePokemonModifiers(newActive, replacement.getCardId());
         ps.setActivePokemon(newActive);
 
         state.getTurnFlags().setRetreatedThisTurn(true);
@@ -632,6 +635,7 @@ public class TurnManager {
         List<BenchPokemon> bench = new ArrayList<>(ps.getBench());
         bench.remove(chosen);
         ps.setBench(bench);
+        populatePokemonModifiers(newActive, chosen.getCardId());
         ps.setActivePokemon(newActive);
 
         // Clear the pending bench choice flag
@@ -831,6 +835,7 @@ public class TurnManager {
         bench.remove(chosen);
         bench.add(newBench);
         ps.setBench(bench);
+        populatePokemonModifiers(newActive, chosen.getCardId());
         ps.setActivePokemon(newActive);
 
         return state.toBuilder()
@@ -1030,6 +1035,7 @@ public class TurnManager {
             List<String> stack = new ArrayList<>(ps.getActivePokemon().getEvolutionStack());
             stack.add(newCardId);
             ps.getActivePokemon().setEvolutionStack(stack);
+            populatePokemonModifiers(ps.getActivePokemon(), newCardId);
             return;
         }
         if (ps.getBench() != null) {
@@ -1072,5 +1078,34 @@ public class TurnManager {
             return (List<String>) list;
         }
         return List.of();
+    }
+
+    /**
+     * Resolves weaknesses, resistances and types from the card cache
+     * and applies them to the given ActivePokemon builder.
+     * Falls back to empty lists if the card is not found.
+     */
+    private void populatePokemonModifiers(ActivePokemon pokemon, String cardId) {
+        cardLookupPort.findCardById(cardId).ifPresent(card -> {
+            if (card.getWeaknesses() != null) {
+                pokemon.setWeaknesses(new ArrayList<>(card.getWeaknesses()));
+            }
+            if (card.getResistances() != null) {
+                pokemon.setResistances(new ArrayList<>(card.getResistances()));
+            }
+            if (card.getTypes() != null) {
+                List<EnergyType> energyTypes = card.getTypes().stream()
+                        .map(t -> {
+                            try {
+                                return EnergyType.valueOf(t.toUpperCase());
+                            } catch (IllegalArgumentException e) {
+                                return null;
+                            }
+                        })
+                        .filter(t -> t != null)
+                        .collect(java.util.stream.Collectors.toList());
+                pokemon.setTypes(energyTypes);
+            }
+        });
     }
 }
