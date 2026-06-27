@@ -11,6 +11,11 @@ public class ChesnaughtAbility implements PassiveAbilityEffect {
     private static final int SPIKY_SHIELD_COUNTERS = 3;
 
     @Override
+    public String getIdentifier() {
+        return "chesnaught";
+    }
+
+    @Override
     public void onDamageReceived(AttackContext ctx, ActivePokemon defender) {
         if (ctx.getDamageToApply() <= 0) return;
 

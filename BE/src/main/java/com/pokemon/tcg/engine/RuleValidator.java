@@ -123,6 +123,7 @@ public class RuleValidator {
             case PLAY_TRAINER          -> validatePlayTrainer(state, action);
             case RETREAT               -> validateRetreat(state, action);
             case DECLARE_ATTACK        -> validateAttack(state, action);
+            case USE_ABILITY           -> validateUseAbility(state, action);
             case END_TURN              -> validateEndTurn(state, action);
             // ── Post-KO ──────────────────────────────────────────────
             case CHOOSE_BENCH_POKEMON  -> validateChooseBenchPokemon(state, action);
@@ -528,6 +529,50 @@ public class RuleValidator {
         if (state.getTurnPhase() != TurnPhase.MAIN) {
             return ValidationResult.fail("You can only end your turn during the main phase.");
         }
+        return ValidationResult.ok();
+    }
+
+    // ─── USE_ABILITY ───────────────────────────────────────────────────────────
+
+    /**
+     * USE_ABILITY rules:
+     * - Only during MAIN phase.
+     * - The Pokémon using the ability must be in play (Active or Bench).
+     * - instanceId and abilityName must be present in the payload.
+     * - Each active ability can only be used once per turn per Pokémon instance.
+     */
+    private ValidationResult validateUseAbility(BoardState state, GameAction action) {
+        if (state.getTurnPhase() != TurnPhase.MAIN) {
+            return ValidationResult.fail(
+                    "You can only use abilities during your main phase.");
+        }
+        String instanceId  = action.getPayloadString("instanceId");
+        String abilityName = action.getPayloadString("abilityName");
+
+        if (instanceId == null) {
+            return ValidationResult.fail(
+                    "You must specify the instanceId of the Pokémon using the ability.");
+        }
+        if (abilityName == null) {
+            return ValidationResult.fail(
+                    "You must specify the abilityName to use.");
+        }
+
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        boolean inPlay = (ps.getActivePokemon() != null
+                && ps.getActivePokemon().getInstanceId().equals(instanceId))
+                || (ps.getBench() != null && ps.getBench().stream()
+                        .anyMatch(b -> b.getInstanceId().equals(instanceId)));
+
+        if (!inPlay) {
+            return ValidationResult.fail("The specified Pokémon is not in play.");
+        }
+
+        if (state.getTurnFlags().isAbilityUsed(instanceId, abilityName)) {
+            return ValidationResult.fail(
+                    "This ability has already been used this turn.");
+        }
+
         return ValidationResult.ok();
     }
 

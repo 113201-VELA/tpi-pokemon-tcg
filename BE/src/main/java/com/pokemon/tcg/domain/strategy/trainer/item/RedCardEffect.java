@@ -16,6 +16,11 @@ public class RedCardEffect implements TrainerEffect {
     private static final int CARDS_TO_DRAW = 4;
 
     @Override
+    public String getCardIdentifier() {
+        return "red card";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         return ValidationResult.ok();
     }

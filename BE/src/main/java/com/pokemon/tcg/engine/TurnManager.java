@@ -2,6 +2,7 @@ package com.pokemon.tcg.engine;
 
 import com.pokemon.tcg.domain.model.card.Attack;
 import com.pokemon.tcg.domain.model.game.*;
+import com.pokemon.tcg.domain.strategy.ability.ActiveAbilityRegistry;
 import com.pokemon.tcg.domain.strategy.trainer.TrainerEffectRegistry;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.engine.attack.AttackPipeline;
@@ -18,6 +19,7 @@ public class TurnManager {
     private final StatusEffectManager statusEffectManager;
     private final CardLookupPort cardLookupPort;
     private final TrainerEffectRegistry trainerEffectRegistry;
+    private final ActiveAbilityRegistry activeAbilityRegistry;
     private final SetupManager setupManager;
 
     public TurnManager(RuleValidator ruleValidator,
@@ -26,6 +28,7 @@ public class TurnManager {
                        StatusEffectManager statusEffectManager,
                        CardLookupPort cardLookupPort,
                        TrainerEffectRegistry trainerEffectRegistry,
+                       ActiveAbilityRegistry activeAbilityRegistry,
                        SetupManager setupManager) {
         this.ruleValidator         = ruleValidator;
         this.coinFlipService       = coinFlipService;
@@ -33,6 +36,7 @@ public class TurnManager {
         this.statusEffectManager   = statusEffectManager;
         this.cardLookupPort        = cardLookupPort;
         this.trainerEffectRegistry = trainerEffectRegistry;
+        this.activeAbilityRegistry = activeAbilityRegistry;
         this.setupManager = setupManager;
     }
 
@@ -55,7 +59,7 @@ public class TurnManager {
             case EVOLVE_POKEMON        -> handleEvolvePokemon(state, action);
             case ATTACH_ENERGY         -> handleAttachEnergy(state, action);
             case PLAY_TRAINER          -> handlePlayTrainer(state, action);
-            case USE_ABILITY           -> state;
+            case USE_ABILITY           -> handleUseAbility(state, action);
             case RETREAT               -> handleRetreat(state, action);
             case DECLARE_ATTACK        -> handleDeclareAttack(state, action);
             case END_TURN              -> handleEndTurn(state, action);
@@ -110,6 +114,7 @@ public class TurnManager {
             if (ps.getActivePokemon() != null) {
                 actions.add(GameActionType.DECLARE_ATTACK);
             }
+            actions.add(GameActionType.USE_ABILITY);
         }
 
         return actions;
@@ -784,6 +789,59 @@ public class TurnManager {
         return state.toBuilder()
                 .pendingForcedSwitchPlayerId(null)
                 .build();
+    }
+
+    // ─── USE_ABILITY ───────────────────────────────────────────────────────────
+
+    /**
+     * Handles a USE_ABILITY action by looking up the active ability for the
+     * Pokémon identified by {@code instanceId} in the payload and applying it.
+     *
+     * <p>Payload expected:
+     * <ul>
+     *   <li>{@code instanceId} — instanceId of the Pokémon using the ability.</li>
+     *   <li>{@code abilityName} — name of the ability to use.</li>
+     * </ul>
+     *
+     * <p>If the ability is not registered or cannot be applied, returns the
+     * board state unchanged.
+     */
+    private BoardState handleUseAbility(BoardState state, GameAction action) {
+        String instanceId  = action.getPayloadString("instanceId");
+        String abilityName = action.getPayloadString("abilityName");
+
+        if (instanceId == null || abilityName == null) return state;
+
+        String cardId = resolveCardIdByInstanceId(state, action.getPlayerId(), instanceId);
+        if (cardId == null) return state;
+
+        return cardLookupPort.findCardById(cardId)
+                .flatMap(card -> activeAbilityRegistry.findAbility(card.getName(), abilityName))
+                .filter(ability -> ability.canApply(state, action).isValid())
+                .map(ability -> ability.apply(state, action))
+                .orElse(state);
+    }
+
+    /**
+     * Resolves the card ID of a Pokémon in play (Active or Bench) by its instanceId.
+     * Returns null if no matching Pokémon is found.
+     */
+    private String resolveCardIdByInstanceId(BoardState state, String playerId,
+                                              String instanceId) {
+        PlayerState ps = state.getStateFor(playerId);
+
+        if (ps.getActivePokemon() != null
+                && ps.getActivePokemon().getInstanceId().equals(instanceId)) {
+            return ps.getActivePokemon().getCardId();
+        }
+        if (ps.getBench() != null) {
+            return ps.getBench().stream()
+                    .filter(b -> b.getInstanceId().equals(instanceId))
+                    .map(BenchPokemon::getCardId)
+                    .findFirst()
+                    .orElse(null);
+        }
+        return null;
     }
 
     // ─── HELPERS ──────────────────────────────────────────────────────────────

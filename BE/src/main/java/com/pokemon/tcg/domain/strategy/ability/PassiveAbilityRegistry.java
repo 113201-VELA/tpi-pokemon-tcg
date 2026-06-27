@@ -1,8 +1,9 @@
 package com.pokemon.tcg.domain.strategy.ability;
 
-import com.pokemon.tcg.domain.strategy.ability.ability.ChesnaughtAbility;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -11,10 +12,11 @@ public class PassiveAbilityRegistry {
 
     private final Map<String, PassiveAbilityEffect> abilities;
 
-    public PassiveAbilityRegistry(ChesnaughtAbility chesnaughtAbility) {
-        this.abilities = Map.ofEntries(
-                Map.entry("chesnaught", chesnaughtAbility)
-        );
+    public PassiveAbilityRegistry(List<PassiveAbilityEffect> allAbilities) {
+        this.abilities = new HashMap<>();
+        for (PassiveAbilityEffect ability : allAbilities) {
+            this.abilities.put(ability.getIdentifier().toLowerCase(), ability);
+        }
     }
 
     public Optional<PassiveAbilityEffect> findAbility(String cardName) {

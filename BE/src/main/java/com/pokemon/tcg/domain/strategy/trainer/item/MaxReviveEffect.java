@@ -21,6 +21,11 @@ public class MaxReviveEffect implements TrainerEffect {
     }
 
     @Override
+    public String getCardIdentifier() {
+        return "max revive";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         String chosenCardId = action.getPayloadString("chosenCardId");
         PlayerState ps      = state.getStateFor(action.getPlayerId());

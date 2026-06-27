@@ -26,6 +26,11 @@ import java.util.Map;
 public class CassiusEffect implements TrainerEffect {
 
     @Override
+    public String getCardIdentifier() {
+        return "cassius";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         String targetId = action.getPayloadString("targetInstanceId");
         PlayerState ps  = state.getStateFor(action.getPlayerId());

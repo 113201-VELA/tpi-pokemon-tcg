@@ -22,6 +22,11 @@ public class ShaunaEffect implements TrainerEffect {
     private static final int CARDS_TO_DRAW = 5;
 
     @Override
+    public String getCardIdentifier() {
+        return "shauna";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         PlayerState ps = state.getStateFor(action.getPlayerId());
         if (ps.getDeck() == null || ps.getDeck().isEmpty()) {

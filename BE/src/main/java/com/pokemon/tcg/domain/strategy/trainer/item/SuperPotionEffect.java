@@ -30,6 +30,11 @@ public class SuperPotionEffect implements TrainerEffect {
     private static final int COUNTERS_HEAL = HEAL_AMOUNT / 10;
 
     @Override
+    public String getCardIdentifier() {
+        return "super potion";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         String targetId  = action.getPayloadString("targetInstanceId");
         String energyId  = action.getPayloadString("energyToDiscardId");

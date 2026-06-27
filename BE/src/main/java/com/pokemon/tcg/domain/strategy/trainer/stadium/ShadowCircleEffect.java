@@ -11,6 +11,11 @@ import org.springframework.stereotype.Component;
 public class ShadowCircleEffect implements TrainerEffect {
 
     @Override
+    public String getCardIdentifier() {
+        return "shadow circle";
+    }
+
+    @Override
     public EngineResult apply(BoardState state, GameAction action) {
         state.setActiveStadiumCardId("shadow circle");
         return EngineResult.of(state, java.util.List.of());

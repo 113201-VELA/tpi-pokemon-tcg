@@ -21,6 +21,11 @@ public class GreatBallEffect implements TrainerEffect {
     }
 
     @Override
+    public String getCardIdentifier() {
+        return "great ball";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         PlayerState ps = state.getStateFor(action.getPlayerId());
         List<String> deck = ps.getDeck() != null ? ps.getDeck() : List.of();

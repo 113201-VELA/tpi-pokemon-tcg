@@ -36,6 +36,11 @@ public class ProfessorsLetterEffect implements TrainerEffect {
     }
 
     @Override
+    public String getCardIdentifier() {
+        return "professor's letter";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         PlayerState ps           = state.getStateFor(action.getPlayerId());
         List<String> chosenIds   = getChosenIds(action);

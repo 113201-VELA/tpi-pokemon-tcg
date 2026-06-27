@@ -20,6 +20,11 @@ import java.util.Map;
 public class ProfessorSycamoreEffect implements TrainerEffect {
 
     @Override
+    public String getCardIdentifier() {
+        return "professor sycamore";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         PlayerState ps = state.getStateFor(action.getPlayerId());
         if (ps.getDeck() == null || ps.getDeck().isEmpty()) {

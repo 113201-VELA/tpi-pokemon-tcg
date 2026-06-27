@@ -1,6 +1,7 @@
 package com.pokemon.tcg.engine;
 
 import com.pokemon.tcg.domain.model.game.*;
+import com.pokemon.tcg.domain.strategy.ability.ActiveAbilityRegistry;
 import com.pokemon.tcg.domain.strategy.trainer.TrainerEffectRegistry;
 import com.pokemon.tcg.engine.attack.AttackPipeline;
 import org.junit.jupiter.api.BeforeEach;
@@ -19,6 +20,7 @@ class TurnManagerTest {
     private StatusEffectManager statusEffectManager;
     private CardLookupPort cardLookupPort;
     private TrainerEffectRegistry trainerEffectRegistry;
+    private ActiveAbilityRegistry activeAbilityRegistry;
     private SetupManager setupManager;
     private TurnManager turnManager;
 
@@ -29,12 +31,14 @@ class TurnManagerTest {
         attackPipeline       = mock(AttackPipeline.class);
         statusEffectManager  = mock(StatusEffectManager.class);
         cardLookupPort       = mock(CardLookupPort.class);
-        trainerEffectRegistry = mock(TrainerEffectRegistry.class);
-        setupManager         = mock(SetupManager.class);
+        trainerEffectRegistry  = mock(TrainerEffectRegistry.class);
+        activeAbilityRegistry  = mock(ActiveAbilityRegistry.class);
+        setupManager           = mock(SetupManager.class);
 
         turnManager = new TurnManager(
                 ruleValidator, coinFlipService, attackPipeline,
-                statusEffectManager, cardLookupPort, trainerEffectRegistry, setupManager);
+                statusEffectManager, cardLookupPort, trainerEffectRegistry,
+                activeAbilityRegistry, setupManager);
     }
 
     // ─── helpers ──────────────────────────────────────────────────────────────

@@ -12,6 +12,11 @@ import java.util.Map;
 public class MuscleBandEffect implements TrainerEffect {
 
     @Override
+    public String getCardIdentifier() {
+        return "muscle band";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         String targetId = action.getPayloadString("targetInstanceId");
         PlayerState ps  = state.getStateFor(action.getPlayerId());

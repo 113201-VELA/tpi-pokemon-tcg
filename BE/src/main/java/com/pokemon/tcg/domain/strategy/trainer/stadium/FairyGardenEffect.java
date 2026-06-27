@@ -28,6 +28,11 @@ public class FairyGardenEffect implements TrainerEffect {
     private static final String CARD_ID = "xy1-117";
 
     @Override
+    public String getCardIdentifier() {
+        return "fairy garden";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         return ValidationResult.ok();
     }

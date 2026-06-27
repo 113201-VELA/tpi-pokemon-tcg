@@ -1,11 +1,13 @@
 package com.pokemon.tcg.domain.strategy.ability;
 
-import com.pokemon.tcg.domain.strategy.ability.ability.ChesnaughtAbility;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class PassiveAbilityRegistryTest {
 
@@ -13,7 +15,10 @@ class PassiveAbilityRegistryTest {
 
     @BeforeEach
     void setUp() {
-        registry = new PassiveAbilityRegistry(mock(ChesnaughtAbility.class));
+        PassiveAbilityEffect chesnaughtAbility = mock(PassiveAbilityEffect.class);
+        when(chesnaughtAbility.getIdentifier()).thenReturn("chesnaught");
+
+        registry = new PassiveAbilityRegistry(List.of(chesnaughtAbility));
     }
 
     @Test

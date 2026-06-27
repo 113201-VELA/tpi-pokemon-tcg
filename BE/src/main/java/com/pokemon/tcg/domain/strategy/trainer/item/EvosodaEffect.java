@@ -19,6 +19,11 @@ public class EvosodaEffect implements TrainerEffect {
     }
 
     @Override
+    public String getCardIdentifier() {
+        return "evosoda";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         PlayerState ps = state.getStateFor(action.getPlayerId());
         String targetId = action.getPayloadString("targetPokemonInstanceId");

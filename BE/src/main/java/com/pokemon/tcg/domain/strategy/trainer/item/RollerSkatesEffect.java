@@ -22,6 +22,11 @@ public class RollerSkatesEffect implements TrainerEffect {
     }
 
     @Override
+    public String getCardIdentifier() {
+        return "roller skates";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         return ValidationResult.ok();
     }

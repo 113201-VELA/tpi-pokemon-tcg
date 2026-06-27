@@ -28,6 +28,11 @@ import java.util.Map;
 public class TeamFlareGruntEffect implements TrainerEffect {
 
     @Override
+    public String getCardIdentifier() {
+        return "team flare grunt";
+    }
+
+    @Override
     public ValidationResult canApply(BoardState state, GameAction action) {
         String opponentId   = state.getOpponentState(action.getPlayerId()).getPlayerId();
         PlayerState opponent = state.getStateFor(opponentId);

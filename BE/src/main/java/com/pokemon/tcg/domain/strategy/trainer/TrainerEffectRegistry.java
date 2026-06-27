@@ -1,22 +1,9 @@
 package com.pokemon.tcg.domain.strategy.trainer;
 
-import com.pokemon.tcg.domain.strategy.trainer.item.EvosodaEffect;
-import com.pokemon.tcg.domain.strategy.trainer.item.GreatBallEffect;
-import com.pokemon.tcg.domain.strategy.trainer.item.HardCharmEffect;
-import com.pokemon.tcg.domain.strategy.trainer.item.MaxReviveEffect;
-import com.pokemon.tcg.domain.strategy.trainer.item.MuscleBandEffect;
-import com.pokemon.tcg.domain.strategy.trainer.item.ProfessorsLetterEffect;
-import com.pokemon.tcg.domain.strategy.trainer.stadium.FairyGardenEffect;
-import com.pokemon.tcg.domain.strategy.trainer.stadium.ShadowCircleEffect;
-import com.pokemon.tcg.domain.strategy.trainer.item.RedCardEffect;
-import com.pokemon.tcg.domain.strategy.trainer.item.RollerSkatesEffect;
-import com.pokemon.tcg.domain.strategy.trainer.item.SuperPotionEffect;
-import com.pokemon.tcg.domain.strategy.trainer.supporter.CassiusEffect;
-import com.pokemon.tcg.domain.strategy.trainer.supporter.ProfessorSycamoreEffect;
-import com.pokemon.tcg.domain.strategy.trainer.supporter.ShaunaEffect;
-import com.pokemon.tcg.domain.strategy.trainer.supporter.TeamFlareGruntEffect;
 import org.springframework.stereotype.Component;
 
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -34,38 +21,11 @@ public class TrainerEffectRegistry {
 
     private final Map<String, TrainerEffect> effects;
 
-    public TrainerEffectRegistry(SuperPotionEffect superPotionEffect,
-                                 ProfessorSycamoreEffect professorSycamoreEffect,
-                                 ShaunaEffect shaunaEffect,
-                                 CassiusEffect cassiusEffect,
-                                 TeamFlareGruntEffect teamFlareGruntEffect,
-                                 ProfessorsLetterEffect professorsLetterEffect,
-                                 EvosodaEffect evosodaEffect,
-                                 GreatBallEffect greatBallEffect,
-                                 RollerSkatesEffect rollerSkatesEffect,
-                                 RedCardEffect redCardEffect,
-                                 MaxReviveEffect maxReviveEffect,
-                                 MuscleBandEffect muscleBandEffect,
-                                  HardCharmEffect hardCharmEffect,
-                                  ShadowCircleEffect shadowCircleEffect,
-                                  FairyGardenEffect fairyGardenEffect) {
-        this.effects = Map.ofEntries(
-                Map.entry("super potion",        superPotionEffect),
-                Map.entry("professor sycamore",  professorSycamoreEffect),
-                Map.entry("shauna",              shaunaEffect),
-                Map.entry("cassius",             cassiusEffect),
-                Map.entry("team flare grunt",    teamFlareGruntEffect),
-                Map.entry("professor's letter",  professorsLetterEffect),
-                Map.entry("evosoda",             evosodaEffect),
-                Map.entry("great ball",          greatBallEffect),
-                Map.entry("roller skates",       rollerSkatesEffect),
-                Map.entry("red card",            redCardEffect),
-                Map.entry("max revive",          maxReviveEffect),
-                Map.entry("muscle band",         muscleBandEffect),
-                Map.entry("hard charm",          hardCharmEffect),
-                Map.entry("shadow circle",       shadowCircleEffect),
-                Map.entry("fairy garden",        fairyGardenEffect)
-        );
+    public TrainerEffectRegistry(List<TrainerEffect> allEffects) {
+        this.effects = new HashMap<>();
+        for (TrainerEffect effect : allEffects) {
+            this.effects.put(effect.getCardIdentifier().toLowerCase(), effect);
+        }
     }
 
     /**
