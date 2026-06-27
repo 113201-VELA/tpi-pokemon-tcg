@@ -868,6 +868,10 @@ public class TurnManager {
         if (ps.getActivePokemon() != null &&
                 ps.getActivePokemon().getInstanceId().equals(targetInstanceId)) {
             ps.getActivePokemon().setCardId(newCardId);
+            ps.getActivePokemon().setBlockedAttackName(null);
+            if (ps.getActivePokemon().getActiveEffects() != null) {
+                ps.getActivePokemon().getActiveEffects().clear();
+            }
             List<String> stack = new ArrayList<>(ps.getActivePokemon().getEvolutionStack());
             stack.add(newCardId);
             ps.getActivePokemon().setEvolutionStack(stack);
@@ -890,5 +894,6 @@ public class TurnManager {
         if (pokemon.getActiveEffects() != null) {
             pokemon.getActiveEffects().clear();
         }
+        pokemon.setBlockedAttackName(null);
     }
 }

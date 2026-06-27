@@ -34,6 +34,9 @@ public class ActivePokemon {
     private List<PokemonEffect> activeEffects = new ArrayList<>();
 
     @Builder.Default
+    private String blockedAttackName = null;
+
+    @Builder.Default
     private List<TypeModifier> weaknesses = new ArrayList<>();
 
     @Builder.Default

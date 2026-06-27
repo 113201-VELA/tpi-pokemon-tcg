@@ -1,9 +1,14 @@
 package com.pokemon.tcg.engine.attack;
 
 import com.pokemon.tcg.domain.attack.BeedrillEffect;
+import com.pokemon.tcg.domain.attack.ChespinEffect;
+import com.pokemon.tcg.domain.attack.ChesnaughtEffect;
 import com.pokemon.tcg.domain.attack.IllumiseEffect;
 import com.pokemon.tcg.domain.attack.KakunaEffect;
 import com.pokemon.tcg.domain.attack.LedianEffect;
+import com.pokemon.tcg.domain.attack.PansageEffect;
+import com.pokemon.tcg.domain.attack.QuilladinEffect;
+import com.pokemon.tcg.domain.attack.SimisageEffect;
 import com.pokemon.tcg.domain.attack.VolbeatEffect;
 import com.pokemon.tcg.domain.attack.WeedleEffect;
 import org.springframework.stereotype.Component;
@@ -21,17 +26,28 @@ public class AttackEffectRegistry {
                                 BeedrillEffect beedrillEffect,
                                 LedianEffect ledianEffect,
                                 VolbeatEffect volbeatEffect,
-                                IllumiseEffect illumiseEffect) {
+                                IllumiseEffect illumiseEffect,
+                                PansageEffect pansageEffect,
+                                SimisageEffect simisageEffect,
+                                ChespinEffect chespinEffect,
+                                QuilladinEffect quilladinEffect,
+                                ChesnaughtEffect chesnaughtEffect) {
         this.effects = Map.ofEntries(
-                Map.entry("weedle|poison sting",    weedleEffect),
-                Map.entry("kakuna|harden",           kakunaEffect),
-                Map.entry("beedrill|poison jab",     beedrillEffect),
-                Map.entry("beedrill|flash needle",   beedrillEffect),
-                Map.entry("ledian|mach punch",       ledianEffect),
-                Map.entry("volbeat|luring glow",     volbeatEffect),
-                Map.entry("volbeat|signal beam",     volbeatEffect),
-                Map.entry("illumise|pheromation",    illumiseEffect),
-                Map.entry("illumise|quick attack",   illumiseEffect)
+                Map.entry("weedle|poison sting",      weedleEffect),
+                Map.entry("kakuna|harden",             kakunaEffect),
+                Map.entry("beedrill|poison jab",       beedrillEffect),
+                Map.entry("beedrill|flash needle",     beedrillEffect),
+                Map.entry("ledian|mach punch",         ledianEffect),
+                Map.entry("volbeat|luring glow",       volbeatEffect),
+                Map.entry("volbeat|signal beam",       volbeatEffect),
+                Map.entry("illumise|pheromation",      illumiseEffect),
+                Map.entry("illumise|quick attack",     illumiseEffect),
+                Map.entry("pansage|leech seed",        pansageEffect),
+                Map.entry("simisage|torment",          simisageEffect),
+                Map.entry("chespin|pin missile",       chespinEffect),
+                Map.entry("quilladin|scrunch",         quilladinEffect),
+                Map.entry("quilladin|wood hammer",     quilladinEffect),
+                Map.entry("chesnaught|touchdown",       chesnaughtEffect)
         );
     }
 

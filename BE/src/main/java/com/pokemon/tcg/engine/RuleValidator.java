@@ -475,9 +475,10 @@ public class RuleValidator {
 
     /**
      * Attack rules:
-     * - The player who goes first cant attack on the first turn.
+     * - The player who goes first cannot attack on turn 1.
      * - Only during MAIN phase.
      * - Active Pokémon must not be Asleep or Paralyzed.
+     * - The declared attack must not be blocked by Torment.
      * Energy sufficiency is checked inside EnergyCheckStep in the pipeline,
      * not here, to keep the pipeline as the single source of truth for energy logic.
      */
@@ -507,6 +508,16 @@ public class RuleValidator {
                 return ValidationResult.fail("Your Active Pokémon is Paralyzed and cannot attack.");
             }
         }
+
+        // Check if the declared attack is blocked by Torment
+        String attackName = action.getPayloadString("attackName");
+        if (attackName != null
+                && active.getBlockedAttackName() != null
+                && attackName.equalsIgnoreCase(active.getBlockedAttackName())) {
+            return ValidationResult.fail(
+                    "That attack is blocked by Torment and cannot be used this turn.");
+        }
+
         return ValidationResult.ok();
     }
 
