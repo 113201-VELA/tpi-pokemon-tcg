@@ -550,7 +550,7 @@ public class RuleValidator {
      *
      * <p>Fairy type is checked via the Pokémon's {@code types} list.
      * Fairy Energy is identified by looking up each attached card in the
-     * card cache and checking its type list for {@link EnergyType#FAIRY}.
+     * card cache and checking its type list for @link EnergyType#FAIRY.
      */
     private boolean isFairyPokemonWithFairyEnergy(ActivePokemon active) {
         // Check that the Pokémon itself is Fairy type
