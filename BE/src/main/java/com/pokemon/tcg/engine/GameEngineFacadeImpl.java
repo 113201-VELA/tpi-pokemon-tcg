@@ -46,7 +46,7 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
 
         String firstPlayerId = setupManager.determineFirstPlayer(
                 player1.getPlayerId(), player2.getPlayerId());
-
+        System.out.println("First player: " + firstPlayerId);//BORRAR!!!!!!!!
         BoardState initialState = BoardState.builder()
                 .gameId(gameId)
                 .gameState(GameState.SETUP)

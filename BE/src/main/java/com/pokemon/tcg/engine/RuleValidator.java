@@ -115,10 +115,8 @@ public class RuleValidator {
         if (state.getTurnPhase() != TurnPhase.DRAW) {
             return ValidationResult.fail("You can only draw a card at the start of your turn.");
         }
-        PlayerState ps = state.getStateFor(action.getPlayerId());
-        if (ps.getDeck() == null || ps.getDeck().isEmpty()) {
-            return ValidationResult.fail("Your deck is empty. You lose.");
-        }
+        // Empty deck is NOT rejected here — it's a loss condition detected by
+        // VictoryConditionChecker after the action processes, not a validation error.
         return ValidationResult.ok();
     }
 

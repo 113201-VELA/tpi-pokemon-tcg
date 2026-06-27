@@ -68,9 +68,10 @@ public class VictoryConditionChecker {
      * <p>Win condition 2 — no Pokémon: the opponent has no Active Pokémon
      * and no Bench Pokémon remaining after a KO.
      *
-     * <p>Win condition 3 — empty deck: the opponent has no cards left in their
-     * deck at the start of their turn. This condition is checked here but is
-     * only meaningful when called after a DRAW_CARD action fails.
+     * <p>Win condition 3 — empty deck: the opponent cannot draw at the start
+     * of their turn. Only evaluated during DRAW phase to avoid triggering
+     * immediately after the last card is drawn — the player may take their
+     * final card and only lose on their next turn when they attempt to draw again.
      */
     private boolean playerWins(BoardState state, PlayerState player, PlayerState opponent) {
         // Condition 1: all prizes taken
@@ -85,9 +86,13 @@ public class VictoryConditionChecker {
             return true;
         }
 
-        // Condition 3: opponent deck is empty (cannot draw)
+        // Condition 3: opponent deck is empty and it is their turn to draw.
+        // The DRAW phase check ensures this only triggers when the player
+        // attempts to draw but has no cards — not when they draw the last one.
         boolean opponentCannotDraw = opponent.getDeck() == null || opponent.getDeck().isEmpty();
-        if (opponentCannotDraw && state.getCurrentPlayerId().equals(opponent.getPlayerId())) {
+        if (opponentCannotDraw
+                && state.getCurrentPlayerId().equals(opponent.getPlayerId())
+                && state.getTurnPhase() == TurnPhase.DRAW) {
             return true;
         }
 
