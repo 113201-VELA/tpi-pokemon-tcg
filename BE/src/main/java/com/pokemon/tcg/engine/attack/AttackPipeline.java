@@ -1,5 +1,6 @@
 package com.pokemon.tcg.engine.attack;
 
+import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.engine.attack.steps.*;
 import org.springframework.stereotype.Component;
 

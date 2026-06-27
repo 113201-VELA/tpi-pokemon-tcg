@@ -1,7 +1,7 @@
 package com.pokemon.tcg.engine;
 
 import com.pokemon.tcg.domain.model.game.*;
-import com.pokemon.tcg.domain.strategy.TrainerEffectRegistry;
+import com.pokemon.tcg.domain.strategy.trainer.TrainerEffectRegistry;
 import com.pokemon.tcg.engine.attack.AttackPipeline;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

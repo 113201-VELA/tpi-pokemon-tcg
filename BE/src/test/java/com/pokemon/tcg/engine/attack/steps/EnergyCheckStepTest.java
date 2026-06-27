@@ -7,7 +7,7 @@ import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.engine.CardLookupPort;
 import com.pokemon.tcg.engine.attack.AttackChain;
-import com.pokemon.tcg.engine.attack.AttackContext;
+import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;

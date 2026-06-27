@@ -5,7 +5,7 @@ import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.game.ActivePokemon;
 import com.pokemon.tcg.engine.CardLookupPort;
 import com.pokemon.tcg.engine.attack.AttackChain;
-import com.pokemon.tcg.engine.attack.AttackContext;
+import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.engine.attack.AttackStep;
 import com.pokemon.tcg.domain.model.card.Attack;
 import org.springframework.stereotype.Component;

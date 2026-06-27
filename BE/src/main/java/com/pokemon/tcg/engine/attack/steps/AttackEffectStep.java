@@ -2,9 +2,8 @@ package com.pokemon.tcg.engine.attack.steps;
 
 import com.pokemon.tcg.engine.CardLookupPort;
 import com.pokemon.tcg.engine.attack.AttackChain;
-import com.pokemon.tcg.engine.attack.AttackContext;
-import com.pokemon.tcg.engine.attack.AttackEffect;
-import com.pokemon.tcg.engine.attack.AttackEffectRegistry;
+import com.pokemon.tcg.domain.strategy.attack.AttackContext;
+import com.pokemon.tcg.domain.strategy.attack.AttackEffectRegistry;
 import com.pokemon.tcg.engine.attack.AttackStep;
 import org.springframework.stereotype.Component;
 

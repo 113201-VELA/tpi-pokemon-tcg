@@ -2,8 +2,8 @@ package com.pokemon.tcg.engine;
 
 import com.pokemon.tcg.domain.model.card.Attack;
 import com.pokemon.tcg.domain.model.game.*;
-import com.pokemon.tcg.domain.strategy.TrainerEffectRegistry;
-import com.pokemon.tcg.engine.attack.AttackContext;
+import com.pokemon.tcg.domain.strategy.trainer.TrainerEffectRegistry;
+import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.engine.attack.AttackPipeline;
 import org.springframework.stereotype.Component;
 

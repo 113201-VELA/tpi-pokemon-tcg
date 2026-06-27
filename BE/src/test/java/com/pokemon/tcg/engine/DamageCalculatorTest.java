@@ -3,6 +3,7 @@ package com.pokemon.tcg.engine;
 import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.card.TypeModifier;
 import com.pokemon.tcg.domain.model.game.ActivePokemon;
+import com.pokemon.tcg.domain.strategy.attack.DamageModifier;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

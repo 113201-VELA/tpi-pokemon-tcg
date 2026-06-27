@@ -1,6 +1,7 @@
 package com.pokemon.tcg.engine.attack;
 
-import com.pokemon.tcg.domain.attack.*;
+import com.pokemon.tcg.domain.strategy.attack.attack.*;
+import com.pokemon.tcg.domain.strategy.attack.AttackEffectRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

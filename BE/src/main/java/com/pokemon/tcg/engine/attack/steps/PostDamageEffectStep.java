@@ -3,9 +3,9 @@ package com.pokemon.tcg.engine.attack.steps;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.engine.CardLookupPort;
 import com.pokemon.tcg.engine.VictoryConditionChecker;
-import com.pokemon.tcg.engine.ability.PassiveAbilityRegistry;
+import com.pokemon.tcg.domain.strategy.ability.PassiveAbilityRegistry;
 import com.pokemon.tcg.engine.attack.AttackChain;
-import com.pokemon.tcg.engine.attack.AttackContext;
+import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.engine.attack.AttackStep;
 import org.springframework.stereotype.Component;
 
