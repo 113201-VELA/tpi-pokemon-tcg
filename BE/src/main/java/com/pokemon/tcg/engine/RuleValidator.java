@@ -115,10 +115,8 @@ public class RuleValidator {
         if (state.getTurnPhase() != TurnPhase.DRAW) {
             return ValidationResult.fail("You can only draw a card at the start of your turn.");
         }
-        PlayerState ps = state.getStateFor(action.getPlayerId());
-        if (ps.getDeck() == null || ps.getDeck().isEmpty()) {
-            return ValidationResult.fail("Your deck is empty. You lose.");
-        }
+        // Empty deck is NOT rejected here — it's a loss condition detected by
+        // VictoryConditionChecker after the action processes, not a validation error.
         return ValidationResult.ok();
     }
 
@@ -550,7 +548,7 @@ public class RuleValidator {
      *
      * <p>Fairy type is checked via the Pokémon's {@code types} list.
      * Fairy Energy is identified by looking up each attached card in the
-     * card cache and checking its type list for {@link EnergyType#FAIRY}.
+     * card cache and checking its type list for @link EnergyType#FAIRY.
      */
     private boolean isFairyPokemonWithFairyEnergy(ActivePokemon active) {
         // Check that the Pokémon itself is Fairy type

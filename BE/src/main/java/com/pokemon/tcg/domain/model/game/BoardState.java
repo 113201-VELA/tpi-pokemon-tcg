@@ -38,15 +38,13 @@ public class BoardState {
      * All actions are blocked until that player sends CHOOSE_BENCH_POKEMON.
      * Null when no bench choice is pending.
      */
-    @Builder.Default
-    private String pendingBenchChoicePlayerId = null;
+    private String pendingBenchChoicePlayerId;
 
     /**
      * ID of the player who goes first, determined by coin flip during initialization.
      * Used to block attacks on the very first turn of the game.
      */
-    @Builder.Default
-    private String firstPlayerId = null;
+    private String firstPlayerId;
 
     /**
      * Set to the player's ID when a card effect (e.g. Great Ball) requires them
