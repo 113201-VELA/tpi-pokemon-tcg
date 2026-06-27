@@ -11,12 +11,21 @@ import {
   groupEnergies,
 } from '../../domain/models/game.models';
 import { CardResponse } from '../../../deck-builder/domain/models/card.models';
+import { DraggablePokemonDirective } from '../../../../shared/directives/draggable-pokemon.directive';
 
 @Component({
   selector: 'app-bench-pokemon-slot',
   changeDetection: ChangeDetectionStrategy.OnPush,
+  imports: [DraggablePokemonDirective],
   template: `
-    <div class="bench-slot-inner" (click)="cardClick.emit(pokemon().card)">
+    <div
+      class="bench-slot-inner"
+      [attr.draggable]="draggable() ? true : null"
+      appDraggablePokemon
+      [cardId]="pokemon().cardId"
+      [instanceId]="pokemon().instanceId"
+      (click)="cardClick.emit(pokemon().card)"
+    >
       @if (pokemon().card) {
         <img
           class="card-img-bench"
@@ -44,6 +53,7 @@ import { CardResponse } from '../../../deck-builder/domain/models/card.models';
 })
 export class BenchPokemonSlot {
   readonly pokemon   = input.required<BenchPokemonDTO>();
+  readonly draggable = input<boolean>(false);
   readonly cardClick = output<CardResponse | null>();
 
   hpPercent(): number {

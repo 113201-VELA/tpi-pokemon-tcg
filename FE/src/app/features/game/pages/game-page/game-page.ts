@@ -23,12 +23,13 @@ import { CardResponse } from '../../../deck-builder/domain/models/card.models';
 import { ActivePokemonSlot } from '../../components/active-pokemon-slot/active-pokemon-slot';
 import { BenchPokemonSlot } from '../../components/bench-pokemon-slot/bench-pokemon-slot';
 import { DraggableCardDirective } from '../../../../shared/directives/draggable-card.directive';
+import { DraggablePokemonDirective } from '../../../../shared/directives/draggable-pokemon.directive';
 import { DropZoneDirective } from '../../../../shared/directives/drop-zone.directive';
 import { DragStateService } from '../../../../shared/services/drag-state.service';
 
 @Component({
   selector: 'app-game-page',
-  imports: [ActivePokemonSlot, BenchPokemonSlot, DraggableCardDirective, DropZoneDirective],
+  imports: [ActivePokemonSlot, BenchPokemonSlot, DraggableCardDirective, DraggablePokemonDirective, DropZoneDirective],
   templateUrl: './game-page.html',
   styleUrl: './game-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
@@ -67,6 +68,11 @@ export class GamePage implements OnInit, OnDestroy {
 
   // Bench choice modal (after KO)
   readonly showBenchChoiceModal = signal(false);
+
+  // Retreat modal state
+  readonly showRetreatModal            = signal(false);
+  readonly retreatReplacement          = signal<string | null>(null);
+  readonly selectedEnergiesToDiscard   = signal<string[]>([]);
 
   /**
    * Combined board state: starts from the public broadcast and merges in
@@ -287,6 +293,32 @@ export class GamePage implements OnInit, OnDestroy {
 
   /** True when the player can evolve Pokémon (MAIN phase, player's turn). */
   readonly canEvolve = computed(() => this.isMainPhase());
+
+  /** True when the player can retreat (MAIN phase, not retreated yet, Active can retreat). */
+  readonly canRetreat = computed(() => {
+    const state = this.boardState();
+    if (!state) return false;
+    return (
+      this.isMainPhase() &&
+      !(state.turnFlags?.retreatedThisTurn ?? false) &&
+      !!(state.ownState.active?.canRetreat)
+    );
+  });
+
+  /** Retreat cost: number of energies to discard. */
+  readonly retreatCost = computed(
+    () => this.boardState()?.ownState.active?.card?.retreatCost?.length ?? 0
+  );
+
+  /** Energies currently attached to the Active Pokémon. */
+  readonly activeEnergies = computed(
+    () => this.boardState()?.ownState.active?.attachedEnergies ?? []
+  );
+
+  /** True when the player has selected enough energies to pay the retreat cost. */
+  readonly canConfirmRetreat = computed(
+    () => this.selectedEnergiesToDiscard().length === this.retreatCost()
+  );
 
   // ── Lifecycle ────────────────────────────────────────────────────────────
   constructor() {
@@ -535,6 +567,75 @@ export class GamePage implements OnInit, OnDestroy {
   chooseBenchPokemon(instanceId: string): void {
     this.gameActionService.sendAction('CHOOSE_BENCH_POKEMON', { instanceId });
     this.showBenchChoiceModal.set(false);
+  }
+
+  /**
+   * Called when a bench Pokémon is dragged onto the Active slot.
+   * If retreat is possible, opens the retreat modal (or sends directly if cost is 0).
+   */
+  onRetreat(instanceId: string): void {
+    if (!this.canRetreat()) return;
+    if (!instanceId) return;
+
+    this.retreatReplacement.set(instanceId);
+    this.selectedEnergiesToDiscard.set([]);
+
+    if (this.retreatCost() === 0) {
+      this.gameActionService.sendAction('RETREAT', {
+        replacementInstanceId: instanceId,
+        energyCardIdsToDiscard: [],
+      });
+      this.retreatReplacement.set(null);
+      return;
+    }
+
+    this.showRetreatModal.set(true);
+  }
+
+  /** Toggles an energy card in the discard selection for retreat. */
+  toggleRetreatEnergy(cardIndex: number): void {
+    const energies = this.activeEnergies();
+    if (cardIndex < 0 || cardIndex >= energies.length) return;
+
+    const key = `${cardIndex}`;
+    const current = this.selectedEnergiesToDiscard();
+
+    if (current.includes(key)) {
+      this.selectedEnergiesToDiscard.set(current.filter(k => k !== key));
+    } else {
+      if (current.length >= this.retreatCost()) return;
+      this.selectedEnergiesToDiscard.set([...current, key]);
+    }
+  }
+
+  /** Confirms the retreat, sending the action with selected energies. */
+  confirmRetreat(): void {
+    if (!this.canConfirmRetreat()) return;
+    const replacement = this.retreatReplacement();
+    if (!replacement) return;
+
+    const energies = this.activeEnergies();
+    const energyCardIdsToDiscard = this.selectedEnergiesToDiscard()
+      .map(key => parseInt(key))
+      .sort()
+      .map(idx => energies[idx]?.id)
+      .filter((id): id is string => !!id);
+
+    this.gameActionService.sendAction('RETREAT', {
+      replacementInstanceId: replacement,
+      energyCardIdsToDiscard,
+    });
+
+    this.showRetreatModal.set(false);
+    this.retreatReplacement.set(null);
+    this.selectedEnergiesToDiscard.set([]);
+  }
+
+  /** Cancels the retreat modal. */
+  cancelRetreat(): void {
+    this.showRetreatModal.set(false);
+    this.retreatReplacement.set(null);
+    this.selectedEnergiesToDiscard.set([]);
   }
 
   // ── Card detail modal ─────────────────────────────────────────────────────

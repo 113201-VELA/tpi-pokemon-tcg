@@ -141,43 +141,42 @@
             }
           </div>
 
-          <div class="play-area">
-            <div class="active-col">
-              <div class="active-slot-wrap">
-                @if (boardState()!.opponentState.active) {
-                  <app-active-pokemon-slot
-                    [pokemon]="boardState()!.opponentState.active!"
+          <div class="bench-row">
+            @for (slot of getBenchSlots(boardState()!.opponentState.bench); track $index) {
+              <div class="bench-slot-wrap">
+                @if (slot) {
+                  <app-bench-pokemon-slot
+                    [pokemon]="slot"
                     (cardClick)="openCardDetail($event)"
                   />
                 } @else {
-                  <span class="slot-empty">Active</span>
+                  <span class="slot-empty">B{{ $index + 1 }}</span>
                 }
               </div>
-              <div class="tool-slot">
-                @if (boardState()!.opponentState.active?.attachedTool) {
-                  <img
-                    [src]="boardState()!.opponentState.active!.attachedTool!.imageSmall"
-                    alt="Tool"
-                    class="card-img-full"
-                    (click)="openCardDetail(boardState()!.opponentState.active!.attachedTool)"
-                  />
-                } @else {
-                  <span class="slot-empty">Tool</span>
-                }
-              </div>
+            }
+          </div>
+
+          <div class="active-col">
+            <div class="active-slot-wrap">
+              @if (boardState()!.opponentState.active) {
+                <app-active-pokemon-slot
+                  [pokemon]="boardState()!.opponentState.active!"
+                  (cardClick)="openCardDetail($event)"
+                />
+              } @else {
+                <span class="slot-empty">Active</span>
+              }
             </div>
-            <div class="bench-row">
-              @for (slot of getBenchSlots(boardState()!.opponentState.bench); track $index) {
-                <div class="bench-slot-wrap">
-                  @if (slot) {
-                    <app-bench-pokemon-slot
-                      [pokemon]="slot"
-                      (cardClick)="openCardDetail($event)"
-                    />
-                  } @else {
-                    <span class="slot-empty">B{{ $index + 1 }}</span>
-                  }
-                </div>
+            <div class="tool-slot">
+              @if (boardState()!.opponentState.active?.attachedTool) {
+                <img
+                  [src]="boardState()!.opponentState.active!.attachedTool!.imageSmall"
+                  alt="Tool"
+                  class="card-img-full"
+                  (click)="openCardDetail(boardState()!.opponentState.active!.attachedTool)"
+                />
+              } @else {
+                <span class="slot-empty">Tool</span>
               }
             </div>
           </div>
@@ -240,98 +239,95 @@
             }
           </div>
 
-          <div class="play-area">
-
-            <div class="active-col">
-              <!-- Active slot: drop zone during setup when empty -->
+          <div class="bench-row">
+            @for (slot of getBenchSlots(boardState()!.ownState.bench); track $index) {
               <div
-                class="active-slot-wrap"
+                class="bench-slot-wrap"
                 appDropZone
-                [acceptDrop]="(isSetupPhase() && !boardState()!.ownState.active)
-                  || canAttachEnergy()
-                  || canEvolveTarget(
-                      draggedCardId(),
-                      boardState()!.ownState.active?.card ?? null,
-                      boardState()!.ownState.active?.enteredThisTurn ?? false
-                     )"
+                [acceptDrop]="(isSetupPhase() && !slot)
+                  || (canAttachEnergy() && !!slot)
+                  || (canPlaceBasic() && !slot)
+                  || (!!slot && canEvolveTarget(
+                        draggedCardId(),
+                        slot.card ?? null,
+                        slot.enteredThisTurn
+                      ))"
                 (cardDropped)="isSetupPhase()
-                  ? onSetupDropActive($event)
-                  : canEvolveTarget(
-                      $event,
-                      boardState()!.ownState.active?.card ?? null,
-                      boardState()!.ownState.active?.enteredThisTurn ?? false
-                    )
-                    ? onEvolve(
-                        $event,
-                        boardState()!.ownState.active!.instanceId,
-                        boardState()!.ownState.active?.card ?? null,
-                        boardState()!.ownState.active?.enteredThisTurn ?? false
-                      )
-                    : onAttachEnergy($event, boardState()!.ownState.active!.instanceId)"
+                  ? onSetupDropBench($event, $index)
+                  : !slot
+                    ? onPlaceBasic($event)
+                    : canEvolveTarget(
+                          $event,
+                          slot.card ?? null,
+                          slot.enteredThisTurn
+                        )
+                      ? onEvolve($event, slot!.instanceId, slot.card ?? null, slot.enteredThisTurn)
+                      : onAttachEnergy($event, slot!.instanceId)"
               >
-                @if (boardState()!.ownState.active) {
-                  <app-active-pokemon-slot
-                    [pokemon]="boardState()!.ownState.active!"
+                @if (slot) {
+                  <app-bench-pokemon-slot
+                    [pokemon]="slot"
+                    [draggable]="canRetreat()"
                     (cardClick)="openCardDetail($event)"
                   />
                 } @else {
-                  <span class="slot-empty">
-                    {{ isSetupPhase() ? 'Drop Basic here' : 'Active' }}
-                  </span>
+                  <span class="slot-empty">B{{ $index + 1 }}</span>
                 }
               </div>
-              <div class="tool-slot">
-                @if (boardState()!.ownState.active?.attachedTool) {
-                  <img
-                    [src]="boardState()!.ownState.active!.attachedTool!.imageSmall"
-                    alt="Tool"
-                    class="card-img-full"
-                    (click)="openCardDetail(boardState()!.ownState.active!.attachedTool)"
-                  />
-                } @else {
-                  <span class="slot-empty">Tool</span>
-                }
-              </div>
-            </div>
+            }
+          </div>
 
-            <!-- Bench: each empty slot is a drop zone during setup -->
-            <div class="bench-row">
-              @for (slot of getBenchSlots(boardState()!.ownState.bench); track $index) {
-                <div
-                  class="bench-slot-wrap"
-                  appDropZone
-                  [acceptDrop]="(isSetupPhase() && !slot)
-                    || (canAttachEnergy() && !!slot)
-                    || (canPlaceBasic() && !slot)
-                    || (!!slot && canEvolveTarget(
-                          draggedCardId(),
-                          slot.card ?? null,
-                          slot.enteredThisTurn
-                        ))"
-                  (cardDropped)="isSetupPhase()
-                    ? onSetupDropBench($event, $index)
-                    : !slot
-                      ? onPlaceBasic($event)
-                      : canEvolveTarget(
-                            $event,
-                            slot.card ?? null,
-                            slot.enteredThisTurn
-                          )
-                        ? onEvolve($event, slot!.instanceId, slot.card ?? null, slot.enteredThisTurn)
-                        : onAttachEnergy($event, slot!.instanceId)"
-                >
-                  @if (slot) {
-                    <app-bench-pokemon-slot
-                      [pokemon]="slot"
-                      (cardClick)="openCardDetail($event)"
-                    />
-                  } @else {
-                    <span class="slot-empty">B{{ $index + 1 }}</span>
-                  }
-                </div>
+          <div class="active-col">
+            <div
+              class="active-slot-wrap"
+              appDropZone
+              [acceptDrop]="(isSetupPhase() && !boardState()!.ownState.active)
+                || canAttachEnergy()
+                || canRetreat()
+                || canEvolveTarget(
+                    draggedCardId(),
+                    boardState()!.ownState.active?.card ?? null,
+                    boardState()!.ownState.active?.enteredThisTurn ?? false
+                   )"
+              (cardDropped)="isSetupPhase()
+                ? onSetupDropActive($event)
+                : canEvolveTarget(
+                    $event,
+                    boardState()!.ownState.active?.card ?? null,
+                    boardState()!.ownState.active?.enteredThisTurn ?? false
+                  )
+                  ? onEvolve(
+                      $event,
+                      boardState()!.ownState.active!.instanceId,
+                      boardState()!.ownState.active?.card ?? null,
+                      boardState()!.ownState.active?.enteredThisTurn ?? false
+                    )
+                  : onAttachEnergy($event, boardState()!.ownState.active!.instanceId)"
+              (pokemonDropped)="onRetreat($event.instanceId)"
+            >
+              @if (boardState()!.ownState.active) {
+                <app-active-pokemon-slot
+                  [pokemon]="boardState()!.ownState.active!"
+                  (cardClick)="openCardDetail($event)"
+                />
+              } @else {
+                <span class="slot-empty">
+                  {{ isSetupPhase() ? 'Drop Basic here' : 'Active' }}
+                </span>
               }
             </div>
-
+            <div class="tool-slot">
+              @if (boardState()!.ownState.active?.attachedTool) {
+                <img
+                  [src]="boardState()!.ownState.active!.attachedTool!.imageSmall"
+                  alt="Tool"
+                  class="card-img-full"
+                  (click)="openCardDetail(boardState()!.ownState.active!.attachedTool)"
+                />
+              } @else {
+                <span class="slot-empty">Tool</span>
+              }
+            </div>
           </div>
 
           <div class="deck-col">
@@ -456,6 +452,49 @@
               </div>
             </button>
           }
+        </div>
+      </div>
+    </div>
+  }
+
+  <!-- ── Retreat modal ──────────────────────────────────────────────── -->
+  @if (showRetreatModal()) {
+    <div class="modal-overlay">
+      <div class="modal-retreat">
+        <h2 class="modal-retreat__title">Retreat</h2>
+        <p class="modal-retreat__subtitle">
+          Select {{ retreatCost() }} energy card(s) to discard as retreat cost.
+          ({{ selectedEnergiesToDiscard().length }}/{{ retreatCost() }} selected)
+        </p>
+
+        <div class="retreat-energies">
+          @for (energy of activeEnergies(); track $index) {
+            <button
+              class="retreat-energy-option"
+              [class.retreat-energy-option--selected]="selectedEnergiesToDiscard().includes($index.toString())"
+              (click)="toggleRetreatEnergy($index)"
+            >
+              <img
+                class="retreat-energy-option__img"
+                [src]="energy.imageSmall"
+                [alt]="energy.name"
+              />
+              <span class="retreat-energy-option__name">{{ energy.name }}</span>
+            </button>
+          }
+        </div>
+
+        <div class="modal-retreat__actions">
+          <button class="btn btn--ghost" (click)="cancelRetreat()">
+            Cancel
+          </button>
+          <button
+            class="btn btn--accent"
+            [disabled]="!canConfirmRetreat()"
+            (click)="confirmRetreat()"
+          >
+            Confirm Retreat
+          </button>
         </div>
       </div>
     </div>
