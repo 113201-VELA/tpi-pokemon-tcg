@@ -70,6 +70,9 @@ public class BoardState {
     @Builder.Default
     private int pendingAttackSelectionMaxCards = 1;
 
+    @Builder.Default
+    private AttackSelectionType pendingAttackSelectionType = AttackSelectionType.PICK;
+
     public PlayerState getStateFor(String playerId) {
         if (playerId.equals(player1State.getPlayerId())) return player1State;
         if (playerId.equals(player2State.getPlayerId())) return player2State;

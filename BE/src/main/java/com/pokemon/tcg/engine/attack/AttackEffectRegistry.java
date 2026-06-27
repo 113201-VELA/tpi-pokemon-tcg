@@ -1,6 +1,7 @@
 package com.pokemon.tcg.engine.attack;
 
 import com.pokemon.tcg.domain.attack.BeedrillEffect;
+import com.pokemon.tcg.domain.attack.BraixenEffect;
 import com.pokemon.tcg.domain.attack.ChespinEffect;
 import com.pokemon.tcg.domain.attack.ChesnaughtEffect;
 import com.pokemon.tcg.domain.attack.GogoatEffect;
@@ -47,34 +48,37 @@ public class AttackEffectRegistry {
                                 SlugmaEffect slugmaEffect,
                                 MagcargoEffect magcargoEffect,
                                 PansearEffect pansearEffect,
-                                SimisearEffect simisearEffect) {
+                                SimisearEffect simisearEffect,
+                                BraixenEffect braixenEffect) {
         this.effects = Map.ofEntries(
-                Map.entry("weedle|poison sting",          weedleEffect),
-                Map.entry("kakuna|harden",                 kakunaEffect),
-                Map.entry("beedrill|poison jab",           beedrillEffect),
-                Map.entry("beedrill|flash needle",         beedrillEffect),
-                Map.entry("ledian|mach punch",             ledianEffect),
-                Map.entry("volbeat|luring glow",           volbeatEffect),
-                Map.entry("volbeat|signal beam",           volbeatEffect),
-                Map.entry("illumise|pheromation",          illumiseEffect),
-                Map.entry("illumise|quick attack",         illumiseEffect),
-                Map.entry("pansage|leech seed",            pansageEffect),
-                Map.entry("simisage|torment",              simisageEffect),
-                Map.entry("chespin|pin missile",           chespinEffect),
-                Map.entry("quilladin|scrunch",             quilladinEffect),
-                Map.entry("quilladin|wood hammer",         quilladinEffect),
-                Map.entry("chesnaught|touchdown",          chesnaughtEffect),
-                Map.entry("spewpa|stun spore",             spewpaEffect),
-                Map.entry("vivillon|conversion powder",    vivillonEffect),
-                Map.entry("vivillon|colorful wind",        vivillonEffect),
-                Map.entry("skiddo|lead",                   skiddoEffect),
-                Map.entry("gogoat|lead",                   gogoatEffect),
-                Map.entry("gogoat|charge dash",            gogoatEffect),
-                Map.entry("slugma|flamethrower",           slugmaEffect),
-                Map.entry("magcargo|magma mantle",         magcargoEffect),
-                Map.entry("pansear|fireworks",             pansearEffect),
-                Map.entry("simisear|yawn",                 simisearEffect),
-                Map.entry("simisear|flamethrower",         simisearEffect)
+                Map.entry("weedle|poison sting",            weedleEffect),
+                Map.entry("kakuna|harden",                   kakunaEffect),
+                Map.entry("beedrill|poison jab",             beedrillEffect),
+                Map.entry("beedrill|flash needle",           beedrillEffect),
+                Map.entry("ledian|mach punch",               ledianEffect),
+                Map.entry("volbeat|luring glow",             volbeatEffect),
+                Map.entry("volbeat|signal beam",             volbeatEffect),
+                Map.entry("illumise|pheromation",            illumiseEffect),
+                Map.entry("illumise|quick attack",           illumiseEffect),
+                Map.entry("pansage|leech seed",              pansageEffect),
+                Map.entry("simisage|torment",                simisageEffect),
+                Map.entry("chespin|pin missile",             chespinEffect),
+                Map.entry("quilladin|scrunch",               quilladinEffect),
+                Map.entry("quilladin|wood hammer",           quilladinEffect),
+                Map.entry("chesnaught|touchdown",            chesnaughtEffect),
+                Map.entry("spewpa|stun spore",               spewpaEffect),
+                Map.entry("vivillon|conversion powder",      vivillonEffect),
+                Map.entry("vivillon|colorful wind",          vivillonEffect),
+                Map.entry("skiddo|lead",                     skiddoEffect),
+                Map.entry("gogoat|lead",                     gogoatEffect),
+                Map.entry("gogoat|charge dash",              gogoatEffect),
+                Map.entry("slugma|flamethrower",             slugmaEffect),
+                Map.entry("magcargo|magma mantle",           magcargoEffect),
+                Map.entry("pansear|fireworks",               pansearEffect),
+                Map.entry("simisear|yawn",                   simisearEffect),
+                Map.entry("simisear|flamethrower",           simisearEffect),
+                Map.entry("braixen|clairvoyant deck",        braixenEffect),
+                Map.entry("braixen|firetail slap",           braixenEffect)
         );
     }
 

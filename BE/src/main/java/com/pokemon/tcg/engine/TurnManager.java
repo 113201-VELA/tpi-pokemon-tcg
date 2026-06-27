@@ -623,9 +623,28 @@ public class TurnManager {
         String playerId = action.getPlayerId();
         if (!state.getPendingAttackSelectionPlayerId().equals(playerId)) return state;
 
+        AttackSelectionType selectionType = state.getPendingAttackSelectionType() != null
+                ? state.getPendingAttackSelectionType()
+                : AttackSelectionType.PICK;
+
+        BoardState resolved = switch (selectionType) {
+            case PICK    -> handlePickSelection(state, action);
+            case REORDER -> handleReorderSelection(state, action);
+        };
+
+        return resolved.toBuilder()
+                .pendingAttackSelectionKey(null)
+                .pendingAttackSelectionPlayerId(null)
+                .pendingAttackSelectionMaxCards(1)
+                .pendingAttackSelectionType(AttackSelectionType.PICK)
+                .pendingDeckSelectionCardIds(new ArrayList<>())
+                .build();
+    }
+
+    private BoardState handlePickSelection(BoardState state, GameAction action) {
         List<String> chosenCardIds = getChosenCardIds(action);
         List<String> pendingCards  = state.getPendingDeckSelectionCardIds();
-        PlayerState ps             = state.getStateFor(playerId);
+        PlayerState ps             = state.getStateFor(action.getPlayerId());
         int maxCards               = state.getPendingAttackSelectionMaxCards();
 
         List<String> hand = new ArrayList<>(
@@ -648,12 +667,39 @@ public class TurnManager {
         ps.setHand(hand);
         ps.setDeck(deck);
 
-        return state.toBuilder()
-                .pendingAttackSelectionKey(null)
-                .pendingAttackSelectionPlayerId(null)
-                .pendingAttackSelectionMaxCards(1)
-                .pendingDeckSelectionCardIds(new ArrayList<>())
-                .build();
+        return state;
+    }
+
+    private BoardState handleReorderSelection(BoardState state, GameAction action) {
+        List<String> orderedIds   = getOrderedCardIds(action);
+        List<String> pendingCards = state.getPendingDeckSelectionCardIds();
+        PlayerState ps            = state.getStateFor(action.getPlayerId());
+
+        List<String> deck = new ArrayList<>(
+                ps.getDeck() != null ? ps.getDeck() : new ArrayList<>());
+
+        if (pendingCards != null) {
+            pendingCards.forEach(deck::remove);
+        }
+
+        List<String> newTop = new ArrayList<>();
+        for (String cardId : orderedIds) {
+            if (pendingCards != null && pendingCards.contains(cardId)) {
+                newTop.add(cardId);
+            }
+        }
+        if (pendingCards != null) {
+            for (String cardId : pendingCards) {
+                if (!newTop.contains(cardId)) {
+                    newTop.add(cardId);
+                }
+            }
+        }
+
+        deck.addAll(0, newTop);
+        ps.setDeck(deck);
+
+        return state;
     }
 
     private BoardState handleTrainerDrivenSelection(BoardState state, GameAction action) {
@@ -903,6 +949,17 @@ public class TurnManager {
     private List<String> getChosenCardIds(GameAction action) {
         Object raw = action.getPayload() != null
                 ? action.getPayload().get("chosenCardIds")
+                : null;
+        if (raw instanceof List<?> list) {
+            return (List<String>) list;
+        }
+        return List.of();
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<String> getOrderedCardIds(GameAction action) {
+        Object raw = action.getPayload() != null
+                ? action.getPayload().get("orderedCardIds")
                 : null;
         if (raw instanceof List<?> list) {
             return (List<String>) list;
