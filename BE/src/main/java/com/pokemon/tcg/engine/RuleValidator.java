@@ -423,6 +423,21 @@ public class RuleValidator {
                     && state.getTurnFlags().isStadiumPlayedThisTurn()) {
                 return ValidationResult.fail("You can only play one Stadium per turn.");
             }
+
+            // Forest's Curse: if the opponent's Active Pokémon is Trevenant,
+            // Item cards cannot be played.
+            PlayerState opponentState = state.getOpponentState(action.getPlayerId());
+            if (opponentState.getActivePokemon() != null
+                    && subtypes != null && subtypes.contains("Item")) {
+                String opponentCardId = opponentState.getActivePokemon().getCardId();
+                boolean isTrevenant = cardLookupPort.findCardById(opponentCardId)
+                        .map(c -> "Trevenant".equalsIgnoreCase(c.getName()))
+                        .orElse(false);
+                if (isTrevenant) {
+                    return ValidationResult.fail(
+                            "Forest's Curse: you cannot play Item cards while your opponent's Trevenant is Active.");
+                }
+            }
         }
 
         return ValidationResult.ok();
