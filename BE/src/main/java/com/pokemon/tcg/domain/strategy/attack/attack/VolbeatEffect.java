@@ -5,11 +5,18 @@ import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class VolbeatEffect implements AttackEffect {
 
     private static final String LURING_GLOW  = "luring glow";
     private static final String SIGNAL_BEAM  = "signal beam";
+
+    @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("volbeat|luring glow", "volbeat|signal beam");
+    }
 
     @Override
     public void apply(AttackContext ctx) {

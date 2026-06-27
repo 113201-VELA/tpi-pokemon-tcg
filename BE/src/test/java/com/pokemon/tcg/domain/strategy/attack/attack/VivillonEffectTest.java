@@ -28,7 +28,6 @@ class VivillonEffectTest {
 
     private static final String FIRE_ENERGY_ID   = "xy1-133";
     private static final String WATER_ENERGY_ID  = "xy1-134";
-    private static final String GRASS_ENERGY_ID  = "xy1-132";
     private static final String RAINBOW_ID       = "xy1-131";
 
     @BeforeEach

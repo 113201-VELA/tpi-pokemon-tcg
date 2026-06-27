@@ -5,8 +5,15 @@ import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class SimisageEffect implements AttackEffect {
+
+    @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("simisage|torment");
+    }
 
     @Override
     public void apply(AttackContext ctx) {

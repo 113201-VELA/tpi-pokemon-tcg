@@ -1,7 +1,6 @@
-package com.pokemon.tcg.engine.ability;
+package com.pokemon.tcg.domain.strategy.ability;
 
 import com.pokemon.tcg.domain.strategy.ability.ability.ChesnaughtAbility;
-import com.pokemon.tcg.domain.strategy.ability.PassiveAbilityRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 

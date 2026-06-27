@@ -1,12 +1,13 @@
-package com.pokemon.tcg.engine.attack;
+package com.pokemon.tcg.domain.strategy.attack;
 
-import com.pokemon.tcg.domain.strategy.attack.attack.*;
-import com.pokemon.tcg.domain.strategy.attack.AttackEffectRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.List;
+
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 class AttackEffectRegistryTest {
 
@@ -14,19 +15,16 @@ class AttackEffectRegistryTest {
 
     @BeforeEach
     void setUp() {
-        registry = new AttackEffectRegistry(
-                mock(WeedleEffect.class),
-                mock(KakunaEffect.class),
-                mock(BeedrillEffect.class),
-                mock(LedianEffect.class),
-                mock(VolbeatEffect.class),
-                mock(IllumiseEffect.class),
-                mock(PansageEffect.class),
-                mock(SimisageEffect.class),
-                mock(ChespinEffect.class),
-                mock(QuilladinEffect.class),
-                mock(ChesnaughtEffect.class)
-        );
+        AttackEffect weedleEffect = mock(AttackEffect.class);
+        when(weedleEffect.getSupportedAttacks()).thenReturn(List.of("weedle|poison sting"));
+
+        AttackEffect beedrillEffect = mock(AttackEffect.class);
+        when(beedrillEffect.getSupportedAttacks()).thenReturn(List.of("beedrill|poison jab", "beedrill|flash needle"));
+
+        AttackEffect chesnaughtEffect = mock(AttackEffect.class);
+        when(chesnaughtEffect.getSupportedAttacks()).thenReturn(List.of("chesnaught|touchdown"));
+
+        registry = new AttackEffectRegistry(List.of(weedleEffect, beedrillEffect, chesnaughtEffect));
     }
 
     @Test

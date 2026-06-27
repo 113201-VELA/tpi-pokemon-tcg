@@ -6,6 +6,8 @@ import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class SpewpaEffect implements AttackEffect {
 
@@ -13,6 +15,11 @@ public class SpewpaEffect implements AttackEffect {
 
     public SpewpaEffect(CoinFlipService coinFlipService) {
         this.coinFlipService = coinFlipService;
+    }
+
+    @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("spewpa|stun spore");
     }
 
     @Override

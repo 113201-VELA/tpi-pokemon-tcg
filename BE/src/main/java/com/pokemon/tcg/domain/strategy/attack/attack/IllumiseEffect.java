@@ -30,6 +30,11 @@ public class IllumiseEffect implements AttackEffect {
     }
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("illumise|pheromation", "illumise|quick attack");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         String attackName = ctx.getAttackName() != null
                 ? ctx.getAttackName().toLowerCase()

@@ -26,6 +26,11 @@ public class BraixenEffect implements AttackEffect {
     }
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("braixen|clairvoyant deck", "braixen|firetail slap");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         String attackName = ctx.getAttackName() != null
                 ? ctx.getAttackName().toLowerCase()

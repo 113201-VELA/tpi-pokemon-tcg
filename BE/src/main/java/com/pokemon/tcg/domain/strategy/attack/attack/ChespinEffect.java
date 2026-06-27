@@ -23,6 +23,11 @@ public class ChespinEffect implements AttackEffect {
     }
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("chespin|pin missile");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         int heads = 0;
         for (int i = 0; i < COIN_FLIPS; i++) {

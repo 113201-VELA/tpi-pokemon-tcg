@@ -5,10 +5,17 @@ import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class PansageEffect implements AttackEffect {
 
     private static final int HEAL_COUNTERS = 1;
+
+    @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("pansage|leech seed");
+    }
 
     @Override
     public void apply(AttackContext ctx) {

@@ -14,6 +14,11 @@ import java.util.List;
 public class KakunaEffect implements AttackEffect {
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("kakuna|harden");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         String attackerId = ctx.getAction().getPlayerId();
         PlayerState attackerState = ctx.getBoardState().getStateFor(attackerId);

@@ -33,6 +33,11 @@ public class VivillonEffect implements AttackEffect {
     }
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("vivillon|conversion powder", "vivillon|colorful wind");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         String attackName = ctx.getAttackName() != null
                 ? ctx.getAttackName().toLowerCase()

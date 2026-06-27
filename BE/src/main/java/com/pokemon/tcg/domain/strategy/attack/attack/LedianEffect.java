@@ -13,6 +13,11 @@ public class LedianEffect implements AttackEffect {
     private static final int BENCH_DAMAGE_COUNTERS = 1;
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("ledian|mach punch");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         String attackerId    = ctx.getAction().getPlayerId();
         PlayerState opponent = ctx.getBoardState().getOpponentState(attackerId);

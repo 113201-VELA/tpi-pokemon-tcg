@@ -5,10 +5,17 @@ import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
+
 @Component
 public class ChesnaughtEffect implements AttackEffect {
 
     private static final int HEAL_COUNTERS = 2;
+
+    @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("chesnaught|touchdown");
+    }
 
     @Override
     public void apply(AttackContext ctx) {

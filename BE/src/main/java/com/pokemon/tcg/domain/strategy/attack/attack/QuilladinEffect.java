@@ -23,6 +23,11 @@ public class QuilladinEffect implements AttackEffect {
     }
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("quilladin|scrunch", "quilladin|wood hammer");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         String attackName = ctx.getAttackName() != null
                 ? ctx.getAttackName().toLowerCase()

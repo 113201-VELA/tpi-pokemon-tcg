@@ -25,6 +25,11 @@ public class BeedrillEffect implements AttackEffect {
     }
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("beedrill|poison jab", "beedrill|flash needle");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         String attackName = ctx.getAttackName() != null
                 ? ctx.getAttackName().toLowerCase()

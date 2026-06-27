@@ -24,6 +24,11 @@ public class MagcargoEffect implements AttackEffect {
     }
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("magcargo|magma mantle");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         if (!getDiscardTop(ctx.getAction())) return;
 

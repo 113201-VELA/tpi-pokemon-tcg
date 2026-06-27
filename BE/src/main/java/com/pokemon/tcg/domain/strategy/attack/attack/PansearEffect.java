@@ -12,6 +12,11 @@ import java.util.List;
 public class PansearEffect implements AttackEffect {
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("pansear|fireworks");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         String energyToDiscardId = ctx.getAction().getPayloadString("energyToDiscardId");
         if (energyToDiscardId == null) return;

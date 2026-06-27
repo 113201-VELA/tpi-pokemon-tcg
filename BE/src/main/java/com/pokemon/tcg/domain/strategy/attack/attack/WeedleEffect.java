@@ -17,6 +17,11 @@ public class WeedleEffect implements AttackEffect {
     private static final int GRASS_BONUS = 20;
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("weedle|poison sting");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         String attackerId = ctx.getAction().getPlayerId();
         PlayerState defenderState = ctx.getBoardState().getOpponentState(attackerId);

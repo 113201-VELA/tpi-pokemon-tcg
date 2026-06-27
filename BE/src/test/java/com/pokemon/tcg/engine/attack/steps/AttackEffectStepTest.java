@@ -41,8 +41,12 @@ class AttackEffectStepTest {
 
     @Test
     void execute_shouldApplyEffect_whenRegisteredForCardAndAttack() {
-        AttackEffect mockEffect = ctx ->
-                ctx.getModifiers().add(new DamageModifier("test", 20, true));
+        AttackEffect mockEffect = mock(AttackEffect.class);
+        doAnswer(ctxInvocation -> {
+            AttackContext ctx = ctxInvocation.getArgument(0);
+            ctx.getModifiers().add(new DamageModifier("test", 20, true));
+            return null;
+        }).when(mockEffect).apply(any());
 
         when(cardLookupPort.findCardById("xy1-3"))
                 .thenReturn(Optional.of(pokemonCard("xy1-3", "Weedle")));

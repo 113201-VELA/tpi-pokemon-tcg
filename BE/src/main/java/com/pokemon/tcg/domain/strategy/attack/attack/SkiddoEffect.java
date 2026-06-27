@@ -26,6 +26,11 @@ public class SkiddoEffect implements AttackEffect {
     }
 
     @Override
+    public List<String> getSupportedAttacks() {
+        return List.of("skiddo|lead");
+    }
+
+    @Override
     public void apply(AttackContext ctx) {
         if (coinFlipService.flip() != CoinResult.HEADS) return;
 
