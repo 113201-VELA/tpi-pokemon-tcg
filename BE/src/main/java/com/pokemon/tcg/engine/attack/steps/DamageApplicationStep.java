@@ -123,6 +123,9 @@ public class DamageApplicationStep implements AttackStep {
         if (defender.getActiveEffects().contains(PokemonEffect.HARDEN) && finalDamage <= 60) {
             return 0;
         }
+        if (defender.getActiveEffects().contains(PokemonEffect.DAMAGE_REDUCED_20)) {
+            finalDamage = Math.max(0, finalDamage - 20);
+        }
         return finalDamage;
     }
 }
