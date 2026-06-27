@@ -380,6 +380,26 @@ public class TurnManager {
 
         evolvePokemon(ps, targetId, cardId);
 
+        // If the evolution card is a MEGA, the turn ends immediately
+        boolean isMega = cardLookupPort.findCardById(cardId)
+                .map(card -> card.getSubtypes() != null && card.getSubtypes().contains("MEGA"))
+                .orElse(false);
+
+        if (isMega) {
+            String opponentId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
+                    ? state.getPlayer2State().getPlayerId()
+                    : state.getPlayer1State().getPlayerId();
+
+            state = processBetweenTurns(state);
+
+            return state.toBuilder()
+                    .currentPlayerId(opponentId)
+                    .turnPhase(TurnPhase.DRAW)
+                    .turnNumber(state.getTurnNumber() + 1)
+                    .turnFlags(TurnFlags.fresh())
+                    .build();
+        }
+
         return state;
     }
 

@@ -108,21 +108,20 @@ public class PostDamageEffectStep implements AttackStep {
         defenderState.setDiscard(discard);
         defenderState.setActivePokemon(null);
 
-        // Attacker takes one prize card into their hand
+        // Attacker takes prize cards — 2 for EX/MEGA, 1 for normal Pokémon
+        int prizesToTake = resolvePrizeCount(knockedOut.getCardId());
         List<String> prizes = new ArrayList<>(
                 attackerState.getPrizes() != null
                         ? attackerState.getPrizes() : new ArrayList<>());
-        if (!prizes.isEmpty()) {
-            String takenPrize = prizes.remove(0);
-            attackerState.setPrizes(prizes);
+        List<String> hand = new ArrayList<>(
+                attackerState.getHand() != null
+                        ? attackerState.getHand() : new ArrayList<>());
 
-            // Prize goes directly to the attacker's hand
-            List<String> hand = new ArrayList<>(
-                    attackerState.getHand() != null
-                            ? attackerState.getHand() : new ArrayList<>());
-            hand.add(takenPrize);
-            attackerState.setHand(hand);
+        for (int i = 0; i < prizesToTake && !prizes.isEmpty(); i++) {
+            hand.add(prizes.remove(0));
         }
+        attackerState.setPrizes(prizes);
+        attackerState.setHand(hand);
 
         ctx.addEvent(GameEvent.builder()
                 .type(GameEventType.POKEMON_KNOCKED_OUT)
@@ -152,5 +151,18 @@ public class PostDamageEffectStep implements AttackStep {
                     .pendingBenchChoicePlayerId(defenderState.getPlayerId())
                     .build());
         }
+    }
+
+    private int resolvePrizeCount(String cardId) {
+        return cardLookupPort.findCardById(cardId)
+                .map(card -> {
+                    List<String> subtypes = card.getSubtypes();
+                    if (subtypes != null &&
+                            (subtypes.contains("EX") || subtypes.contains("MEGA"))) {
+                        return 2;
+                    }
+                    return 1;
+                })
+                .orElse(1);
     }
 }
