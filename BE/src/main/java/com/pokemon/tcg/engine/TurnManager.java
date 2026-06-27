@@ -245,15 +245,21 @@ public class TurnManager {
     private BoardState handleDrawCard(BoardState state, GameAction action) {
         PlayerState ps = state.getStateFor(action.getPlayerId());
 
-        if (ps.getDeck() == null || ps.getDeck().isEmpty()) return state;
+        // The first player does not draw on turn 1 per rulebook
+        boolean isFirstPlayerFirstTurn = state.getTurnNumber() == 1
+                && action.getPlayerId().equals(state.getFirstPlayerId());
 
-        List<String> deck = new ArrayList<>(ps.getDeck());
-        List<String> hand = new ArrayList<>(
-                ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        if (!isFirstPlayerFirstTurn) {
+            if (ps.getDeck() == null || ps.getDeck().isEmpty()) return state;
 
-        hand.add(deck.remove(0));
-        ps.setDeck(deck);
-        ps.setHand(hand);
+            List<String> deck = new ArrayList<>(ps.getDeck());
+            List<String> hand = new ArrayList<>(
+                    ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+
+            hand.add(deck.remove(0));
+            ps.setDeck(deck);
+            ps.setHand(hand);
+        }
 
         // Reset enteredThisTurn for all Pokémon of the current player
         resetEnteredThisTurn(ps);

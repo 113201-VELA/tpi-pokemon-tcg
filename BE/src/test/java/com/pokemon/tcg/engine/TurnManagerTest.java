@@ -444,4 +444,34 @@ class TurnManagerTest {
         assertThat(result.getPlayer1State().getDiscard()).doesNotContain("xy1-121");
         assertThat(result.getPlayer1State().getHand()).doesNotContain("xy1-121");
     }
+
+    @Test
+    void handleDrawCard_firstPlayerShouldNotDrawOnTurn1() {
+        BoardState state = buildState("p1", TurnPhase.DRAW);
+        state = state.toBuilder().turnNumber(1).firstPlayerId("p1").build();
+        state.getPlayer1State().setDeck(new ArrayList<>(List.of("card-a", "card-b")));
+        state.getPlayer1State().setHand(new ArrayList<>());
+
+        GameAction action = buildAction("p1", GameActionType.DRAW_CARD, Map.of());
+        BoardState result = turnManager.advancePhase(state, action);
+
+        // Hand should remain empty — no draw on first turn for first player
+        assertThat(result.getPlayer1State().getHand()).isEmpty();
+        assertThat(result.getPlayer1State().getDeck()).containsExactly("card-a", "card-b");
+        assertThat(result.getTurnPhase()).isEqualTo(TurnPhase.MAIN);
+    }
+
+    @Test
+    void handleDrawCard_secondPlayerShouldDrawNormallyOnTurn2() {
+        BoardState state = buildState("p2", TurnPhase.DRAW);
+        state = state.toBuilder().turnNumber(2).firstPlayerId("p1").build();
+        state.getPlayer2State().setDeck(new ArrayList<>(List.of("card-a", "card-b")));
+        state.getPlayer2State().setHand(new ArrayList<>());
+
+        GameAction action = buildAction("p2", GameActionType.DRAW_CARD, Map.of());
+        BoardState result = turnManager.advancePhase(state, action);
+
+        assertThat(result.getPlayer2State().getHand()).containsExactly("card-a");
+        assertThat(result.getTurnPhase()).isEqualTo(TurnPhase.MAIN);
+    }
 }
