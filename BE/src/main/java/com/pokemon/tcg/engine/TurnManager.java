@@ -255,9 +255,21 @@ public class TurnManager {
         ps.setDeck(deck);
         ps.setHand(hand);
 
+        // Reset enteredThisTurn for all Pokémon of the current player
+        resetEnteredThisTurn(ps);
+
         return state.toBuilder()
                 .turnPhase(TurnPhase.MAIN)
                 .build();
+    }
+
+    private void resetEnteredThisTurn(PlayerState ps) {
+        if (ps.getActivePokemon() != null) {
+            ps.getActivePokemon().setEnteredThisTurn(false);
+        }
+        if (ps.getBench() != null) {
+            ps.getBench().forEach(b -> b.setEnteredThisTurn(false));
+        }
     }
 
     // ─── MAIN ─────────────────────────────────────────────────────────────────

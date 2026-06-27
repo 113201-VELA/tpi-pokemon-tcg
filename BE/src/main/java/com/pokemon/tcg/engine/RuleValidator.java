@@ -315,9 +315,11 @@ public class RuleValidator {
 
         // Find the target Pokémon (Active or Bench)
         boolean targetEnteredThisTurn = false;
+        String targetCardId = null;
         if (ps.getActivePokemon() != null &&
                 ps.getActivePokemon().getInstanceId().equals(targetId)) {
             targetEnteredThisTurn = ps.getActivePokemon().isEnteredThisTurn();
+            targetCardId = ps.getActivePokemon().getCardId();
         } else if (ps.getBench() != null) {
             var benchTarget = ps.getBench().stream()
                     .filter(b -> b.getInstanceId().equals(targetId))
@@ -326,6 +328,7 @@ public class RuleValidator {
                 return ValidationResult.fail("Target Pokémon is not in play.");
             }
             targetEnteredThisTurn = benchTarget.isEnteredThisTurn();
+            targetCardId = benchTarget.getCardId();
         } else {
             return ValidationResult.fail("Target Pokémon is not in play.");
         }
@@ -333,6 +336,22 @@ public class RuleValidator {
         if (targetEnteredThisTurn) {
             return ValidationResult.fail(
                     "You cannot evolve a Pokémon the same turn it entered play.");
+        }
+
+        // Validate that the evolution card actually evolves from the target Pokémon's current form
+        var evolutionCard = cardLookupPort.findCardById(cardId);
+        if (evolutionCard.isPresent() && evolutionCard.get().getEvolvesFrom() != null
+                && targetCardId != null) {
+            String evolvesFrom = evolutionCard.get().getEvolvesFrom();
+            var targetCard = cardLookupPort.findCardById(targetCardId);
+            if (targetCard.isPresent()) {
+                String targetName = targetCard.get().getName();
+                if (!evolvesFrom.equalsIgnoreCase(targetName)) {
+                    return ValidationResult.fail(
+                            evolutionCard.get().getName() + " evolves from "
+                                    + evolvesFrom + ", not " + targetName + ".");
+                }
+            }
         }
 
         return ValidationResult.ok();
