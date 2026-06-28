@@ -3,14 +3,21 @@ package com.pokemon.tcg.integration;
 import com.pokemon.tcg.domain.model.card.Attack;
 import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.domain.model.game.*;
+import com.pokemon.tcg.domain.state.SetupState;
 import com.pokemon.tcg.engine.*;
+import com.pokemon.tcg.fixtures.TestDataBuilder;
 import org.junit.jupiter.api.*;
 import org.springframework.test.context.ActiveProfiles;
+import org.mockito.Mockito;
+import static org.mockito.Mockito.*;
+import static org.mockito.ArgumentMatchers.any;
+import org.mockito.stubbing.Answer;
+import java.util.HashMap;
 
 import java.util.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
-
+import com.pokemon.tcg.domain.state.ActiveState;
 /**
  * Integration tests for the game engine.
  *
@@ -693,5 +700,220 @@ class GameEngineIntegrationTest {
         List<String> list = new ArrayList<>();
         for (int i = 0; i < size; i++) list.add("xy1-item-" + i);
         return list;
+    }
+
+    @Nested
+    @DisplayName("9. Full game flow — sequential actions via facade")
+    class FullGameFlowTests {
+
+        private GameEngineFacadeImpl facade;
+        private TurnManager mockTurnManager;
+        private SetupManager mockSetupManager;
+
+        @BeforeEach
+        void setUpFacade() {
+            mockTurnManager  = mock(TurnManager.class);
+            mockSetupManager = mock(SetupManager.class);
+
+            // Real components for validation and victory detection
+            var cardLookup = new StubCardLookupPort();
+            var validator  = new RuleValidator(cardLookup);
+            var victory    = new VictoryConditionChecker();
+            var statusMgr  = new StatusEffectManager(deterministicCoin);
+
+            // SetupManager.shuffleDeck and drawInitialHand mutate playerState in place
+            doAnswer(inv -> { Collections.shuffle(inv.<PlayerState>getArgument(0).getDeck()); return null; })
+                    .when(mockSetupManager).shuffleDeck(any());
+            doAnswer(inv -> {
+                PlayerState ps = inv.getArgument(0);
+                var deck = new ArrayList<>(ps.getDeck());
+                var hand = new ArrayList<String>();
+                for (int i = 0; i < Math.min(7, deck.size()); i++) hand.add(deck.remove(0));
+                ps.setDeck(deck);
+                ps.setHand(hand);
+                return true;
+            }).when(mockSetupManager).drawInitialHand(any());
+            doAnswer(inv -> {
+                PlayerState ps = inv.getArgument(0);
+                var deck = new ArrayList<>(ps.getDeck());
+                var prizes = new ArrayList<String>();
+                for (int i = 0; i < Math.min(6, deck.size()); i++) prizes.add(deck.remove(0));
+                ps.setDeck(deck);
+                ps.setPrizes(prizes);
+                return ps;
+            }).when(mockSetupManager).setupPrizes(any());
+            when(mockSetupManager.determineFirstPlayer(any(), any()))
+                    .thenReturn(TestDataBuilder.PLAYER_1);
+
+            // TurnManager.advancePhase delegates to our manual state transitions
+            when(mockTurnManager.advancePhase(any(), any())).thenAnswer(inv -> {
+                BoardState state   = inv.getArgument(0);
+                GameAction action  = inv.getArgument(1);
+                return applyAction(state, action);
+            });
+
+            // ActiveState and SetupState are the real handlers — we need to provide them
+            var activeState = new ActiveState(mockTurnManager);
+            var setupState = new SetupState(mockTurnManager);
+
+            facade = new GameEngineFacadeImpl(
+                    mockSetupManager, mockTurnManager, validator, victory, statusMgr,
+                    List.of(activeState, setupState)
+            );
+        }
+
+        /**
+         * Simulates minimal state transitions for the stub TurnManager.
+         * Only the actions used in the flow test are handled.
+         */
+        private BoardState applyAction(BoardState state, GameAction action) {
+            return switch (action.getType()) {
+                case DRAW_CARD -> state.toBuilder().turnPhase(TurnPhase.MAIN).build();
+                case END_TURN  -> {
+                    String next = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
+                            ? state.getPlayer2State().getPlayerId()
+                            : state.getPlayer1State().getPlayerId();
+                    yield state.toBuilder()
+                            .currentPlayerId(next)
+                            .turnPhase(TurnPhase.DRAW)
+                            .turnNumber(state.getTurnNumber() + 1)
+                            .turnFlags(TurnFlags.fresh())
+                            .build();
+                }
+                default -> state;
+            };
+        }
+
+        @Test
+        @DisplayName("Full flow: initialize → setup → draw → end turns → victory by prizes")
+        void fullGameFlow_victoryByPrizes() {
+            // --- Initialize ---
+            var p1State = TestDataBuilder.playerState(
+                    TestDataBuilder.PLAYER_1, new ArrayList<>(), buildList(60));
+            var p2State = TestDataBuilder.playerState(
+                    TestDataBuilder.PLAYER_2, new ArrayList<>(), buildList(60));
+
+            var initResult = facade.initializeGame(TestDataBuilder.GAME_ID, p1State, p2State);
+            assertThat(initResult.newState().getGameState()).isEqualTo(GameState.SETUP);
+            assertThat(initResult.events()).anyMatch(e -> e.getType() == GameEventType.GAME_STARTED);
+
+            // --- Manually advance to ACTIVE with 0 prizes for p1 (simulates all taken) ---
+            var activeBoard = initResult.newState().toBuilder()
+                    .gameState(GameState.ACTIVE)
+                    .turnPhase(TurnPhase.DRAW)
+                    .currentPlayerId(TestDataBuilder.PLAYER_1)
+                    .turnNumber(1)
+                    .build();
+
+            // Set p1 prizes to empty (all taken) and p2 to have some remaining
+            activeBoard.getPlayer1State().setPrizes(new ArrayList<>());
+            activeBoard.getPlayer2State().setPrizes(buildList(3));
+
+            // Place active Pokémon for both players so the board is valid
+            activeBoard.getPlayer1State().setActivePokemon(buildActivePokemon(0, new HashSet<>()));
+            activeBoard.getPlayer2State().setActivePokemon(buildActivePokemon(0, new HashSet<>()));
+
+            // --- P1 draws — victory should be detected immediately ---
+            var drawAction = GameAction.builder()
+                    .type(GameActionType.DRAW_CARD)
+                    .playerId(TestDataBuilder.PLAYER_1)
+                    .payload(new HashMap<>())
+                    .build();
+
+            var result = facade.processAction(activeBoard, drawAction);
+
+            // Victory condition: p1 has 0 prizes → p1 wins
+            assertThat(result.newState().getGameState()).isEqualTo(GameState.FINISHED);
+            assertThat(result.events()).anyMatch(e -> e.getType() == GameEventType.GAME_OVER
+                    && TestDataBuilder.PLAYER_1.equals(e.getPlayerId()));
+        }
+
+        @Test
+        @DisplayName("Full flow: invalid action is rejected and game continues")
+        void fullGameFlow_invalidActionRejected() {
+            var p1 = buildPlayerState(TestDataBuilder.PLAYER_1, 3, 20);
+            var p2 = buildPlayerState(TestDataBuilder.PLAYER_2, 3, 20);
+            var board = buildActiveBoard(p1, p2); // MAIN phase
+
+            // Try to draw during MAIN phase — invalid
+            var invalidAction = GameAction.builder()
+                    .type(GameActionType.DRAW_CARD)
+                    .playerId(TestDataBuilder.PLAYER_1)
+                    .payload(new HashMap<>())
+                    .build();
+
+            var result = facade.processAction(board, invalidAction);
+
+            // State unchanged, error event emitted
+            assertThat(result.newState().getGameState()).isEqualTo(GameState.ACTIVE);
+            assertThat(result.events()).anyMatch(e ->
+                    e.getType() == GameEventType.TURN_ENDED
+                            && e.getData().containsKey("error"));
+        }
+
+        @Test
+        @DisplayName("Full flow: out-of-turn action is rejected")
+        void fullGameFlow_outOfTurnActionRejected() {
+            var p1 = buildPlayerState(TestDataBuilder.PLAYER_1, 3, 20);
+            var p2 = buildPlayerState(TestDataBuilder.PLAYER_2, 3, 20);
+            var board = buildActiveBoard(p1, p2); // p1's turn
+
+            // P2 tries to act out of turn
+            var outOfTurnAction = GameAction.builder()
+                    .type(GameActionType.END_TURN)
+                    .playerId(TestDataBuilder.PLAYER_2)
+                    .payload(new HashMap<>())
+                    .build();
+
+            var result = facade.processAction(board, outOfTurnAction);
+
+            assertThat(result.newState().getGameState()).isEqualTo(GameState.ACTIVE);
+            assertThat(result.events()).anyMatch(e ->
+                    e.getType() == GameEventType.TURN_ENDED
+                            && e.getData().containsKey("error"));
+        }
+
+        @Test
+        @DisplayName("Full flow: two consecutive turns advance turn counter")
+        void fullGameFlow_twoTurnsAdvanceTurnCounter() {
+            var p1 = buildPlayerState(TestDataBuilder.PLAYER_1, 3, 20);
+            var p2 = buildPlayerState(TestDataBuilder.PLAYER_2, 3, 20);
+
+            var board = BoardState.builder()
+                    .gameId(TestDataBuilder.GAME_ID)
+                    .gameState(GameState.ACTIVE)
+                    .turnPhase(TurnPhase.DRAW)
+                    .currentPlayerId(TestDataBuilder.PLAYER_1)
+                    .turnNumber(1)
+                    .turnFlags(TurnFlags.fresh())
+                    .pendingEvents(new ArrayList<>())
+                    .player1State(p1)
+                    .player2State(p2)
+                    .build();
+
+            board.getPlayer1State().setActivePokemon(buildActivePokemon(0, new HashSet<>()));
+            board.getPlayer2State().setActivePokemon(buildActivePokemon(0, new HashSet<>()));
+
+            // P1: draw
+            var p1Draw = GameAction.builder()
+                    .type(GameActionType.DRAW_CARD)
+                    .playerId(TestDataBuilder.PLAYER_1)
+                    .payload(new HashMap<>())
+                    .build();
+            var afterDraw = facade.processAction(board, p1Draw);
+            assertThat(afterDraw.newState().getTurnPhase()).isEqualTo(TurnPhase.MAIN);
+
+            // P1: end turn
+            var p1End = GameAction.builder()
+                    .type(GameActionType.END_TURN)
+                    .playerId(TestDataBuilder.PLAYER_1)
+                    .payload(new HashMap<>())
+                    .build();
+            var afterEnd = facade.processAction(afterDraw.newState(), p1End);
+
+            assertThat(afterEnd.newState().getCurrentPlayerId()).isEqualTo(TestDataBuilder.PLAYER_2);
+            assertThat(afterEnd.newState().getTurnNumber()).isEqualTo(2);
+            assertThat(afterEnd.newState().getTurnPhase()).isEqualTo(TurnPhase.DRAW);
+        }
     }
 }
