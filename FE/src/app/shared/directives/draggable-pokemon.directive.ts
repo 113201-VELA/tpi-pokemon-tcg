@@ -8,16 +8,18 @@ import {
 import { DragStateService } from '../services/drag-state.service';
 
 @Directive({
-  selector: '[appDraggableCard]',
+  selector: '[appDraggablePokemon]',
   host: {
     '(dragstart)': 'onDragStart($event)',
-    '(dragend)': 'onDragEnd()',
+    '(dragend)':   'onDragEnd()',
   },
 })
-export class DraggableCardDirective implements OnInit {
+export class DraggablePokemonDirective implements OnInit {
   readonly cardId = input.required<string>();
+  readonly instanceId = input.required<string>();
 
-  static readonly TRANSFER_KEY = 'application/pokemon-card-id';
+  static readonly CARD_KEY     = 'application/pokemon-card-id';
+  static readonly INSTANCE_KEY = 'application/pokemon-instance-id';
 
   private readonly dragState = inject(DragStateService);
 
@@ -29,10 +31,11 @@ export class DraggableCardDirective implements OnInit {
 
   onDragStart(event: DragEvent): void {
     if (!event.dataTransfer) return;
-    event.dataTransfer.setData(DraggableCardDirective.TRANSFER_KEY, this.cardId());
+    event.dataTransfer.setData(DraggablePokemonDirective.CARD_KEY, this.cardId());
+    event.dataTransfer.setData(DraggablePokemonDirective.INSTANCE_KEY, this.instanceId());
     event.dataTransfer.effectAllowed = 'move';
     this.el.nativeElement.style.opacity = '0.5';
-    this.dragState.startCardDrag(this.cardId());
+    this.dragState.startPokemonDrag(this.cardId(), this.instanceId());
   }
 
   onDragEnd(): void {

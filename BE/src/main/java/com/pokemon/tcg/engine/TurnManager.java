@@ -830,7 +830,7 @@ public class TurnManager {
                 .damageCounters(chosen.getDamageCounters())
                 .conditions(new HashSet<>())
                 .activeEffects(new ArrayList<>())
-                .enteredThisTurn(false)
+                .enteredThisTurn(true)
                 .build();
 
         List<BenchPokemon> bench = new ArrayList<>(ps.getBench());

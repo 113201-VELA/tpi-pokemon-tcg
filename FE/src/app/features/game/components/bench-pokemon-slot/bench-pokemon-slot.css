@@ -5,14 +5,15 @@
   flex-direction: column;
   align-items: center;
   cursor: pointer;
+  overflow: hidden;
 }
 
 .card-img-bench {
-  height: 56px;
-  width: auto;
-  max-width: 100%;
+  width: 100%;
+  height: 100%;
   object-fit: cover;
   border-radius: 4px;
+  display: block;
 }
 
 .hp-bar-wrap {

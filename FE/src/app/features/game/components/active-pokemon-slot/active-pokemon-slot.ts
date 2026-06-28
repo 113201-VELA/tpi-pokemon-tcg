@@ -22,6 +22,7 @@ import { CardResponse } from '../../../deck-builder/domain/models/card.models';
       @if (pokemon().card) {
         <img
           class="card-img"
+          [class]="'card-img ' + cardRotationClass()"
           [src]="pokemon().card!.imageSmall"
           [alt]="pokemon().card!.name"
         />
@@ -81,5 +82,13 @@ export class ActivePokemonSlot {
 
   conditionColor(cond: SpecialCondition): string {
     return this.conditionConfig[cond]?.color ?? '#666';
+  }
+
+  cardRotationClass(): string {
+    const conditions = this.pokemon().conditions ?? [];
+    if (conditions.includes('PARALYZED')) return 'card-img--rotated-cw';
+    if (conditions.includes('ASLEEP'))    return 'card-img--rotated-ccw';
+    if (conditions.includes('CONFUSED'))  return 'card-img--rotated-180';
+    return '';
   }
 }

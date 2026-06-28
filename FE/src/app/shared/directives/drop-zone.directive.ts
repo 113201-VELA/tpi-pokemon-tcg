@@ -31,6 +31,12 @@ export class DropZoneDirective {
   /** Emits the card ID of the card dropped onto this zone. */
   readonly cardDropped = output<string>();
 
+  /**
+   * Emits when a Pokémon in play (bench) is dropped onto this zone.
+   * Contains both the card ID and the runtime instance ID.
+   */
+  readonly pokemonDropped = output<{ cardId: string; instanceId: string }>();
+
   constructor(private readonly el: ElementRef<HTMLElement>) {}
 
   onDragOver(event: DragEvent): void {
@@ -51,7 +57,16 @@ export class DropZoneDirective {
 
     const cardId = event.dataTransfer?.getData(
       DraggableCardDirective.TRANSFER_KEY
+    ) || event.dataTransfer?.getData('application/pokemon-card-id');
+
+    const instanceId = event.dataTransfer?.getData(
+      'application/pokemon-instance-id'
     );
-    if (cardId) this.cardDropped.emit(cardId);
+
+    if (instanceId && cardId) {
+      this.pokemonDropped.emit({ cardId, instanceId });
+    } else if (cardId) {
+      this.cardDropped.emit(cardId);
+    }
   }
 }
