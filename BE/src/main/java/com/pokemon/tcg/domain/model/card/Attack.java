@@ -20,7 +20,7 @@ public class Attack {
     private String damage;
     private String text;
 
-    //Added JsonIgnore so Jackson does not serialize these methods.
+    //Added JsonIgnore so Jackson does not serialize these methods
     @JsonIgnore
     public int getBaseDamage() {
         if (damage == null || damage.isBlank()) return 0;
