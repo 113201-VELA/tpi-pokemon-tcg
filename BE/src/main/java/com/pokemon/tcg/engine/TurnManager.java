@@ -267,11 +267,17 @@ public class TurnManager {
         resetEnteredThisTurn(state.getPlayer1State());
         resetEnteredThisTurn(state.getPlayer2State());
 
+        // Clear self-protective effects (HARDEN, INVULNERABLE, etc.) set by this
+        // player during their previous turn — they already served their purpose
+        // protecting through the opponent's turn that just ended.
+        if (ps.getActivePokemon() != null) {
+            clearActiveEffects(ps.getActivePokemon());
+        }
+
         return state.toBuilder()
                 .turnPhase(TurnPhase.MAIN)
                 .build();
     }
-
     private void resetEnteredThisTurn(PlayerState ps) {
         if (ps.getActivePokemon() != null) {
             ps.getActivePokemon().setEnteredThisTurn(false);
@@ -625,11 +631,9 @@ public class TurnManager {
     private BoardState processBetweenTurns(BoardState state) {
         if (state.getPlayer1State().getActivePokemon() != null) {
             statusEffectManager.processBetweenTurns(state.getPlayer1State().getActivePokemon());
-            clearActiveEffects(state.getPlayer1State().getActivePokemon());
         }
         if (state.getPlayer2State().getActivePokemon() != null) {
             statusEffectManager.processBetweenTurns(state.getPlayer2State().getActivePokemon());
-            clearActiveEffects(state.getPlayer2State().getActivePokemon());
         }
         return state;
     }

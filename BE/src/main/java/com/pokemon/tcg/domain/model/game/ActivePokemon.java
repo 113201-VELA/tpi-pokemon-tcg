@@ -45,6 +45,18 @@ public class ActivePokemon {
     @Builder.Default
     private List<EnergyType> types = new ArrayList<>();
 
+    /**
+     * Tracks a self-buff granted by this Pokémon's own attack that applies
+     * only the next time that same attack is used (e.g. Bisharp's Metal Wallop).
+     * Set when the attack is used without a pending boost; consumed and cleared
+     * on the following use. Not reset between turns like activeEffects.
+     */
+    @Builder.Default
+    private String pendingAttackDamageBoostName = null;
+
+    @Builder.Default
+    private int pendingAttackDamageBoostAmount = 0;
+
     public int getCurrentHp(int maxHp) {
         return Math.max(0, maxHp - damageCounters * 10);
     }
