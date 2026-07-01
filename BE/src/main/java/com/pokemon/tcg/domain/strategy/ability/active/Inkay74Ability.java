@@ -24,13 +24,13 @@ import java.util.List;
  * </ul>
  */
 @Component
-public class InkayAbility implements ActiveAbilityEffect {
+public class Inkay74Ability implements ActiveAbilityEffect {
 
     private static final String IDENTIFIER = "inkay|upside-down evolution";
 
     private final CardLookupPort cardLookupPort;
 
-    public InkayAbility(CardLookupPort cardLookupPort) {
+    public Inkay74Ability(CardLookupPort cardLookupPort) {
         this.cardLookupPort = cardLookupPort;
     }
 

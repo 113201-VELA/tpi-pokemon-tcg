@@ -82,7 +82,7 @@ class DamageApplicationStepTest {
 
         step.execute(ctx, chain);
 
-        verify(damageCalculator, never()).calculate(any(), any(), anyInt(), any(), any());
+        verify(damageCalculator, never()).calculate(any(), any(), anyInt(), any(), any(), anyBoolean());
         verify(chain).next(ctx);
     }
 
@@ -92,7 +92,7 @@ class DamageApplicationStepTest {
 
         step.execute(ctx, chain);
 
-        verify(damageCalculator, never()).calculate(any(), any(), anyInt(), any(), any());
+        verify(damageCalculator, never()).calculate(any(), any(), anyInt(), any(), any(), anyBoolean());
         verify(chain).next(ctx);
     }
 
@@ -102,7 +102,7 @@ class DamageApplicationStepTest {
         ActivePokemon defender = pokemon("xy1-2");
         AttackContext ctx = buildCtx(attacker, defender, attack(50));
 
-        when(damageCalculator.calculate(any(), any(), eq(50), any(), any())).thenReturn(50);
+        when(damageCalculator.calculate(any(), any(), eq(50), any(), any(), eq(false))).thenReturn(50);
         when(damageCalculator.toCounters(50)).thenReturn(5);
 
         step.execute(ctx, chain);
@@ -118,7 +118,7 @@ class DamageApplicationStepTest {
         ActivePokemon defender = pokemon("xy1-2");
         AttackContext ctx = buildCtx(attacker, defender, attack(80));
 
-        when(damageCalculator.calculate(any(), any(), eq(80), any(), any())).thenReturn(160);
+        when(damageCalculator.calculate(any(), any(), eq(80), any(), any(), eq(false))).thenReturn(160);
         when(damageCalculator.toCounters(160)).thenReturn(16);
 
         step.execute(ctx, chain);
@@ -135,7 +135,7 @@ class DamageApplicationStepTest {
         defender.setActiveEffects(new ArrayList<>(List.of(PokemonEffect.INVULNERABLE)));
         AttackContext ctx = buildCtx(attacker, defender, attack(80));
 
-        when(damageCalculator.calculate(any(), any(), eq(80), any(), any())).thenReturn(80);
+        when(damageCalculator.calculate(any(), any(), eq(80), any(), any(), eq(false))).thenReturn(80);
         when(damageCalculator.toCounters(0)).thenReturn(0);
 
         step.execute(ctx, chain);
@@ -152,7 +152,7 @@ class DamageApplicationStepTest {
         defender.setActiveEffects(new ArrayList<>(List.of(PokemonEffect.HARDEN)));
         AttackContext ctx = buildCtx(attacker, defender, attack(60));
 
-        when(damageCalculator.calculate(any(), any(), eq(60), any(), any())).thenReturn(60);
+        when(damageCalculator.calculate(any(), any(), eq(60), any(), any(), eq(false))).thenReturn(60);
         when(damageCalculator.toCounters(0)).thenReturn(0);
 
         step.execute(ctx, chain);
@@ -167,7 +167,7 @@ class DamageApplicationStepTest {
         defender.setActiveEffects(new ArrayList<>(List.of(PokemonEffect.HARDEN)));
         AttackContext ctx = buildCtx(attacker, defender, attack(70));
 
-        when(damageCalculator.calculate(any(), any(), eq(70), any(), any())).thenReturn(70);
+        when(damageCalculator.calculate(any(), any(), eq(70), any(), any(), eq(false))).thenReturn(70);
         when(damageCalculator.toCounters(70)).thenReturn(7);
 
         step.execute(ctx, chain);
@@ -193,7 +193,7 @@ class DamageApplicationStepTest {
 
         step.execute(ctx, chain);
 
-        verify(damageCalculator, never()).calculate(any(), any(), anyInt(), any(), any());
+        verify(damageCalculator, never()).calculate(any(), any(), anyInt(), any(), any(), anyBoolean());
         verify(chain).next(ctx);
     }
 
@@ -204,11 +204,30 @@ class DamageApplicationStepTest {
         defender.setDamageCounters(3);
         AttackContext ctx = buildCtx(attacker, defender, attack(50));
 
-        when(damageCalculator.calculate(any(), any(), eq(50), any(), any())).thenReturn(50);
+        when(damageCalculator.calculate(any(), any(), eq(50), any(), any(), eq(false))).thenReturn(50);
         when(damageCalculator.toCounters(50)).thenReturn(5);
 
         step.execute(ctx, chain);
 
         assertThat(defender.getDamageCounters()).isEqualTo(8); // 3 + 5
+    }
+
+    // ── ignoreResistance flag (Puncture-style attacks) ──────────────────────────
+
+    @Test
+    void ignoreResistance_shouldSkipResistanceCalculation() {
+        ActivePokemon attacker = pokemon("xy1-1");
+        ActivePokemon defender = pokemon("xy1-2");
+        AttackContext ctx = buildCtx(attacker, defender, attack(20));
+        ctx.setIgnoreResistance(true);
+
+        when(damageCalculator.calculate(any(), any(), eq(20), any(), any(), eq(true)))
+                .thenReturn(20);
+        when(damageCalculator.toCounters(20)).thenReturn(2);
+
+        step.execute(ctx, chain);
+
+        assertThat(defender.getDamageCounters()).isEqualTo(2);
+        verify(damageCalculator).calculate(any(), any(), eq(20), any(), any(), eq(true));
     }
 }

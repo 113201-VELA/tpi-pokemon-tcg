@@ -30,6 +30,9 @@ public class AttackContext {
     @Builder.Default
     private boolean ignoreDefenderEffects = false;
 
+    @Builder.Default
+    private boolean ignoreResistance = false;
+
     public void cancel(String reason) {
         this.cancelled = true;
         this.cancellationReason = reason;

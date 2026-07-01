@@ -15,11 +15,11 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
-class InkayAbilityTest {
+class Inkay74AbilityTest {
 
     @Mock private CardLookupPort cardLookupPort;
 
-    private InkayAbility ability;
+    private Inkay74Ability ability;
 
     private static final String PLAYER_1 = "player-1";
     private static final String INKAY_INSTANCE = "inkay-1";
@@ -27,7 +27,7 @@ class InkayAbilityTest {
 
     @BeforeEach
     void setUp() {
-        ability = new InkayAbility(cardLookupPort);
+        ability = new Inkay74Ability(cardLookupPort);
     }
 
     @Test
