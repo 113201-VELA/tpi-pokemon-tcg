@@ -16,13 +16,13 @@ import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
 
 @ExtendWith(MockitoExtension.class)
-class InkayEffectTest {
+class Inkay74EffectTest {
 
-    private InkayEffect effect;
+    private Inkay74Effect effect;
 
     @BeforeEach
     void setUp() {
-        effect = new InkayEffect();
+        effect = new Inkay74Effect();
     }
 
     @Test

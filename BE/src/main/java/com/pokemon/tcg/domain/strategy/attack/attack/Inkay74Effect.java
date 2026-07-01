@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Set;
 
 @Component
-public class InkayEffect implements AttackEffect {
+public class Inkay74Effect implements AttackEffect {
 
     private static final String CONFUSION_WAVE = "confusion wave";
 

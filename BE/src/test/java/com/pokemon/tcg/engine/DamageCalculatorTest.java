@@ -212,4 +212,36 @@ class DamageCalculatorTest {
                 .conditions(new HashSet<>())
                 .build();
     }
+
+    // ── ignoreResistance flag (Puncture-style attacks) ─────────────────────────
+
+    @Test
+    void calculate_shouldSkipResistance_whenIgnoreResistanceTrue() {
+        ActivePokemon attacker = attackerWithType(EnergyType.WATER);
+        ActivePokemon defender = defenderWithResistance(EnergyType.WATER);
+
+        int result = calculator.calculate(attacker, defender, 50, List.of(), null, true);
+
+        assertThat(result).isEqualTo(50); // resistance not applied
+    }
+
+    @Test
+    void calculate_shouldStillApplyWeakness_whenIgnoreResistanceTrue() {
+        ActivePokemon attacker = attackerWithType(EnergyType.FIRE);
+        ActivePokemon defender = defenderWithWeaknessAndResistance(EnergyType.FIRE, EnergyType.FIRE);
+
+        int result = calculator.calculate(attacker, defender, 50, List.of(), null, true);
+
+        assertThat(result).isEqualTo(100); // weakness applied (×2), resistance skipped
+    }
+
+    @Test
+    void calculate_shouldApplyResistance_whenIgnoreResistanceFalse() {
+        ActivePokemon attacker = attackerWithType(EnergyType.WATER);
+        ActivePokemon defender = defenderWithResistance(EnergyType.WATER);
+
+        int result = calculator.calculate(attacker, defender, 50, List.of(), null, false);
+
+        assertThat(result).isEqualTo(30); // same as the existing 5-arg overload behavior
+    }
 }

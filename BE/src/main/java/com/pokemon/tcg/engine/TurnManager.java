@@ -557,12 +557,12 @@ public class TurnManager {
         if (ctx.getBoardState().isPendingBenchChoice()) {
             List<GameEvent> pending = new ArrayList<>();
 
-            // Coin flip events primero
+            // Coin flip events goes first
             if (ctx.getEvents() != null) {
                 pending.addAll(ctx.getEvents());
             }
 
-            // Merge con pending events existentes del boardState
+            // Merge with existing pending events from the boardState
             if (ctx.getBoardState().getPendingEvents() != null) {
                 pending.addAll(ctx.getBoardState().getPendingEvents());
             }
@@ -687,12 +687,14 @@ public class TurnManager {
                 .pendingBenchChoicePlayerId(null)
                 .build();
 
-
-
         state = processBetweenTurns(state);
 
+        String opponentId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
+                ? state.getPlayer2State().getPlayerId()
+                : state.getPlayer1State().getPlayerId();
+
         return state.toBuilder()
-                .currentPlayerId(action.getPlayerId())
+                .currentPlayerId(opponentId)
                 .turnPhase(TurnPhase.DRAW)
                 .turnNumber(state.getTurnNumber() + 1)
                 .turnFlags(TurnFlags.fresh())

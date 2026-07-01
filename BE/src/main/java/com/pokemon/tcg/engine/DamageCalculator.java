@@ -63,6 +63,34 @@ public class DamageCalculator {
         return Math.max(0, damage);
     }
 
+    /**
+     * Calculates damage with control over whether Resistance is skipped
+     * (e.g. Puncture: "This attack's damage isn't affected by Resistance").
+     * Weakness and modifiers still apply normally.
+     */
+    public int calculate(ActivePokemon attacker, ActivePokemon defender,
+                         int baseDamage, List<DamageModifier> modifiers,
+                         String activeStadiumCardId, boolean ignoreResistance) {
+        if (baseDamage == 0) return 0;
+
+        int damage = baseDamage;
+
+        damage = applyModifiers(damage, modifiers, true);
+
+        if (!isWeaknessSuppressed(activeStadiumCardId, defender)) {
+            damage = applyWeakness(damage, attacker, defender);
+        }
+
+        if (!ignoreResistance) {
+            damage = applyResistance(damage, attacker, defender);
+        }
+
+        damage = applyModifiers(damage, modifiers, false);
+
+        return Math.max(0, damage);
+    }
+
+
     public int toCounters(int damage) {
         return damage / 10;
     }
