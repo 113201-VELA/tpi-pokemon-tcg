@@ -32,7 +32,7 @@ public class PanpourEffect implements AttackEffect {
         if (!WATER_SPLASH.equals(ctx.getAttackName() != null
                 ? ctx.getAttackName().toLowerCase() : "")) return;
 
-        if (coinFlipService.flip() == CoinResult.HEADS) {
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.HEADS) {
             List<DamageModifier> modifiers = new ArrayList<>(
                     ctx.getModifiers() != null ? ctx.getModifiers() : new ArrayList<>());
             modifiers.add(new DamageModifier("water-splash-heads", HEADS_BONUS, true));

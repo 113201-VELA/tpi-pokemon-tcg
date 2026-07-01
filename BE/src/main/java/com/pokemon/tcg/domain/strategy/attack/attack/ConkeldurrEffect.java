@@ -78,7 +78,7 @@ public class ConkeldurrEffect implements AttackEffect {
      * to the opponent's Active Pokémon.
      */
     private void applyDynamicPunch(AttackContext ctx) {
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         String attackerId    = ctx.getAction().getPlayerId();
         PlayerState opponent = ctx.getBoardState().getOpponentState(attackerId);

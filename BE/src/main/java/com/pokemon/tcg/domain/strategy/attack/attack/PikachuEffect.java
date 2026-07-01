@@ -43,7 +43,7 @@ public class PikachuEffect implements AttackEffect {
 
     /** Nuzzle: flip a coin. On heads, Paralyze the opponent's Active Pokémon. */
     private void applyNuzzle(AttackContext ctx) {
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         String attackerId    = ctx.getAction().getPlayerId();
         PlayerState opponent = ctx.getBoardState().getOpponentState(attackerId);
@@ -58,7 +58,7 @@ public class PikachuEffect implements AttackEffect {
 
     /** Quick Attack: flip a coin. On heads, do 10 more damage. */
     private void applyQuickAttack(AttackContext ctx) {
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         List<DamageModifier> modifiers = new ArrayList<>(
                 ctx.getModifiers() != null ? ctx.getModifiers() : new ArrayList<>());

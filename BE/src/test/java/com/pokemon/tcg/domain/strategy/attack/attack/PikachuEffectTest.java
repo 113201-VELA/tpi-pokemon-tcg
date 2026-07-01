@@ -34,7 +34,7 @@ class PikachuEffectTest {
 
     @Test
     void nuzzle_onHeads_shouldParalyzeDefender() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("nuzzle", new HashSet<>());
 
         effect.apply(ctx);
@@ -46,7 +46,7 @@ class PikachuEffectTest {
 
     @Test
     void nuzzle_onHeads_shouldReplaceAsleep() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("nuzzle",
                 new HashSet<>(Set.of(SpecialCondition.ASLEEP)));
 
@@ -60,7 +60,7 @@ class PikachuEffectTest {
 
     @Test
     void nuzzle_onTails_shouldNotParalyzeDefender() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("nuzzle", new HashSet<>());
 
         effect.apply(ctx);
@@ -72,7 +72,7 @@ class PikachuEffectTest {
 
     @Test
     void nuzzle_shouldNotAffectAttacker() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("nuzzle", new HashSet<>());
 
         effect.apply(ctx);
@@ -85,7 +85,7 @@ class PikachuEffectTest {
 
     @Test
     void quickAttack_onHeads_shouldAdd10Damage() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("quick attack", new HashSet<>());
 
         effect.apply(ctx);
@@ -96,7 +96,7 @@ class PikachuEffectTest {
 
     @Test
     void quickAttack_onTails_shouldNotAddDamage() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("quick attack", new HashSet<>());
 
         effect.apply(ctx);
@@ -106,7 +106,7 @@ class PikachuEffectTest {
 
     @Test
     void quickAttack_shouldNotAffectOpponentConditions() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("quick attack", new HashSet<>());
 
         effect.apply(ctx);

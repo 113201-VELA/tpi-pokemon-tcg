@@ -55,7 +55,7 @@ public class BeedrillEffect implements AttackEffect {
     private void applyFlashNeedle(AttackContext ctx) {
         int heads = 0;
         for (int i = 0; i < COIN_FLIPS; i++) {
-            if (coinFlipService.flip() == CoinResult.HEADS) {
+            if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.HEADS) {
                 heads++;
             }
         }

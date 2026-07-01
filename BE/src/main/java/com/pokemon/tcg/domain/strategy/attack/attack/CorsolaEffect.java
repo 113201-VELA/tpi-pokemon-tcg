@@ -70,7 +70,7 @@ public class CorsolaEffect implements AttackEffect {
      */
     private void applySpinyRush(AttackContext ctx) {
         int heads = 0;
-        while (coinFlipService.flip() == CoinResult.HEADS) {
+        while (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.HEADS) {
             heads++;
         }
 

@@ -132,7 +132,7 @@ class ConkeldurrEffectTest {
     private AttackContext buildContext(String attackName,
                                        Set<SpecialCondition> defenderConditions,
                                        CoinResult coinResult) {
-        when(coinFlipService.flip()).thenReturn(coinResult);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(coinResult);
 
         ActivePokemon conkeldurr = ActivePokemon.builder()
                 .instanceId("conkeldurr-1")

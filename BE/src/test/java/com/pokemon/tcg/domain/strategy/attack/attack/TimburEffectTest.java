@@ -32,7 +32,7 @@ class TimburEffectTest {
 
     @Test
     void pummel_shouldAdd20Modifier_onHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);
@@ -44,7 +44,7 @@ class TimburEffectTest {
 
     @Test
     void pummel_shouldNotAddModifier_onTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);
@@ -54,7 +54,7 @@ class TimburEffectTest {
 
     @Test
     void pummel_shouldFlipExactlyOneCoin() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);

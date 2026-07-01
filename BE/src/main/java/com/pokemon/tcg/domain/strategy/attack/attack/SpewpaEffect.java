@@ -24,7 +24,7 @@ public class SpewpaEffect implements AttackEffect {
 
     @Override
     public void apply(AttackContext ctx) {
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         String attackerId     = ctx.getAction().getPlayerId();
         PlayerState opponent  = ctx.getBoardState().getOpponentState(attackerId);

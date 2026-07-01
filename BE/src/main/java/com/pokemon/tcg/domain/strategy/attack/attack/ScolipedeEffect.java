@@ -46,7 +46,7 @@ public class ScolipedeEffect implements AttackEffect {
     private void applyRandomPeck(AttackContext ctx) {
         int heads = 0;
         for (int i = 0; i < COIN_FLIPS; i++) {
-            if (coinFlipService.flip() == CoinResult.HEADS) heads++;
+            if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.HEADS) heads++;
         }
 
         if (heads > 0) {

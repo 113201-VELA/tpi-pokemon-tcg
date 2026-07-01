@@ -41,7 +41,7 @@ public class QuilladinEffect implements AttackEffect {
     }
 
     private void applyScrunch(AttackContext ctx) {
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         String attackerId         = ctx.getAction().getPlayerId();
         PlayerState attackerState = ctx.getBoardState().getStateFor(attackerId);

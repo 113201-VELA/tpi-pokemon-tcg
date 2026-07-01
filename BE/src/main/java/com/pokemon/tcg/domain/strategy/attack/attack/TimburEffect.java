@@ -30,7 +30,7 @@ public class TimburEffect implements AttackEffect {
 
     @Override
     public void apply(AttackContext ctx) {
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         List<DamageModifier> modifiers = new ArrayList<>(
                 ctx.getModifiers() != null ? ctx.getModifiers() : new ArrayList<>());

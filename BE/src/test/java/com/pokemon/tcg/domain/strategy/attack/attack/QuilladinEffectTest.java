@@ -16,6 +16,8 @@ import java.util.List;
 
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,7 +35,7 @@ class QuilladinEffectTest {
 
     @Test
     void scrunch_shouldApplyInvulnerable_whenHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("Scrunch", 0);
 
         effect.apply(ctx);
@@ -45,7 +47,7 @@ class QuilladinEffectTest {
 
     @Test
     void scrunch_shouldNotApplyInvulnerable_whenTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("Scrunch", 0);
 
         effect.apply(ctx);
@@ -57,7 +59,7 @@ class QuilladinEffectTest {
 
     @Test
     void scrunch_shouldNotDuplicateInvulnerable_whenAlreadyActive() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("Scrunch", 0);
         ctx.getBoardState().getStateFor(PLAYER_1)
                 .getActivePokemon().getActiveEffects().add(PokemonEffect.INVULNERABLE);
@@ -71,7 +73,7 @@ class QuilladinEffectTest {
 
     @Test
     void scrunch_shouldNotAddDamageCounters() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("Scrunch", 0);
 
         effect.apply(ctx);
@@ -82,7 +84,7 @@ class QuilladinEffectTest {
 
     @Test
     void scrunch_shouldNotAffectDefender() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("Scrunch", 0);
 
         effect.apply(ctx);

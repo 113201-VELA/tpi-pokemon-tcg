@@ -37,7 +37,7 @@ class KrokorokEffectTest {
 
     @Test
     void crunch_shouldDiscardEnergyFromDefender_onHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("crunch", DARKNESS_ENERGY);
 
         effect.apply(ctx);
@@ -49,7 +49,7 @@ class KrokorokEffectTest {
 
     @Test
     void crunch_shouldMoveEnergyToOpponentDiscard_onHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("crunch", DARKNESS_ENERGY);
 
         effect.apply(ctx);
@@ -60,7 +60,7 @@ class KrokorokEffectTest {
 
     @Test
     void crunch_shouldDoNothing_whenEnergyNotAttached_onHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("crunch", WATER_ENERGY);
 
         effect.apply(ctx);
@@ -74,7 +74,7 @@ class KrokorokEffectTest {
 
     @Test
     void crunch_shouldNotDiscardEnergy_onTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("crunch", DARKNESS_ENERGY);
 
         effect.apply(ctx);
@@ -86,7 +86,7 @@ class KrokorokEffectTest {
 
     @Test
     void crunch_shouldNotAddModifiers() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("crunch", DARKNESS_ENERGY);
 
         effect.apply(ctx);

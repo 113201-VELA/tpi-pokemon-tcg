@@ -20,6 +20,8 @@ import java.util.Optional;
 
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -40,7 +42,7 @@ class SkiddoEffectTest {
 
     @Test
     void apply_shouldDoNothing_whenTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext(List.of(SUPPORTER_ID));
 
         effect.apply(ctx);
@@ -50,7 +52,7 @@ class SkiddoEffectTest {
 
     @Test
     void apply_shouldSetPendingAttackSelection_whenHeadsAndSupporterInDeck() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         when(cardLookupPort.findCardById(SUPPORTER_ID))
                 .thenReturn(Optional.of(supporterCard(SUPPORTER_ID)));
         AttackContext ctx = buildContext(List.of(SUPPORTER_ID));
@@ -66,7 +68,7 @@ class SkiddoEffectTest {
 
     @Test
     void apply_shouldIncludeOnlySupporters_inPendingCards() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         when(cardLookupPort.findCardById(SUPPORTER_ID))
                 .thenReturn(Optional.of(supporterCard(SUPPORTER_ID)));
         when(cardLookupPort.findCardById(NON_SUPPORTER_ID))
@@ -81,7 +83,7 @@ class SkiddoEffectTest {
 
     @Test
     void apply_shouldDoNothing_whenHeadsButNoSupportersInDeck() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         when(cardLookupPort.findCardById(NON_SUPPORTER_ID))
                 .thenReturn(Optional.of(nonSupporterCard(NON_SUPPORTER_ID)));
         AttackContext ctx = buildContext(List.of(NON_SUPPORTER_ID));
@@ -93,7 +95,7 @@ class SkiddoEffectTest {
 
     @Test
     void apply_shouldDoNothing_whenHeadsButDeckIsEmpty() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(List.of());
 
         effect.apply(ctx);
@@ -103,7 +105,7 @@ class SkiddoEffectTest {
 
     @Test
     void apply_shouldNotAddModifiers() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         when(cardLookupPort.findCardById(SUPPORTER_ID))
                 .thenReturn(Optional.of(supporterCard(SUPPORTER_ID)));
         AttackContext ctx = buildContext(List.of(SUPPORTER_ID));

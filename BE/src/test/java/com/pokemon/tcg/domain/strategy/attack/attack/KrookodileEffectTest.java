@@ -34,7 +34,7 @@ class KrookodileEffectTest {
 
     @Test
     void bother_shouldAddNoSupporterToDefender_onHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("bother", true);
 
         effect.apply(ctx);
@@ -46,7 +46,7 @@ class KrookodileEffectTest {
 
     @Test
     void bother_shouldNotDuplicateNoSupporter_whenAlreadyPresent() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("bother", true);
         ctx.getBoardState().getOpponentState(PLAYER_1).getActivePokemon()
                 .setActiveEffects(new ArrayList<>(List.of(PokemonEffect.NO_SUPPORTER)));
@@ -59,7 +59,7 @@ class KrookodileEffectTest {
 
     @Test
     void bother_shouldNotAffectAttacker_onHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("bother", true);
 
         effect.apply(ctx);
@@ -73,7 +73,7 @@ class KrookodileEffectTest {
 
     @Test
     void bother_shouldNotAddNoSupporter_onTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("bother", true);
 
         effect.apply(ctx);
@@ -85,7 +85,7 @@ class KrookodileEffectTest {
 
     @Test
     void bother_shouldNotAddModifiers() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("bother", true);
 
         effect.apply(ctx);

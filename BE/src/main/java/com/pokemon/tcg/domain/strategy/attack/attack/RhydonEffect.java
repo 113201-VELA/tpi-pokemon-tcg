@@ -52,8 +52,8 @@ public class RhydonEffect implements AttackEffect {
      * If the opponent's deck runs out, stop discarding.
      */
     private void applyMadMountain(AttackContext ctx) {
-        CoinResult first  = coinFlipService.flip();
-        CoinResult second = coinFlipService.flip();
+        CoinResult first  = coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId());
+        CoinResult second = coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId());
 
         if (first != CoinResult.HEADS || second != CoinResult.HEADS) return;
 

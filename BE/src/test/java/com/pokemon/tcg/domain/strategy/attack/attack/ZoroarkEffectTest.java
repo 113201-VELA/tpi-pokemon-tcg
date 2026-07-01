@@ -16,6 +16,8 @@ import java.util.List;
 
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -55,7 +57,7 @@ class ZoroarkEffectTest {
 
     @Test
     void nightClaw_shouldDiscardTwoEnergies_whenTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("Night Claw", List.of());
         ctx.getBoardState().getStateFor(PLAYER_1).getActivePokemon()
                 .setAttachedEnergyIds(new ArrayList<>(List.of("xy1-132", "xy1-132", "xy1-133")));
@@ -69,7 +71,7 @@ class ZoroarkEffectTest {
 
     @Test
     void nightClaw_shouldDiscardOnlyAvailableEnergies_whenFewerThanTwo() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("Night Claw", List.of());
         ctx.getBoardState().getStateFor(PLAYER_1).getActivePokemon()
                 .setAttachedEnergyIds(new ArrayList<>(List.of("xy1-132")));
@@ -83,7 +85,7 @@ class ZoroarkEffectTest {
 
     @Test
     void nightClaw_shouldNotDiscardEnergy_whenHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("Night Claw", List.of());
         ctx.getBoardState().getStateFor(PLAYER_1).getActivePokemon()
                 .setAttachedEnergyIds(new ArrayList<>(List.of("xy1-132", "xy1-132")));

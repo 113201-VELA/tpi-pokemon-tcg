@@ -55,7 +55,7 @@ public class ZoroarkEffect implements AttackEffect {
     }
 
     private void applyNightClaw(AttackContext ctx) {
-        if (coinFlipService.flip() == CoinResult.TAILS) {
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.TAILS) {
             String attackerId = ctx.getAction().getPlayerId();
             PlayerState attackerState = ctx.getBoardState().getStateFor(attackerId);
             ActivePokemon attacker = attackerState.getActivePokemon();

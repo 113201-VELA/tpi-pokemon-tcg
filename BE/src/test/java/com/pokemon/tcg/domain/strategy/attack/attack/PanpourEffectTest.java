@@ -32,7 +32,7 @@ class PanpourEffectTest {
 
     @Test
     void waterSplash_shouldAdd20Damage_onHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("water splash");
 
         effect.apply(ctx);
@@ -43,7 +43,7 @@ class PanpourEffectTest {
 
     @Test
     void waterSplash_shouldNotAddDamage_onTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("water splash");
 
         effect.apply(ctx);

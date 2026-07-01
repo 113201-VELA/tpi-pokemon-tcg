@@ -55,7 +55,7 @@ class RhyperiorEffectTest {
 
     @Test
     void rockBlast_shouldAdd50PerHead_withTwoFightingEnergiesAndTwoHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
         AttackContext ctx = buildContext("rock blast",
                 List.of(FIGHTING_ENERGY_ID, FIGHTING_ENERGY_ID));
 
@@ -68,7 +68,7 @@ class RhyperiorEffectTest {
 
     @Test
     void rockBlast_shouldAdd50_withOneHeadOutOfTwo() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.TAILS);
         AttackContext ctx = buildContext("rock blast",
                 List.of(FIGHTING_ENERGY_ID, FIGHTING_ENERGY_ID));
 
@@ -81,7 +81,7 @@ class RhyperiorEffectTest {
 
     @Test
     void rockBlast_shouldAddNoModifier_whenAllTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS, CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS, CoinResult.TAILS);
         AttackContext ctx = buildContext("rock blast",
                 List.of(FIGHTING_ENERGY_ID, FIGHTING_ENERGY_ID));
 
@@ -92,7 +92,7 @@ class RhyperiorEffectTest {
 
     @Test
     void rockBlast_shouldOnlyCountFightingEnergies() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         // One Fighting + one Colorless — only one coin flip
         AttackContext ctx = buildContext("rock blast",
                 List.of(FIGHTING_ENERGY_ID, OTHER_ENERGY_ID));

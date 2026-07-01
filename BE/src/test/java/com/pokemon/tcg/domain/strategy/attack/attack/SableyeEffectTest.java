@@ -147,7 +147,7 @@ class SableyeEffectTest {
                                        int attackerDeckSize,
                                        String energyToDiscardId,
                                        CoinResult coinResult) {
-        when(coinFlipService.flip()).thenReturn(coinResult);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(coinResult);
 
         ActivePokemon sableye = ActivePokemon.builder()
                 .instanceId("sableye-1")

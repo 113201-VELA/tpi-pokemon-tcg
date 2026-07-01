@@ -73,7 +73,7 @@ public class RhyperiorEffect implements AttackEffect {
 
         int heads = 0;
         for (int i = 0; i < fightingCount; i++) {
-            if (coinFlipService.flip() == CoinResult.HEADS) heads++;
+            if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.HEADS) heads++;
         }
 
         if (heads > 0) {

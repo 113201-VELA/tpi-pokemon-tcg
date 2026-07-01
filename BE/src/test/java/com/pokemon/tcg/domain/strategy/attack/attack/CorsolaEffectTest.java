@@ -102,7 +102,7 @@ class CorsolaEffectTest {
     @Test
     void spinyRush_shouldAdd20Damage_perHead_thenStop() {
         // HEADS, HEADS, TAILS
-        when(coinFlipService.flip())
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString()))
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.TAILS);
@@ -116,7 +116,7 @@ class CorsolaEffectTest {
 
     @Test
     void spinyRush_shouldAdd0Damage_whenFirstFlipIsTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("spiny rush", 0, new HashSet<>());
 
         effect.apply(ctx);
@@ -126,7 +126,7 @@ class CorsolaEffectTest {
 
     @Test
     void spinyRush_shouldAdd100Damage_when5Heads() {
-        when(coinFlipService.flip())
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString()))
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
@@ -143,7 +143,7 @@ class CorsolaEffectTest {
 
     @Test
     void spinyRush_shouldStopFlipping_afterFirstTails() {
-        when(coinFlipService.flip())
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString()))
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("spiny rush", 0, new HashSet<>());

@@ -34,7 +34,7 @@ class ElectrodeEffectTest {
 
     @Test
     void eerieImpulse_onHeads_shouldDiscardEnergyFromOpponentActive() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(true, false, "def-1", WATER_ENERGY);
 
         effect.apply(ctx);
@@ -46,7 +46,7 @@ class ElectrodeEffectTest {
 
     @Test
     void eerieImpulse_onHeads_shouldDiscardEnergyFromOpponentBench() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(false, true, "bench-opp-1", WATER_ENERGY);
 
         effect.apply(ctx);
@@ -58,7 +58,7 @@ class ElectrodeEffectTest {
 
     @Test
     void eerieImpulse_onTails_shouldNotDiscardEnergy() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext(true, false, "def-1", WATER_ENERGY);
 
         effect.apply(ctx);
@@ -71,7 +71,7 @@ class ElectrodeEffectTest {
 
     @Test
     void eerieImpulse_shouldDoNothing_whenTargetInstanceIdNull() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(true, false, null, WATER_ENERGY);
 
         effect.apply(ctx);
@@ -83,7 +83,7 @@ class ElectrodeEffectTest {
 
     @Test
     void eerieImpulse_shouldDoNothing_whenEnergyCardIdNull() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(true, false, "def-1", null);
 
         effect.apply(ctx);
@@ -95,7 +95,7 @@ class ElectrodeEffectTest {
 
     @Test
     void eerieImpulse_shouldDoNothing_whenEnergyNotAttachedToTarget() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(true, false, "def-1", "xy1-133"); // wrong energy
 
         effect.apply(ctx);
@@ -107,7 +107,7 @@ class ElectrodeEffectTest {
 
     @Test
     void eerieImpulse_shouldNotAffectAttacker() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(true, false, "def-1", WATER_ENERGY);
 
         effect.apply(ctx);

@@ -34,7 +34,7 @@ class ScolipedeEffectTest {
 
     @Test
     void randomPeck_shouldAdd40Damage_whenBothHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
         AttackContext ctx = buildContext("random peck");
 
         effect.apply(ctx);
@@ -45,7 +45,7 @@ class ScolipedeEffectTest {
 
     @Test
     void randomPeck_shouldAdd20Damage_whenOneHead() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.TAILS);
         AttackContext ctx = buildContext("random peck");
 
         effect.apply(ctx);
@@ -56,7 +56,7 @@ class ScolipedeEffectTest {
 
     @Test
     void randomPeck_shouldAdd0Damage_whenBothTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS, CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS, CoinResult.TAILS);
         AttackContext ctx = buildContext("random peck");
 
         effect.apply(ctx);
@@ -66,7 +66,7 @@ class ScolipedeEffectTest {
 
     @Test
     void randomPeck_shouldFlipExactly2Coins() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("random peck");
 
         effect.apply(ctx);

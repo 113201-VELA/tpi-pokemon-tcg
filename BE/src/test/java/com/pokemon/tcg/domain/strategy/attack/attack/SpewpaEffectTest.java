@@ -16,6 +16,8 @@ import java.util.List;
 
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -33,7 +35,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldParalyzeDefender_whenHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);
@@ -45,7 +47,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldNotParalyzeDefender_whenTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);
@@ -57,7 +59,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldReplaceAsleep_withParalyzed_whenHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
         ctx.getBoardState().getStateFor(PLAYER_2)
                 .getActivePokemon().getConditions().add(SpecialCondition.ASLEEP);
@@ -72,7 +74,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldReplaceConfused_withParalyzed_whenHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
         ctx.getBoardState().getStateFor(PLAYER_2)
                 .getActivePokemon().getConditions().add(SpecialCondition.CONFUSED);
@@ -87,7 +89,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldNotAffectAttacker_whenHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);
@@ -98,7 +100,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldNotAddModifiers() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);

@@ -73,7 +73,7 @@ public class SableyeEffect implements AttackEffect {
      * If the coin is tails or the energy is not attached, nothing happens.
      */
     private void applyRipClaw(AttackContext ctx) {
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         String energyToDiscardId = ctx.getAction().getPayloadString("energyToDiscardId");
         if (energyToDiscardId == null) return;

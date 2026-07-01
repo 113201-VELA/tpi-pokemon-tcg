@@ -17,6 +17,8 @@ import java.util.List;
 
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -34,7 +36,7 @@ class ChespinEffectTest {
 
     @Test
     void apply_shouldAddZeroDamage_whenAllTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);
@@ -44,7 +46,7 @@ class ChespinEffectTest {
 
     @Test
     void apply_shouldAdd10Damage_whenOneHead() {
-        when(coinFlipService.flip())
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString()))
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.TAILS)
                 .thenReturn(CoinResult.TAILS)
@@ -60,7 +62,7 @@ class ChespinEffectTest {
 
     @Test
     void apply_shouldAdd20Damage_whenTwoHeads() {
-        when(coinFlipService.flip())
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString()))
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.TAILS)
@@ -74,7 +76,7 @@ class ChespinEffectTest {
 
     @Test
     void apply_shouldAdd30Damage_whenThreeHeads() {
-        when(coinFlipService.flip())
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString()))
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
@@ -88,7 +90,7 @@ class ChespinEffectTest {
 
     @Test
     void apply_shouldAdd40Damage_whenAllHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);
@@ -99,7 +101,7 @@ class ChespinEffectTest {
 
     @Test
     void apply_shouldPreserveExistingModifiers() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
         ctx.getModifiers().add(new DamageModifier("existing", 10, true));
 
@@ -110,7 +112,7 @@ class ChespinEffectTest {
 
     @Test
     void apply_shouldUseSourceName_pinMissileHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
 
         effect.apply(ctx);

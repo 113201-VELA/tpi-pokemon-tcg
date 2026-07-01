@@ -30,7 +30,7 @@ public class ElectrodeEffect implements AttackEffect {
         if (!EERIE_IMPULSE.equals(ctx.getAttackName() != null
                 ? ctx.getAttackName().toLowerCase() : "")) return;
 
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         String attackerId    = ctx.getAction().getPlayerId();
         PlayerState opponent = ctx.getBoardState().getOpponentState(attackerId);

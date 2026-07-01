@@ -39,7 +39,7 @@ class CloysterEffectTest {
 
     @Test
     void clampCrush_onHeads_shouldParalyzeDefender() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("clamp crush", List.of(WATER_ENERGY));
 
         effect.apply(ctx);
@@ -50,7 +50,7 @@ class CloysterEffectTest {
 
     @Test
     void clampCrush_onHeads_shouldReplaceAsleepWithParalyzed() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("clamp crush", List.of(WATER_ENERGY));
         ctx.getBoardState().getStateFor(PLAYER_2).getActivePokemon()
                 .getConditions().add(SpecialCondition.ASLEEP);
@@ -64,7 +64,7 @@ class CloysterEffectTest {
 
     @Test
     void clampCrush_onHeads_shouldDiscardOneEnergyFromDefender() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("clamp crush", List.of(WATER_ENERGY));
 
         effect.apply(ctx);
@@ -77,7 +77,7 @@ class CloysterEffectTest {
 
     @Test
     void clampCrush_onHeads_shouldKeepRemainingEnergies_whenMultipleAttached() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         String secondEnergy = "xy1-132";
         AttackContext ctx = buildContext("clamp crush", List.of(WATER_ENERGY, secondEnergy));
 
@@ -89,7 +89,7 @@ class CloysterEffectTest {
 
     @Test
     void clampCrush_onHeads_shouldNotDiscardEnergy_whenNoneAttached() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("clamp crush", List.of());
 
         effect.apply(ctx);
@@ -104,7 +104,7 @@ class CloysterEffectTest {
 
     @Test
     void clampCrush_onTails_shouldNotParalyzeDefender() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("clamp crush", List.of(WATER_ENERGY));
 
         effect.apply(ctx);
@@ -115,7 +115,7 @@ class CloysterEffectTest {
 
     @Test
     void clampCrush_onTails_shouldNotDiscardEnergy() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("clamp crush", List.of(WATER_ENERGY));
 
         effect.apply(ctx);
@@ -129,7 +129,7 @@ class CloysterEffectTest {
 
     @Test
     void spikeCannon_shouldAdd150Damage_whenAll5Heads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("spike cannon", List.of());
 
         effect.apply(ctx);
@@ -141,7 +141,7 @@ class CloysterEffectTest {
 
     @Test
     void spikeCannon_shouldAdd0Damage_whenAll5Tails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("spike cannon", List.of());
 
         effect.apply(ctx);
@@ -153,7 +153,7 @@ class CloysterEffectTest {
 
     @Test
     void spikeCannon_shouldAdd90Damage_when3Heads() {
-        when(coinFlipService.flip())
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString()))
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
@@ -169,7 +169,7 @@ class CloysterEffectTest {
 
     @Test
     void spikeCannon_shouldFlipExactly5Coins() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("spike cannon", List.of());
 
         effect.apply(ctx);

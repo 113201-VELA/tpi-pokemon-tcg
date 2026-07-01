@@ -32,7 +32,7 @@ class WhirlipedeEffectTest {
 
     @Test
     void continuousTumble_shouldAdd90Damage_when3Heads() {
-        when(coinFlipService.flip())
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString()))
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.HEADS)
@@ -47,7 +47,7 @@ class WhirlipedeEffectTest {
 
     @Test
     void continuousTumble_shouldAdd0Damage_whenFirstFlipIsTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("continuous tumble");
 
         effect.apply(ctx);
@@ -57,7 +57,7 @@ class WhirlipedeEffectTest {
 
     @Test
     void continuousTumble_shouldStopFlipping_afterFirstTails() {
-        when(coinFlipService.flip())
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString()))
                 .thenReturn(CoinResult.HEADS)
                 .thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("continuous tumble");

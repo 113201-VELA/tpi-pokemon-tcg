@@ -67,7 +67,7 @@ public class IllumiseEffect implements AttackEffect {
     }
 
     private void applyQuickAttack(AttackContext ctx) {
-        if (coinFlipService.flip() == CoinResult.HEADS) {
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.HEADS) {
             List<DamageModifier> modifiers = new ArrayList<>(
                     ctx.getModifiers() != null ? ctx.getModifiers() : new ArrayList<>());
             modifiers.add(new DamageModifier("quick-attack-heads", 20, true));

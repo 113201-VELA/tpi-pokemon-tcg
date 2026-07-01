@@ -46,7 +46,7 @@ class RhydonEffectTest {
 
     @Test
     void madMountain_shouldDiscardOneCardPerCounter_onDoubleHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
         AttackContext ctx = buildContext("mad mountain", 3, 5);
 
         effect.apply(ctx);
@@ -57,7 +57,7 @@ class RhydonEffectTest {
 
     @Test
     void madMountain_shouldNotDiscardMoreThanDeckSize_onDoubleHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
         // Rhydon has 5 counters but opponent only has 3 cards in deck
         AttackContext ctx = buildContext("mad mountain", 5, 3);
 
@@ -69,7 +69,7 @@ class RhydonEffectTest {
 
     @Test
     void madMountain_shouldDoNothing_whenRhydonHasNoCounters() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.HEADS);
         AttackContext ctx = buildContext("mad mountain", 0, 5);
 
         effect.apply(ctx);
@@ -81,7 +81,7 @@ class RhydonEffectTest {
 
     @Test
     void madMountain_shouldDoNothing_onHeadsThenTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.TAILS);
         AttackContext ctx = buildContext("mad mountain", 3, 5);
 
         effect.apply(ctx);
@@ -91,7 +91,7 @@ class RhydonEffectTest {
 
     @Test
     void madMountain_shouldDoNothing_onTailsThenHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS, CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS, CoinResult.HEADS);
         AttackContext ctx = buildContext("mad mountain", 3, 5);
 
         effect.apply(ctx);
@@ -101,7 +101,7 @@ class RhydonEffectTest {
 
     @Test
     void madMountain_shouldDoNothing_onDoubleTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS, CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS, CoinResult.TAILS);
         AttackContext ctx = buildContext("mad mountain", 3, 5);
 
         effect.apply(ctx);

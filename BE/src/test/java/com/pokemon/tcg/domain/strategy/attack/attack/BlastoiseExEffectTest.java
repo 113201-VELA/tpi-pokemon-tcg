@@ -91,7 +91,7 @@ class BlastoiseExEffectTest {
 
     @Test
     void splashBomb_shouldAddSelfDamage_onTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("splash bomb", false, false);
         int initialCounters = ctx.getBoardState().getStateFor(PLAYER_1)
                 .getActivePokemon().getDamageCounters();
@@ -105,7 +105,7 @@ class BlastoiseExEffectTest {
 
     @Test
     void splashBomb_shouldNotAddSelfDamage_onHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("splash bomb", false, false);
         int initialCounters = ctx.getBoardState().getStateFor(PLAYER_1)
                 .getActivePokemon().getDamageCounters();
@@ -119,7 +119,7 @@ class BlastoiseExEffectTest {
 
     @Test
     void splashBomb_shouldNotAffectOpponent_onTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("splash bomb", false, false);
         int defenderCounters = ctx.getBoardState().getStateFor(PLAYER_2)
                 .getActivePokemon().getDamageCounters();
@@ -133,7 +133,7 @@ class BlastoiseExEffectTest {
 
     @Test
     void splashBomb_shouldNotSetForcedSwitch() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("splash bomb", false, false);
 
         effect.apply(ctx);

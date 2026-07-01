@@ -50,7 +50,7 @@ public class GurdurrEffect implements AttackEffect {
      * Pummel: flip a coin; on heads add 20 damage via a pre-weakness modifier.
      */
     private void applyPummel(AttackContext ctx) {
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         List<DamageModifier> modifiers = new ArrayList<>(
                 ctx.getModifiers() != null ? ctx.getModifiers() : new ArrayList<>());

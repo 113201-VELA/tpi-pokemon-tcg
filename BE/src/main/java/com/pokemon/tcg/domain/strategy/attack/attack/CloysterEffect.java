@@ -53,7 +53,7 @@ public class CloysterEffect implements AttackEffect {
      * not yet fully implemented we discard the first available one.
      */
     private void applyClampCrush(AttackContext ctx) {
-        if (coinFlipService.flip() != CoinResult.HEADS) return;
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) != CoinResult.HEADS) return;
 
         String attackerId    = ctx.getAction().getPlayerId();
         PlayerState opponent = ctx.getBoardState().getOpponentState(attackerId);
@@ -87,7 +87,7 @@ public class CloysterEffect implements AttackEffect {
     private void applySpikeCannon(AttackContext ctx) {
         int heads = 0;
         for (int i = 0; i < SPIKE_CANNON_FLIPS; i++) {
-            if (coinFlipService.flip() == CoinResult.HEADS) {
+            if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.HEADS) {
                 heads++;
             }
         }

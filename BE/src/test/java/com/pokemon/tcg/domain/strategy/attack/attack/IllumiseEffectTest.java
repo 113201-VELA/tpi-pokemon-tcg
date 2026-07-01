@@ -21,6 +21,8 @@ import java.util.Optional;
 
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.when;
 
 @ExtendWith(MockitoExtension.class)
@@ -98,7 +100,7 @@ class IllumiseEffectTest {
 
     @Test
     void quickAttack_shouldAdd20DamageModifier_whenHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext("Quick Attack", List.of());
 
         effect.apply(ctx);
@@ -111,7 +113,7 @@ class IllumiseEffectTest {
 
     @Test
     void quickAttack_shouldAddNoModifier_whenTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext("Quick Attack", List.of());
 
         effect.apply(ctx);

@@ -51,7 +51,7 @@ class LaprasEffectTest {
 
     @Test
     void seafaring_shouldAttachWaterEnergy_toBench_onHeads() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.TAILS, CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.TAILS, CoinResult.TAILS);
         AttackContext ctx = buildSeafaringContext(
                 List.of(WATER_ENERGY), // discard
                 1,                      // bench size
@@ -66,7 +66,7 @@ class LaprasEffectTest {
 
     @Test
     void seafaring_shouldAttachUpToHeadsCount_fromDiscard() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.HEADS, CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.HEADS, CoinResult.HEADS);
         AttackContext ctx = buildSeafaringContext(
                 List.of(WATER_ENERGY, WATER_ENERGY), // only 2 in discard but 3 heads
                 2,
@@ -85,7 +85,7 @@ class LaprasEffectTest {
 
     @Test
     void seafaring_shouldDoNothing_whenAllTails() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS, CoinResult.TAILS, CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS, CoinResult.TAILS, CoinResult.TAILS);
         AttackContext ctx = buildSeafaringContext(
                 List.of(WATER_ENERGY),
                 1,
@@ -100,7 +100,7 @@ class LaprasEffectTest {
 
     @Test
     void seafaring_shouldDoNothing_whenNoWaterEnergyInDiscard() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.HEADS, CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.HEADS, CoinResult.HEADS);
         AttackContext ctx = buildSeafaringContext(
                 List.of(NON_WATER_ENERGY), // fire energy, not water
                 1,
@@ -114,7 +114,7 @@ class LaprasEffectTest {
 
     @Test
     void seafaring_shouldDoNothing_whenNoBench() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.HEADS, CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.HEADS, CoinResult.HEADS);
         AttackContext ctx = buildSeafaringContext(
                 List.of(WATER_ENERGY),
                 0, // no bench
@@ -129,7 +129,7 @@ class LaprasEffectTest {
 
     @Test
     void seafaring_shouldRespectPlayerTargetChoice() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS, CoinResult.TAILS, CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS, CoinResult.TAILS, CoinResult.TAILS);
 
         List<Map<String, String>> targets = List.of(
                 Map.of("instanceId", "bench-1", "energyCardId", WATER_ENERGY));
@@ -150,7 +150,7 @@ class LaprasEffectTest {
 
     @Test
     void seafaring_shouldFlipExactly3Coins() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildSeafaringContext(List.of(), 1, null);
 
         effect.apply(ctx);

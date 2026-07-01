@@ -389,6 +389,7 @@ export class GamePage implements OnInit, OnDestroy {
   private handleGameEvent(
     event: { type: string; data: Record<string, unknown> }
   ): void {
+    console.log('GAME EVENT:', event.type, event.data);
     switch (event.type) {
       case 'GAME_OVER':
         this.router.navigate(['/lobby']);

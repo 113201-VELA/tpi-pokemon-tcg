@@ -31,7 +31,7 @@ class FrogadierEffectTest {
 
     @Test
     void lick_onHeads_shouldParalyzeDefender() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(new HashSet<>());
 
         effect.apply(ctx);
@@ -43,7 +43,7 @@ class FrogadierEffectTest {
 
     @Test
     void lick_onHeads_shouldReplaceAsleep() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(new HashSet<>(Set.of(SpecialCondition.ASLEEP)));
 
         effect.apply(ctx);
@@ -56,7 +56,7 @@ class FrogadierEffectTest {
 
     @Test
     void lick_onTails_shouldNotParalyzeDefender() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext(new HashSet<>());
 
         effect.apply(ctx);
@@ -68,7 +68,7 @@ class FrogadierEffectTest {
 
     @Test
     void lick_shouldNotAffectAttacker() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(new HashSet<>());
 
         effect.apply(ctx);
@@ -79,7 +79,7 @@ class FrogadierEffectTest {
 
     @Test
     void lick_shouldNotAddModifiers() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(new HashSet<>());
 
         effect.apply(ctx);

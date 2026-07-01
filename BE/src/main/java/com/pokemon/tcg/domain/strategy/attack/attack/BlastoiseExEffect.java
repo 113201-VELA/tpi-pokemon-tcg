@@ -84,7 +84,7 @@ public class BlastoiseExEffect implements AttackEffect {
      * (3 damage counters).
      */
     private void applySplashBomb(AttackContext ctx) {
-        if (coinFlipService.flip() == CoinResult.TAILS) {
+        if (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.TAILS) {
             String attackerId    = ctx.getAction().getPlayerId();
             PlayerState attacker = ctx.getBoardState().getStateFor(attackerId);
             ActivePokemon self   = attacker.getActivePokemon();

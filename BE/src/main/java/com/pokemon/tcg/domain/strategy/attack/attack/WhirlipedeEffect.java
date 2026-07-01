@@ -33,7 +33,7 @@ public class WhirlipedeEffect implements AttackEffect {
                 ? ctx.getAttackName().toLowerCase() : "")) return;
 
         int heads = 0;
-        while (coinFlipService.flip() == CoinResult.HEADS) {
+        while (coinFlipService.flipAndEmit(ctx, ctx.getAction().getPlayerId()) == CoinResult.HEADS) {
             heads++;
         }
 

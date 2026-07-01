@@ -31,7 +31,7 @@ class FroakieEffectTest {
 
     @Test
     void bounce_onHeads_shouldSwapActiveWithBench() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(true, "bench-1");
 
         effect.apply(ctx);
@@ -44,7 +44,7 @@ class FroakieEffectTest {
 
     @Test
     void bounce_onHeads_shouldFallBackToFirstBench_whenNoReplacementSpecified() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(true, null);
 
         effect.apply(ctx);
@@ -55,7 +55,7 @@ class FroakieEffectTest {
 
     @Test
     void bounce_onTails_shouldNotSwap() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext(true, "bench-1");
 
         effect.apply(ctx);
@@ -66,7 +66,7 @@ class FroakieEffectTest {
 
     @Test
     void bounce_onHeads_shouldDoNothing_whenNoBench() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(false, null);
 
         effect.apply(ctx);
@@ -77,7 +77,7 @@ class FroakieEffectTest {
 
     @Test
     void bounce_shouldNotAffectOpponent() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(true, "bench-1");
         String opponentActiveCardId = ctx.getBoardState().getStateFor(PLAYER_2)
                 .getActivePokemon().getCardId();
@@ -90,7 +90,7 @@ class FroakieEffectTest {
 
     @Test
     void bounce_shouldNotAddModifiers() {
-        when(coinFlipService.flip()).thenReturn(CoinResult.HEADS);
+        when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext(true, "bench-1");
 
         effect.apply(ctx);

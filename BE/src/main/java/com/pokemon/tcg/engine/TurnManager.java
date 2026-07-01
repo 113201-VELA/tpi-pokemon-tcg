@@ -587,6 +587,12 @@ public class TurnManager {
                 state.getPendingEvents() != null ? state.getPendingEvents() : new ArrayList<>());
         allPending.addAll(attackEvents);
 
+        System.out.println("CTX EVENTS before return: " +
+                (ctx.getEvents() != null ? ctx.getEvents().size() : "null") +
+                " types: " + (ctx.getEvents() != null ?
+                ctx.getEvents().stream().map(e -> e.getType().name()).toList() : "[]"));
+        System.out.println("ALL PENDING: " + allPending.stream().map(e -> e.getType().name()).toList());
+
         return state.toBuilder()
                 .currentPlayerId(opponentId)
                 .turnPhase(TurnPhase.DRAW)
