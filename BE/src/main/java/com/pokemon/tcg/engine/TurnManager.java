@@ -528,9 +528,14 @@ public class TurnManager {
         // If the pipeline was cancelled (e.g. insufficient energy, confusion flip)
         // the turn does not end — the player keeps their turn and can act again.
         if (ctx.isCancelled()) {
-            List<GameEvent> pending = new ArrayList<>(
-                    ctx.getBoardState().getPendingEvents() != null
-                            ? ctx.getBoardState().getPendingEvents() : new ArrayList<>());
+            List<GameEvent> pending = new ArrayList<>();
+
+            // Coin flip events goes first
+            if (ctx.getEvents() != null) {
+                pending.addAll(ctx.getEvents());
+            }
+
+            // Next, error event
             pending.add(GameEvent.builder()
                     .type(GameEventType.TURN_ENDED)
                     .gameId(state.getGameId())
@@ -541,6 +546,7 @@ public class TurnManager {
                             : "Attack was cancelled."))
                     .occurredAt(Instant.now())
                     .build());
+
             return ctx.getBoardState().toBuilder()
                     .pendingEvents(pending)
                     .build();
@@ -549,7 +555,21 @@ public class TurnManager {
         // If a KO occurred and the defender has bench Pokémon, suspend the turn.
         // Between-turn effects and turn switch will happen after CHOOSE_BENCH_POKEMON.
         if (ctx.getBoardState().isPendingBenchChoice()) {
-            return ctx.getBoardState();
+            List<GameEvent> pending = new ArrayList<>();
+
+            // Coin flip events primero
+            if (ctx.getEvents() != null) {
+                pending.addAll(ctx.getEvents());
+            }
+
+            // Merge con pending events existentes del boardState
+            if (ctx.getBoardState().getPendingEvents() != null) {
+                pending.addAll(ctx.getBoardState().getPendingEvents());
+            }
+
+            return ctx.getBoardState().toBuilder()
+                    .pendingEvents(pending)
+                    .build();
         }
 
         // Attack resolved with no pending bench choice — process between-turn effects
@@ -557,11 +577,22 @@ public class TurnManager {
         state = processBetweenTurns(ctx.getBoardState());
         state.getTurnFlags().setAttackedThisTurn(true);
 
+        // Collect events from the attack pipeline (coin flips, etc.)
+        List<GameEvent> attackEvents = ctx.getEvents() != null
+                ? new ArrayList<>(ctx.getEvents())
+                : new ArrayList<>();
+
+        // Merge with any existing pending events
+        List<GameEvent> allPending = new ArrayList<>(
+                state.getPendingEvents() != null ? state.getPendingEvents() : new ArrayList<>());
+        allPending.addAll(attackEvents);
+
         return state.toBuilder()
                 .currentPlayerId(opponentId)
                 .turnPhase(TurnPhase.DRAW)
                 .turnNumber(state.getTurnNumber() + 1)
                 .turnFlags(TurnFlags.fresh())
+                .pendingEvents(allPending)
                 .build();
     }
 

@@ -20,5 +20,6 @@ public enum GameEventType {
     GAME_OVER,
     SUDDEN_DEATH_STARTED,
     MULLIGAN_DECLARED,
-    RECONNECTED
+    RECONNECTED,
+    COIN_FLIP
 }
