@@ -163,19 +163,13 @@ export class GamePage implements OnInit, OnDestroy {
     return hand.length > 0 && !hand.some(c => this.isBasicPokemon(c));
   });
 
-  /** True when this player has bonus draws to accept and setup is not confirmed. */
+  /** True when this player has bonus draws to accept. */
   readonly bonusDrawPending = computed(() => {
     const state = this.boardState();
     if (!state) return false;
-    console.log('BONUS DRAW CHECK:', {
-      bonusDrawPending: state.bonusDrawPending,
-      mulliganBonusDraws: state.ownState.mulliganBonusDraws,
-      setupConfirmed: state.ownState.setupConfirmed,
-    });
     return (
       (state.bonusDrawPending ?? false) &&
       (state.ownState.mulliganBonusDraws ?? 0) > 0 &&
-      !(state.ownState.setupConfirmed ?? false) &&
       !this.isInBonusPlacement()
     );
   });
