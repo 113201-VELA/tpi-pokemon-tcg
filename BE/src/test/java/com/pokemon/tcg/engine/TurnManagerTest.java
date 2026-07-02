@@ -684,6 +684,15 @@ class TurnManagerTest {
             return null;
         }).when(setupManager).applyMulliganBonusDraws(any(), anyInt());
 
+        when(setupManager.checkBonusResolution(any(), any()))
+                .thenAnswer(inv -> {
+                    BoardState s = inv.getArgument(0);
+                    return s.toBuilder()
+                            .bonusDrawPending(false)
+                            .turnPhase(TurnPhase.DRAW)
+                            .build();
+                });
+
         GameAction action = buildAction("p1", GameActionType.ACCEPT_MULLIGAN_BONUS,
                 Map.of("cardsToDraw", 0));
         BoardState result = turnManager.advancePhase(state, action);
@@ -912,5 +921,112 @@ class TurnManagerTest {
 
         assertThat(result.getCurrentPlayerId()).isEqualTo("p1");
         verifyNoInteractions(attackPipeline);
+    }
+
+    @Test
+    void handleDeclareAttack_shouldNotSwitchTurn_whenHandDiscardPending() {
+        BoardState state = buildState("p1", TurnPhase.MAIN);
+
+        // Simulate an effect like Mental Trash suspending the turn
+        doAnswer(inv -> {
+            com.pokemon.tcg.domain.strategy.attack.AttackContext ctx = inv.getArgument(0);
+            BoardState boardState = ctx.getBoardState();
+            ctx.setBoardState(boardState.toBuilder()
+                    .pendingHandDiscardPlayerId("p2")
+                    .pendingHandDiscardCount(1)
+                    .build());
+            return null;
+        }).when(attackPipeline).execute(any());
+
+        when(cardLookupPort.findAttack(anyString(), anyString())).thenReturn(Optional.empty());
+        when(cardLookupPort.getMaxHp(anyString())).thenReturn(100);
+
+        GameAction action = buildAction("p1", GameActionType.DECLARE_ATTACK,
+                Map.of("attackName", "Mental Trash"));
+        BoardState result = turnManager.advancePhase(state, action);
+
+        // Turn should NOT switch yet — waiting for p2 to discard
+        assertThat(result.getCurrentPlayerId()).isEqualTo("p1");
+        assertThat(result.isPendingHandDiscard()).isTrue();
+    }
+
+    // ─── DISCARD_FROM_HAND ────────────────────────────────────────────────────
+
+    @Test
+    void handleDiscardFromHand_shouldMoveChosenCardsAndSwitchTurn() {
+        BoardState state = buildState("p1", TurnPhase.MAIN);
+        state.setPendingHandDiscardPlayerId("p2");
+        state.setPendingHandDiscardCount(2);
+        state.getPlayer2State().setHand(new ArrayList<>(List.of("xy1-1", "xy1-2", "xy1-3")));
+        state.getPlayer2State().setDiscard(new ArrayList<>());
+
+        GameAction action = buildAction("p2", GameActionType.DISCARD_FROM_HAND,
+                Map.of("chosenCardIds", List.of("xy1-1", "xy1-2")));
+        BoardState result = turnManager.advancePhase(state, action);
+
+        assertThat(result.getPlayer2State().getHand()).containsExactly("xy1-3");
+        assertThat(result.getPlayer2State().getDiscard()).containsExactlyInAnyOrder("xy1-1", "xy1-2");
+        assertThat(result.isPendingHandDiscard()).isFalse();
+        assertThat(result.getPendingHandDiscardCount()).isZero();
+        // Turn switches to the OTHER player relative to who discarded (p2 discarded → p1 goes next)
+        assertThat(result.getCurrentPlayerId()).isEqualTo("p1");
+        assertThat(result.getTurnPhase()).isEqualTo(TurnPhase.DRAW);
+    }
+
+    @Test
+    void handleDiscardFromHand_shouldReturnUnchanged_whenNotPending() {
+        BoardState state = buildState("p1", TurnPhase.MAIN);
+        state.getPlayer2State().setHand(new ArrayList<>(List.of("xy1-1")));
+
+        GameAction action = buildAction("p2", GameActionType.DISCARD_FROM_HAND,
+                Map.of("chosenCardIds", List.of("xy1-1")));
+        BoardState result = turnManager.advancePhase(state, action);
+
+        assertThat(result.getPlayer2State().getHand()).containsExactly("xy1-1");
+    }
+
+    @Test
+    void handleDiscardFromHand_shouldReturnUnchanged_whenWrongPlayer() {
+        BoardState state = buildState("p1", TurnPhase.MAIN);
+        state.setPendingHandDiscardPlayerId("p2");
+        state.setPendingHandDiscardCount(1);
+        state.getPlayer1State().setHand(new ArrayList<>(List.of("xy1-1")));
+
+        GameAction action = buildAction("p1", GameActionType.DISCARD_FROM_HAND,
+                Map.of("chosenCardIds", List.of("xy1-1")));
+        BoardState result = turnManager.advancePhase(state, action);
+
+        assertThat(result.isPendingHandDiscard()).isTrue();
+        assertThat(result.getPlayer1State().getHand()).containsExactly("xy1-1");
+    }
+
+    @Test
+    void handleDiscardFromHand_shouldReturnUnchanged_whenCountMismatch() {
+        BoardState state = buildState("p1", TurnPhase.MAIN);
+        state.setPendingHandDiscardPlayerId("p2");
+        state.setPendingHandDiscardCount(2);
+        state.getPlayer2State().setHand(new ArrayList<>(List.of("xy1-1", "xy1-2")));
+
+        GameAction action = buildAction("p2", GameActionType.DISCARD_FROM_HAND,
+                Map.of("chosenCardIds", List.of("xy1-1"))); // only 1, expected 2
+        BoardState result = turnManager.advancePhase(state, action);
+
+        assertThat(result.isPendingHandDiscard()).isTrue();
+        assertThat(result.getPlayer2State().getHand()).containsExactlyInAnyOrder("xy1-1", "xy1-2");
+    }
+
+    @Test
+    void handleDiscardFromHand_shouldReturnUnchanged_whenChosenCardNotInHand() {
+        BoardState state = buildState("p1", TurnPhase.MAIN);
+        state.setPendingHandDiscardPlayerId("p2");
+        state.setPendingHandDiscardCount(1);
+        state.getPlayer2State().setHand(new ArrayList<>(List.of("xy1-1")));
+
+        GameAction action = buildAction("p2", GameActionType.DISCARD_FROM_HAND,
+                Map.of("chosenCardIds", List.of("xy1-99"))); // not in hand
+        BoardState result = turnManager.advancePhase(state, action);
+
+        assertThat(result.isPendingHandDiscard()).isTrue();
+        assertThat(result.getPlayer2State().getHand()).containsExactly("xy1-1");
     }
 }
