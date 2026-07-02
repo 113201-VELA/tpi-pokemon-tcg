@@ -628,12 +628,11 @@ public class TurnManager {
     }
 
     /**
-     * Procesa los efectos de condición especial entre turnos para ambos Pokémon
-     * activos (POISON, BURN), luego verifica si algún Pokémon quedó KO por ese daño.
-     *
-     * El jugador que acaba de terminar su turno es el "atacante" a efectos de
-     * premios — su oponente toma premios si su Pokémon muere por condiciones.
-     * currentPlayerId en este punto aún refiere al jugador que acaba de actuar.
+     * Process special condition effects between turns for both active Pokémon (POISON, BURN),
+     * then check if any Pokémon were knocked out by that damage.
+     * The player who just finished their turn is the 'attacker' for prize purposes — their
+     * opponent takes prizes if their Pokémon is knocked out by conditions. currentPlayerId
+     * at this point still refers to the player who just acted.
      */
     private BoardState processBetweenTurns(BoardState state) {
         if (state.getPlayer1State().getActivePokemon() != null) {
