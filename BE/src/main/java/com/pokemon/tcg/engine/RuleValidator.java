@@ -43,14 +43,27 @@ public class RuleValidator {
             return validateChooseBenchPokemon(state, action);
         }
 
-        // During bonusDrawPending, only ACCEPT_MULLIGAN_BONUS is allowed
-        // and any player with pending bonus can act regardless of currentPlayerId
+        // During bonusDrawPending, only allowed actions depend on placement stage
         if (state.isBonusDrawPending()) {
-            if (action.getType() != GameActionType.ACCEPT_MULLIGAN_BONUS) {
-                return ValidationResult.fail(
-                        "Mulligan bonus draws must be resolved before continuing.");
+            boolean isInBonusPlacement = state.getPendingBonusPlacement() != null
+                    && state.getPendingBonusPlacement().contains(action.getPlayerId());
+
+            if (isInBonusPlacement) {
+                // Player already accepted bonus draws — only placement actions allowed
+                if (action.getType() != GameActionType.SETUP_PLACE_BENCH
+                        && action.getType() != GameActionType.CONFIRM_BONUS_PLACEMENT) {
+                    return ValidationResult.fail(
+                            "Only bench placement is allowed during bonus placement stage.");
+                }
+                return ValidationResult.ok();
+            } else {
+                // Player hasn't accepted bonus draws yet
+                if (action.getType() != GameActionType.ACCEPT_MULLIGAN_BONUS) {
+                    return ValidationResult.fail(
+                            "Mulligan bonus draws must be resolved before continuing.");
+                }
+                return validateAcceptMulliganBonus(state, action);
             }
-            return validateAcceptMulliganBonus(state, action);
         }
 
         // During pendingAttackSelection, only SELECT_FROM_DECK is allowed
