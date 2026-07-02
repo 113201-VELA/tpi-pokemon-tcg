@@ -154,6 +154,11 @@ export class GamePage implements OnInit, OnDestroy {
     () => this.boardState()?.gameState === 'SETUP'
   );
 
+  /** Returns a fixed array of N elements for rendering opponent hand cards. */
+  getOpponentHandSlots(count: number): number[] {
+    return Array.from({ length: count }, (_, i) => i);
+  }
+
   /** True if the player has no Basic Pokémon in hand and must mulligan. */
   readonly needsMulligan = computed(() => {
     const state = this.boardState();
@@ -700,9 +705,25 @@ export class GamePage implements OnInit, OnDestroy {
   }
 
   coinImageSrc(): string {
-    return this.coinResult() === 'HEADS'
-      ? 'assets/coin/defaultCoinHead.png'
-      : 'assets/coin/defaultCoinTail.png';
+    const event  = this.gameActionService.lastEvent();
+    const state  = this.boardState();
+    const me     = this.authService.currentUser();
+
+    let coinSkin = 'DEFAULT';
+    if (event && state && me) {
+      coinSkin = event.playerId === me.id
+        ? state.ownState.coin
+        : state.opponentState.coin;
+    }
+
+    const map: Record<string, string> = {
+      DEFAULT:    'assets/coin/defaultCoin.png',
+      PIKACHU:    'assets/coin/pikachuCoin.png',
+      BULBASAUR:  'assets/coin/bulbasaurCoin.png',
+      CHARMANDER: 'assets/coin/charmanderCoin.png',
+      SQUIRTLE:   'assets/coin/squirtleCoin.png',
+    };
+    return map[coinSkin] ?? map['DEFAULT'];
   }
 
   openSurrenderModal(): void {
