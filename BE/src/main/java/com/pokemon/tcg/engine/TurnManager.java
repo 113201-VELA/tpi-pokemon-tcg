@@ -627,7 +627,14 @@ public class TurnManager {
                 .build();
     }
 
-    /** Processes between-turn special condition effects for both active Pokémon. */
+    /**
+     * Procesa los efectos de condición especial entre turnos para ambos Pokémon
+     * activos (POISON, BURN), luego verifica si algún Pokémon quedó KO por ese daño.
+     *
+     * El jugador que acaba de terminar su turno es el "atacante" a efectos de
+     * premios — su oponente toma premios si su Pokémon muere por condiciones.
+     * currentPlayerId en este punto aún refiere al jugador que acaba de actuar.
+     */
     private BoardState processBetweenTurns(BoardState state) {
         if (state.getPlayer1State().getActivePokemon() != null) {
             statusEffectManager.processBetweenTurns(state.getPlayer1State().getActivePokemon());
@@ -635,7 +642,111 @@ public class TurnManager {
         if (state.getPlayer2State().getActivePokemon() != null) {
             statusEffectManager.processBetweenTurns(state.getPlayer2State().getActivePokemon());
         }
+
+        state = checkConditionKnockouts(state);
+
         return state;
+    }
+
+    private BoardState checkConditionKnockouts(BoardState state) {
+        List<GameEvent> allEvents = new ArrayList<>();
+
+        allEvents.addAll(checkSingleConditionKO(state, state.getPlayer1State(), state.getPlayer2State()));
+        allEvents.addAll(checkSingleConditionKO(state, state.getPlayer2State(), state.getPlayer1State()));
+
+        if (!allEvents.isEmpty()) {
+            List<GameEvent> pending = new ArrayList<>(
+                    state.getPendingEvents() != null ? state.getPendingEvents() : new ArrayList<>());
+            pending.addAll(allEvents);
+            state = state.toBuilder().pendingEvents(pending).build();
+        }
+
+        if (state.getPlayer1State().getActivePokemon() == null
+                && state.getPlayer1State().getBench() != null
+                && !state.getPlayer1State().getBench().isEmpty()) {
+            state = state.toBuilder()
+                    .pendingBenchChoicePlayerId(state.getPlayer1State().getPlayerId())
+                    .build();
+        }
+        if (state.getPlayer2State().getActivePokemon() == null
+                && state.getPlayer2State().getBench() != null
+                && !state.getPlayer2State().getBench().isEmpty()) {
+            state = state.toBuilder()
+                    .pendingBenchChoicePlayerId(state.getPlayer2State().getPlayerId())
+                    .build();
+        }
+
+        return state;
+    }
+
+    private List<GameEvent> checkSingleConditionKO(BoardState state,
+                                                    PlayerState owner,
+                                                    PlayerState prizeWinner) {
+        ActivePokemon active = owner.getActivePokemon();
+        if (active == null) return List.of();
+
+        int maxHp = cardLookupPort.getMaxHp(active.getCardId());
+        if (maxHp <= 0) return List.of();
+        if (active.getDamageCounters() * 10 < maxHp) return List.of();
+
+        List<String> discard = new ArrayList<>(
+                owner.getDiscard() != null ? owner.getDiscard() : new ArrayList<>());
+        discard.add(active.getCardId());
+        if (active.getAttachedEnergyIds() != null) {
+            discard.addAll(active.getAttachedEnergyIds());
+        }
+        if (active.getAttachedToolId() != null) {
+            discard.add(active.getAttachedToolId());
+        }
+        owner.setDiscard(discard);
+        owner.setActivePokemon(null);
+
+        int prizesToTake = resolvePrizeCountForCard(active.getCardId());
+        List<String> prizes = new ArrayList<>(
+                prizeWinner.getPrizes() != null ? prizeWinner.getPrizes() : new ArrayList<>());
+        List<String> hand = new ArrayList<>(
+                prizeWinner.getHand() != null ? prizeWinner.getHand() : new ArrayList<>());
+
+        for (int i = 0; i < prizesToTake && !prizes.isEmpty(); i++) {
+            hand.add(prizes.remove(0));
+        }
+        prizeWinner.setPrizes(prizes);
+        prizeWinner.setHand(hand);
+
+        List<GameEvent> events = new ArrayList<>();
+
+        events.add(GameEvent.builder()
+                .type(GameEventType.POKEMON_KNOCKED_OUT)
+                .gameId(state.getGameId())
+                .playerId(owner.getPlayerId())
+                .turnNumber(state.getTurnNumber())
+                .data(Map.of("knockedOutCardId", active.getCardId()))
+                .occurredAt(Instant.now())
+                .build());
+
+        events.add(GameEvent.builder()
+                .type(GameEventType.PRIZE_TAKEN)
+                .gameId(state.getGameId())
+                .playerId(prizeWinner.getPlayerId())
+                .turnNumber(state.getTurnNumber())
+                .data(Map.of("prizesRemaining", prizeWinner.getPrizes().size()))
+                .occurredAt(Instant.now())
+                .build());
+
+        return events;
+    }
+
+    private int resolvePrizeCountForCard(String cardId) {
+        return cardLookupPort.findCardById(cardId)
+                .map(card -> {
+                    List<String> subtypes = card.getSubtypes();
+                    if (subtypes != null &&
+                            (subtypes.contains("EX") || subtypes.contains("MEGA"))) {
+                        return 2;
+                    }
+                    return 1;
+                })
+                .orElse(1);
     }
 
     /**

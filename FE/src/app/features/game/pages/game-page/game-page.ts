@@ -350,12 +350,13 @@ export class GamePage implements OnInit, OnDestroy {
       const pub = this.gameActionService.boardState();
       if (!pub) return;
 
-      const isFirstPlayer  = pub.firstPlayerId === me.id;
-      const isDrawPhase    = state.turnPhase === 'DRAW';
-      const isTurnZero     = state.turnNumber === 0;
+      const isFirstPlayer   = pub.firstPlayerId === me.id;
+      const isDrawPhase     = state.turnPhase === 'DRAW';
+      const isTurnZero      = state.turnNumber === 0;
       const isCurrentPlayer = state.currentPlayerId === me.id;
+      const isActivePhase   = state.gameState === 'ACTIVE';  // ← agregar
 
-      if (isFirstPlayer && isDrawPhase && isTurnZero && isCurrentPlayer) {
+      if (isFirstPlayer && isDrawPhase && isTurnZero && isCurrentPlayer && isActivePhase) {
         this.gameActionService.sendAction('DRAW_CARD', {});
       }
     });
