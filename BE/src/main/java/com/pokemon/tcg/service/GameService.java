@@ -789,6 +789,8 @@ public class GameService {
                 .pendingDeckSelectionPlayerId(state.getPendingDeckSelectionPlayerId())
                 .pendingDeckSelectionCardIds(state.getPendingDeckSelectionCardIds())
                 .pendingBonusPlacement(state.getPendingBonusPlacement())
+                .pendingPrizeTakePlayerId(state.getPendingPrizeTakePlayerId())
+                .pendingPrizeTakeCount(state.getPendingPrizeTakeCount())
                 .build();
     }
 }

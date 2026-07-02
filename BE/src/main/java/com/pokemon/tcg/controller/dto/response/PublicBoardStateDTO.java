@@ -18,6 +18,8 @@ public record PublicBoardStateDTO(
         String pendingBenchChoicePlayerId,
         String firstPlayerId,
         Set<String> pendingBonusPlacement,
+        String pendingPrizeTakePlayerId,
+        int pendingPrizeTakeCount,
         PublicPlayerStateDTO player1State,
         PublicPlayerStateDTO player2State
 ) {}
