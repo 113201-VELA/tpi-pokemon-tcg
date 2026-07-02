@@ -81,6 +81,20 @@ public class RuleValidator {
             return validateForcedSwitch(state, action);
         }
 
+        // During pendingHandDiscard, only the affected player may send DISCARD_FROM_HAND.
+        // All other actions are blocked until the discard is resolved.
+        if (state.isPendingHandDiscard()) {
+            if (action.getType() != GameActionType.DISCARD_FROM_HAND) {
+                return ValidationResult.fail(
+                        "Waiting for the opponent to discard cards from their hand.");
+            }
+            if (!state.getPendingHandDiscardPlayerId().equals(action.getPlayerId())) {
+                return ValidationResult.fail(
+                        "It is not your turn to discard cards from your hand.");
+            }
+            return validateDiscardFromHand(state, action);
+        }
+
         // During pendingDeckSelection, only SELECT_FROM_DECK is allowed
         // and only the affected player may act.
         if (state.isPendingDeckSelection()) {
@@ -130,6 +144,7 @@ public class RuleValidator {
             // ── Deck selection ───────────────────────────────────────
             case SELECT_FROM_DECK      -> validateSelectFromDeck(state, action);
             case FORCED_SWITCH         -> validateForcedSwitch(state, action);
+            case DISCARD_FROM_HAND     -> validateDiscardFromHand(state, action);
             default                    -> ValidationResult.ok();
         };
     }
@@ -700,6 +715,32 @@ public class RuleValidator {
         if (!exists) {
             return ValidationResult.fail("The specified Pokémon is not on your bench.");
         }
+        return ValidationResult.ok();
+    }
+
+    /**
+     * DISCARD_FROM_HAND is only valid when a hand discard is pending for this
+     * player (e.g. Malamar's Mental Trash). The player must choose exactly
+     * pendingHandDiscardCount cards, all of which must be in their hand.
+     */
+    private ValidationResult validateDiscardFromHand(BoardState state, GameAction action) {
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        List<String> chosenCardIds = getChosenCardIds(action);
+        int required = state.getPendingHandDiscardCount();
+
+        if (chosenCardIds.size() != required) {
+            return ValidationResult.fail(
+                    "You must choose exactly " + required + " card(s) to discard.");
+        }
+
+        List<String> handCopy = new java.util.ArrayList<>(
+                ps.getHand() != null ? ps.getHand() : List.of());
+        for (String cardId : chosenCardIds) {
+            if (!handCopy.remove(cardId)) {
+                return ValidationResult.fail("Card " + cardId + " is not in your hand.");
+            }
+        }
+
         return ValidationResult.ok();
     }
 
