@@ -16,15 +16,15 @@ import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-class MalamarEffectTest {
+class Malamar76EffectTest {
 
     private CoinFlipService coinFlipService;
-    private MalamarEffect effect;
+    private Malamar76Effect effect;
 
     @BeforeEach
     void setUp() {
         coinFlipService = mock(CoinFlipService.class);
-        effect = new MalamarEffect(coinFlipService);
+        effect = new Malamar76Effect(coinFlipService);
     }
 
     private ActivePokemon buildPokemon(String instanceId) {
