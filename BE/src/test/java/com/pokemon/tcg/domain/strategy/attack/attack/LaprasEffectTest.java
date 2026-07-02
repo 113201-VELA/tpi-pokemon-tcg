@@ -155,7 +155,7 @@ class LaprasEffectTest {
 
         effect.apply(ctx);
 
-        verify(coinFlipService, times(3)).flip();
+        verify(coinFlipService, times(3)).flipAndEmit(any(AttackContext.class), anyString());
     }
 
     // ─── Hydro Pump ───────────────────────────────────────────────────────────

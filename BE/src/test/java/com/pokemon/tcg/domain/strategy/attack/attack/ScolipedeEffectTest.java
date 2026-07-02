@@ -71,7 +71,7 @@ class ScolipedeEffectTest {
 
         effect.apply(ctx);
 
-        verify(coinFlipService, times(2)).flip();
+        verify(coinFlipService, times(2)).flipAndEmit(any(AttackContext.class), anyString());
     }
 
     // ─── Poison Ring ──────────────────────────────────────────────────────────

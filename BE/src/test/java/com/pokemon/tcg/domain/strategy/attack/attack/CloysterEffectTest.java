@@ -174,7 +174,7 @@ class CloysterEffectTest {
 
         effect.apply(ctx);
 
-        verify(coinFlipService, times(5)).flip();
+        verify(coinFlipService, times(5)).flipAndEmit(any(AttackContext.class), anyString());
     }
 
     // ─── unknown attack ───────────────────────────────────────────────────────

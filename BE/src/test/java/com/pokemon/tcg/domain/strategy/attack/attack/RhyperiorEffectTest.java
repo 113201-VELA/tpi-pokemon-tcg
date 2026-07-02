@@ -99,7 +99,7 @@ class RhyperiorEffectTest {
 
         effect.apply(ctx);
 
-        verify(coinFlipService, times(1)).flip();
+        verify(coinFlipService, times(1)).flipAndEmit(any(AttackContext.class), anyString());
         int total = ctx.getModifiers().stream()
                 .mapToInt(DamageModifier::amount).sum();
         assertThat(total).isEqualTo(50);

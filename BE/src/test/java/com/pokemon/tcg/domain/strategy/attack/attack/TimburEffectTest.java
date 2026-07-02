@@ -59,7 +59,7 @@ class TimburEffectTest {
 
         effect.apply(ctx);
 
-        verify(coinFlipService, times(1)).flip();
+        verify(coinFlipService, times(1)).flipAndEmit(any(AttackContext.class), anyString());
     }
 
     // ─── helper ───────────────────────────────────────────────────────────────
