@@ -86,7 +86,14 @@ public class RhyperiorEffect implements AttackEffect {
 
     /**
      * Rock Wrecker: ignore Weakness and Resistance; block Rhyperior from
-     * using Rock Wrecker again next turn by setting its blockedAttackName.
+     * using Rock Wrecker again next turn.
+     * <p>
+     * blockedAttackUntilTurn = current turnNumber + 2: the block must
+     * survive the opponent's turn (turnNumber+1) and cover Rhyperior's own
+     * next turn (turnNumber+2), expiring only once turnNumber reaches
+     * turnNumber+2 (i.e. the turn after that). blockedAttackName alone is
+     * no longer cleared by TurnManager.clearActiveEffects — it now expires
+     * purely by turn number, checked in RuleValidator.validateAttack.
      */
     private void applyRockWrecker(AttackContext ctx) {
         ctx.setIgnoreDefenderEffects(true);
@@ -98,6 +105,7 @@ public class RhyperiorEffect implements AttackEffect {
         if (rhyperior == null) return;
 
         rhyperior.setBlockedAttackName(ROCK_WRECKER);
+        rhyperior.setBlockedAttackUntilTurn(ctx.getBoardState().getTurnNumber() + 2);
     }
 
     private boolean isFightingEnergy(String cardId) {

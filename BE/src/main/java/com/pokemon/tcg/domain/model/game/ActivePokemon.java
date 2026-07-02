@@ -67,6 +67,18 @@ public class ActivePokemon {
     @Builder.Default
     private boolean pendingAttackFailChance = false;
 
+    /**
+     * Turn number until which blockedAttackName remains enforced (exclusive
+     * upper bound): state.getTurnNumber() < blockedAttackUntilTurn means the
+     * block is still active. Needed because blockedAttackName can't simply be
+     * cleared on the owner's next handleDrawCard — that fires at the START of
+     * the very turn the block is meant to cover, one turn too early (see
+     * bugfix notes in TurnManager). Set together with blockedAttackName;
+     * -1 means no active block.
+     */
+    @Builder.Default
+    private int blockedAttackUntilTurn = -1;
+
     public int getCurrentHp(int maxHp) {
         return Math.max(0, maxHp - damageCounters * 10);
     }

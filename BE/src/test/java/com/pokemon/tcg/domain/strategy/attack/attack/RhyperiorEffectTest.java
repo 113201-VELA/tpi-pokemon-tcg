@@ -140,6 +140,10 @@ class RhyperiorEffectTest {
         ActivePokemon rhyperior = ctx.getBoardState()
                 .getStateFor(PLAYER_1).getActivePokemon();
         assertThat(rhyperior.getBlockedAttackName()).isEqualTo("rock wrecker");
+        // boardState() defaults turnNumber to 1. The block must survive the
+        // opponent's turn and cover Rhyperior's own next turn, expiring only
+        // once turnNumber reaches turnNumber(1) + 2 = 3.
+        assertThat(rhyperior.getBlockedAttackUntilTurn()).isEqualTo(3);
     }
 
     @Test

@@ -1267,7 +1267,6 @@ public class TurnManager {
         if (pokemon.getActiveEffects() != null) {
             pokemon.getActiveEffects().clear();
         }
-        pokemon.setBlockedAttackName(null);
     }
 
     @SuppressWarnings("unchecked")

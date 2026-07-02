@@ -29,6 +29,16 @@ public class Aegislash86Effect implements AttackEffect {
         }
     }
 
+    /**
+     * King's Shield: grants INVULNERABLE this turn (defensive shield during
+     * the opponent's next turn), and blocks reusing King's Shield again
+     * during Aegislash's own next turn.
+     * <p>
+     * blockedAttackUntilTurn = current turnNumber + 2 — same reasoning as
+     * Rhyperior's Rock Wrecker: the block needs to survive the opponent's
+     * turn and cover Aegislash's own next turn, expiring only afterward.
+     * See RuleValidator.validateAttack for the expiry check.
+     */
     private void applyKingsShield(AttackContext ctx) {
         String attackerId = ctx.getAction().getPlayerId();
         PlayerState attackerState = ctx.getBoardState().getStateFor(attackerId);
@@ -46,5 +56,6 @@ public class Aegislash86Effect implements AttackEffect {
         aegislash.setActiveEffects(effects);
 
         aegislash.setBlockedAttackName(KINGS_SHIELD);
+        aegislash.setBlockedAttackUntilTurn(ctx.getBoardState().getTurnNumber() + 2);
     }
 }
