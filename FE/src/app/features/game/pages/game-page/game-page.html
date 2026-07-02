@@ -40,7 +40,15 @@
               </button>
             }
           }
-          @if (!needsMulligan() && !bonusDrawPending()) {
+          @if (isInBonusPlacement()) {
+            <button
+              class="btn-setup btn-setup--accent"
+              (click)="confirmBonusPlacement()"
+            >
+              Confirm Placement
+            </button>
+          }
+          @if (!needsMulligan() && !bonusDrawPending() && !isInBonusPlacement()) {
             <button
               class="btn-setup btn-setup--accent"
               [disabled]="!canConfirmSetup()"

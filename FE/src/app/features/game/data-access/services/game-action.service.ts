@@ -179,6 +179,7 @@ export class GameActionService {
       (message: IMessage) => {
         try {
           const state: PublicBoardStateDTO = JSON.parse(message.body);
+          console.log('PUBLIC STATE bonusDrawPending:', state.bonusDrawPending);
           this.boardState.set(state);
         } catch {
           // Ignore malformed messages

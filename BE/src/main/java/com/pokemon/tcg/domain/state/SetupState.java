@@ -35,7 +35,8 @@ public class SetupState implements GameStateHandler {
                 BoardState newState = turnManager.advancePhase(state, action);
                 yield EngineResult.of(newState, List.of());
             }
-            case ACCEPT_MULLIGAN_BONUS -> {
+            case ACCEPT_MULLIGAN_BONUS,
+                 CONFIRM_BONUS_PLACEMENT -> {
                 BoardState newState = turnManager.advancePhase(state, action);
                 yield EngineResult.of(newState, List.of());
             }

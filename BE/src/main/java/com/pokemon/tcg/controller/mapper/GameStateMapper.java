@@ -222,6 +222,7 @@ public class GameStateMapper {
                 sanitized.isBonusDrawPending(),
                 sanitized.getPendingBenchChoicePlayerId(),
                 sanitized.getFirstPlayerId(),
+                sanitized.getPendingBonusPlacement(),
                 toPublicPlayerStateDTO(sanitized.getPlayer1State(),
                         p1Name, p1CardBack, p1Coin, cardCache),
                 toPublicPlayerStateDTO(sanitized.getPlayer2State(),

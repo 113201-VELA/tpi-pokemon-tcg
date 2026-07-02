@@ -128,6 +128,7 @@ export interface PublicBoardStateDTO {
   bonusDrawPending: boolean;
   pendingBenchChoicePlayerId: string | null;
   firstPlayerId: string | null;
+  pendingBonusPlacement: string[];
   player1State: PublicPlayerStateDTO;
   player2State: PublicPlayerStateDTO;
 }
@@ -144,6 +145,7 @@ export type GameActionType =
   | 'SETUP_PLACE_BENCH'
   | 'ACCEPT_MULLIGAN_BONUS'
   | 'CONFIRM_SETUP'
+  | 'CONFIRM_BONUS_PLACEMENT'
   // Draw
   | 'DRAW_CARD'
   // Main phase

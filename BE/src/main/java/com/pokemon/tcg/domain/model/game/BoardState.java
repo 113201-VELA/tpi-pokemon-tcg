@@ -3,7 +3,9 @@ package com.pokemon.tcg.domain.model.game;
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.*;
 
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 
 @JsonIgnoreProperties(ignoreUnknown = true)
 @Getter
@@ -29,6 +31,15 @@ public class BoardState {
      * Cleared once all bonus decisions are made and the game transitions to DRAW.
      */
     private boolean bonusDrawPending;
+
+    /**
+     * Set of playerIds that are currently in the bonus placement stage.
+     * A player enters this stage after accepting > 0 bonus draws.
+     * They exit by sending CONFIRM_BONUS_PLACEMENT.
+     * When this set is empty and bonusDrawPending is false, the game transitions to ACTIVE.
+     */
+    @Builder.Default
+    private Set<String> pendingBonusPlacement = new HashSet<>();
 
     /**
      * Set to the defending player's ID when their Active Pokémon was knocked out

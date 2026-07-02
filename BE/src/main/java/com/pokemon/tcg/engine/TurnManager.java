@@ -68,6 +68,7 @@ public class TurnManager {
             case CHOOSE_BENCH_POKEMON  -> handleChooseBenchPokemon(state, action);
             // ── Deck selection ───────────────────────────────────────
             case SELECT_FROM_DECK      -> handleSelectFromDeck(state, action);
+            case CONFIRM_BONUS_PLACEMENT -> setupManager.handleConfirmBonusPlacement(state, action);
             case FORCED_SWITCH         -> handleForcedSwitch(state, action);
             default                    -> state;
         };
@@ -152,6 +153,14 @@ public class TurnManager {
 
     /** Places a Basic Pokémon from hand onto the bench during setup. */
     private BoardState handleSetupPlaceBench(BoardState state, GameAction action) {
+        boolean isInBonusPlacement = state.getPendingBonusPlacement() != null
+                && state.getPendingBonusPlacement().contains(action.getPlayerId());
+        boolean isBonusDrawPending = state.isBonusDrawPending();
+
+        if (isBonusDrawPending && !isInBonusPlacement) {
+            return state;
+        }
+
         String cardId = action.getPayloadString("cardId");
         PlayerState ps = state.getStateFor(action.getPlayerId());
 
@@ -216,18 +225,20 @@ public class TurnManager {
 
         setupManager.applyMulliganBonusDraws(ps, drawCount);
 
-        // If no more pending bonuses, transition to DRAW phase
-        if (!state.hasAnyPendingBonus()) {
-            return state.toBuilder()
-                    .bonusDrawPending(false)
-                    .turnPhase(TurnPhase.DRAW)
-                    .gameState(GameState.ACTIVE)
+        Set<String> pendingPlacement = new HashSet<>(
+                state.getPendingBonusPlacement() != null
+                        ? state.getPendingBonusPlacement() : new HashSet<>());
+
+        if (drawCount > 0) {
+            pendingPlacement.add(action.getPlayerId());
+            state = state.toBuilder()
+                    .pendingBonusPlacement(pendingPlacement)
                     .build();
+        } else {
+            state = setupManager.checkBonusResolution(state, pendingPlacement);
         }
 
-        return state.toBuilder()
-                .bonusDrawPending(true)
-                .build();
+        return state;
     }
 
     /**

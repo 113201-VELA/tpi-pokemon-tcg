@@ -127,6 +127,7 @@ export class GamePage implements OnInit, OnDestroy {
       turnNumber:          pub.turnNumber,
       activeStadiumCardId: pub.activeStadiumCardId,
       turnFlags:           pub.turnFlags,
+      bonusDrawPending:   pub.bonusDrawPending,
       ownState,
       opponentState: {
         playerId:            opponentPublic.playerId,
@@ -166,10 +167,16 @@ export class GamePage implements OnInit, OnDestroy {
   readonly bonusDrawPending = computed(() => {
     const state = this.boardState();
     if (!state) return false;
+    console.log('BONUS DRAW CHECK:', {
+      bonusDrawPending: state.bonusDrawPending,
+      mulliganBonusDraws: state.ownState.mulliganBonusDraws,
+      setupConfirmed: state.ownState.setupConfirmed,
+    });
     return (
       (state.bonusDrawPending ?? false) &&
       (state.ownState.mulliganBonusDraws ?? 0) > 0 &&
-      !(state.ownState.setupConfirmed ?? false)
+      !(state.ownState.setupConfirmed ?? false) &&
+      !this.isInBonusPlacement()
     );
   });
 
@@ -185,7 +192,8 @@ export class GamePage implements OnInit, OnDestroy {
     return (
       !!state.ownState.active &&
       !(state.ownState.setupConfirmed ?? false) &&
-      !this.needsMulligan()
+      !this.needsMulligan() &&
+      !this.isInBonusPlacement()
     );
   });
 
@@ -200,6 +208,9 @@ export class GamePage implements OnInit, OnDestroy {
       const opp = state.opponentState.totalMulligans ?? 0;
       return `Opponent had ${opp} mulligan(s) — choose bonus cards to draw.`;
     }
+    if (this.isInBonusPlacement()) {
+      return 'You drew bonus cards! Place any Basic Pokémon on your Bench, then confirm.';
+    }
     if (state.ownState.setupConfirmed ?? false) {
       return 'Setup confirmed. Waiting for opponent…';
     }
@@ -213,6 +224,23 @@ export class GamePage implements OnInit, OnDestroy {
   readonly bonusDrawOptions = computed(() =>
     Array.from({ length: this.maxBonusDraws() + 1 }, (_, i) => i)
   );
+
+  /**
+   * True when this player is in the bonus placement stage
+   * (accepted > 0 bonus draws and must confirm placement before game starts).
+   */
+  readonly isInBonusPlacement = computed(() => {
+    const pub = this.gameActionService.boardState();
+    const me  = this.authService.currentUser();
+    if (!pub || !me) return false;
+    return (pub.pendingBonusPlacement ?? []).includes(me.id);
+  });
+
+  /**
+   * True when the player can confirm bonus placement.
+   * Available during bonus placement stage regardless of bench state.
+   */
+  readonly canConfirmBonusPlacement = computed(() => this.isInBonusPlacement());
 
   // ── Turn derived state ──────────────────────────────────────────────────
 
@@ -455,6 +483,12 @@ export class GamePage implements OnInit, OnDestroy {
   acceptBonusDraws(cardsToDraw: number): void {
     const clamped = Math.max(0, Math.min(cardsToDraw, this.maxBonusDraws()));
     this.gameActionService.sendAction('ACCEPT_MULLIGAN_BONUS', { cardsToDraw: clamped });
+  }
+
+  /** Sends CONFIRM_BONUS_PLACEMENT to end the bonus placement stage. */
+  confirmBonusPlacement(): void {
+    if (!this.isInBonusPlacement()) return;
+    this.gameActionService.sendAction('CONFIRM_BONUS_PLACEMENT', {});
   }
 
   // ── Turn actions ──────────────────────────────────────────────────────────

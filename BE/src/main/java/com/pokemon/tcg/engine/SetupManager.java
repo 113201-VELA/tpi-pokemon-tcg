@@ -138,6 +138,42 @@ public class SetupManager {
         playerState.setMulliganBonusDraws(0);
     }
 
+    /**
+     * Handles CONFIRM_BONUS_PLACEMENT.
+     * Removes the player from pendingBonusPlacement and checks if all are done.
+     */
+    public BoardState handleConfirmBonusPlacement(BoardState state, GameAction action) {
+        Set<String> pendingPlacement = new HashSet<>(
+                state.getPendingBonusPlacement() != null
+                        ? state.getPendingBonusPlacement() : new HashSet<>());
+
+        pendingPlacement.remove(action.getPlayerId());
+
+        return checkBonusResolution(state, pendingPlacement);
+    }
+
+    public BoardState checkBonusResolution(BoardState state,
+                                            Set<String> pendingPlacement) {
+        if (!pendingPlacement.isEmpty()) {
+            return state.toBuilder()
+                    .pendingBonusPlacement(pendingPlacement)
+                    .build();
+        }
+
+        if (state.hasAnyPendingBonus()) {
+            return state.toBuilder()
+                    .pendingBonusPlacement(pendingPlacement)
+                    .build();
+        }
+
+        return state.toBuilder()
+                .bonusDrawPending(false)
+                .pendingBonusPlacement(new HashSet<>())
+                .gameState(GameState.ACTIVE)
+                .turnPhase(TurnPhase.DRAW)
+                .build();
+    }
+
     // ─── HELPERS ──────────────────────────────────────────────────────────────
 
     private boolean hasBasicPokemon(List<String> cardIds) {
