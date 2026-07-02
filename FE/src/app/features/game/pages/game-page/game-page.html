@@ -113,7 +113,7 @@
 
     <!-- ── Opponent hand (fixed dorsos, outside board) ─────────────── -->
     <div class="opponent-hand">
-      @for (i of [].constructor(boardState()!.opponentState.cardsInHand); track $index) {
+      @for (i of getOpponentHandSlots(boardState()!.opponentState.cardsInHand); track $index) {
         <img
           class="opponent-hand-card"
           [src]="getCardBackUrl(boardState()!.opponentState.cardBack)"
