@@ -108,6 +108,10 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
         EngineResult handlerResult = handler.handle(currentState, action);
         BoardState newState = handlerResult.newState();
 
+        System.out.println("HANDLER RESULT newState pendingEvents: " +
+                (newState.getPendingEvents() != null ?
+                        newState.getPendingEvents().stream().map(e -> e.getType().name()).toList() : "null"));
+
         // Collect pending events generated inside the handler
         List<GameEvent> events = new ArrayList<>();
         if (handlerResult.events() != null) {
@@ -132,6 +136,9 @@ public class GameEngineFacadeImpl implements GameEngineFacade {
                         .build();
             }
         }
+
+        System.out.println("ENGINE EVENTS final: " +
+                events.stream().map(e -> e.getType().name()).toList());
 
         return EngineResult.of(newState, events);
     }

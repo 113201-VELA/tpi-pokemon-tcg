@@ -33,6 +33,9 @@ export class GameActionService {
   private stompClient?: Client;
   private gameId = '';
 
+  private eventQueue: GameEvent[] = [];
+  private processingQueue = false;
+
   // ── Signals exposed to consumers ────────────────────────────────────────
 
   /**
@@ -106,6 +109,8 @@ export class GameActionService {
     this.boardState.set(null);
     this.lastEvent.set(null);
     this.privateStateUpdate.set(null);
+    this.eventQueue = [];
+    this.processingQueue = false;
     this.connecting.set(false);
     this.connected.set(false);
   }
@@ -128,6 +133,40 @@ export class GameActionService {
       destination: `/app/game/${this.gameId}/action`,
       body: JSON.stringify(action),
     });
+  }
+
+  // ── Event queue ───────────────────────────────────────────────────────────
+
+  /**
+   * Retorna el delay en ms a esperar después de procesar un evento antes
+   * de procesar el siguiente. Los eventos con animaciones necesitan tiempo
+   * para que no se superpongan.
+   */
+  private getEventDelay(event: GameEvent): number {
+    switch (event.type) {
+      case 'COIN_FLIP': return 3500;
+      default: return 0;
+    }
+  }
+
+  /** Agrega un evento a la cola y arranca el procesamiento si no está corriendo. */
+  private enqueueEvent(event: GameEvent): void {
+    this.eventQueue.push(event);
+    if (!this.processingQueue) {
+      this.processNextEvent();
+    }
+  }
+
+  /** Procesa eventos uno por uno, respetando los delays por tipo de evento. */
+  private processNextEvent(): void {
+    if (this.eventQueue.length === 0) {
+      this.processingQueue = false;
+      return;
+    }
+    this.processingQueue = true;
+    const event = this.eventQueue.shift()!;
+    this.lastEvent.set(event);
+    setTimeout(() => this.processNextEvent(), this.getEventDelay(event));
   }
 
   // ── Private helpers ──────────────────────────────────────────────────────
@@ -166,9 +205,10 @@ export class GameActionService {
     this.stompClient!.subscribe(
       `/topic/game/${this.gameId}/events`,
       (message: IMessage) => {
+        console.log('RAW EVENT:', message.body);
         try {
           const event: GameEvent = JSON.parse(message.body);
-          this.lastEvent.set(event);
+          this.enqueueEvent(event);
         } catch {
           // Ignore malformed messages
         }
