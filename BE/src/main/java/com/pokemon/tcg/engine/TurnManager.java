@@ -11,6 +11,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.*;
+import java.util.Comparator;
 @Component
 public class TurnManager {
 
@@ -71,6 +72,7 @@ public class TurnManager {
             case CONFIRM_BONUS_PLACEMENT -> setupManager.handleConfirmBonusPlacement(state, action);
             case FORCED_SWITCH         -> handleForcedSwitch(state, action);
             case DISCARD_FROM_HAND     -> handleDiscardFromHand(state, action);
+            case TAKE_PRIZE            -> handleTakePrize(state, action);
             default                    -> state;
         };
     }
@@ -576,9 +578,12 @@ public class TurnManager {
         }
 
         // If a KO occurred and the defender has bench Pokémon, OR a hand discard
-        // is pending (e.g. Mental Trash), suspend the turn. Between-turn effects
-        // and turn switch happen only after the pending action is resolved.
-        if (ctx.getBoardState().isPendingBenchChoice() || ctx.getBoardState().isPendingHandDiscard()) {
+        // is pending (e.g. Mental Trash), OR prize taking is pending, suspend the
+        // turn. Between-turn effects and turn switch happen only after the pending
+        // action is resolved.
+        if (ctx.getBoardState().isPendingBenchChoice()
+                || ctx.getBoardState().isPendingHandDiscard()
+                || ctx.getBoardState().getPendingPrizeTakePlayerId() != null) {
             List<GameEvent> pending = new ArrayList<>();
             if (ctx.getEvents() != null) {
                 pending.addAll(ctx.getEvents());
@@ -869,6 +874,65 @@ public class TurnManager {
                 .turnPhase(TurnPhase.DRAW)
                 .turnNumber(state.getTurnNumber() + 1)
                 .turnFlags(TurnFlags.fresh())
+                .build();
+    }
+
+    /**
+     * Maneja TAKE_PRIZE — el atacante selecciona qué carta(s) de Premio tomar
+     * después de un KO. Los índices deben ser válidos y coincidir con la
+     * cantidad esperada (pendingPrizeTakeCount). Emite PRIZE_TAKEN al completarse.
+     */
+    private BoardState handleTakePrize(BoardState state, GameAction action) {
+        String playerId = action.getPlayerId();
+
+        if (!playerId.equals(state.getPendingPrizeTakePlayerId())) {
+            return state;
+        }
+
+        PlayerState ps = state.getStateFor(playerId);
+        List<String> prizes = ps.getPrizes() != null
+                ? new ArrayList<>(ps.getPrizes()) : new ArrayList<>();
+
+        @SuppressWarnings("unchecked")
+        List<Integer> selectedIndices = (List<Integer>) action.getPayload()
+                .getOrDefault("prizeIndices", List.of());
+
+        int expectedCount = state.getPendingPrizeTakeCount();
+
+        if (selectedIndices.size() != expectedCount) return state;
+
+        List<Integer> sorted = selectedIndices.stream()
+                .distinct()
+                .sorted(Comparator.reverseOrder())
+                .toList();
+
+        if (sorted.size() != expectedCount) return state;
+        if (sorted.get(0) >= prizes.size()) return state;
+
+        List<String> hand = new ArrayList<>(ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        for (int idx : sorted) {
+            hand.add(prizes.remove(idx));
+        }
+
+        ps.setPrizes(prizes);
+        ps.setHand(hand);
+
+        // Se emite PRIZE_TAKEN via pendingEvents
+        List<GameEvent> pending = new ArrayList<>(
+                state.getPendingEvents() != null ? state.getPendingEvents() : new ArrayList<>());
+        pending.add(GameEvent.builder()
+                .type(GameEventType.PRIZE_TAKEN)
+                .gameId(state.getGameId())
+                .playerId(playerId)
+                .turnNumber(state.getTurnNumber())
+                .data(Map.of("prizesRemaining", ps.getPrizes().size()))
+                .occurredAt(Instant.now())
+                .build());
+
+        return state.toBuilder()
+                .pendingPrizeTakePlayerId(null)
+                .pendingPrizeTakeCount(0)
+                .pendingEvents(pending)
                 .build();
     }
 

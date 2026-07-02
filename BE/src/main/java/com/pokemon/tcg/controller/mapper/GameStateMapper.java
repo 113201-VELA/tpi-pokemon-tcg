@@ -209,7 +209,9 @@ public class GameStateMapper {
             BoardState sanitized,
             String p1Name, String p1CardBack, String p1Coin,
             String p2Name, String p2CardBack, String p2Coin,
-            Map<String, Card> cardCache) {
+            Map<String, Card> cardCache,
+            int p1BenchCount,
+            int p2BenchCount) {
 
         return new PublicBoardStateDTO(
                 sanitized.getGameId(),
@@ -224,16 +226,17 @@ public class GameStateMapper {
                 sanitized.getFirstPlayerId(),
                 sanitized.getPendingBonusPlacement(),
                 toPublicPlayerStateDTO(sanitized.getPlayer1State(),
-                        p1Name, p1CardBack, p1Coin, cardCache),
+                        p1Name, p1CardBack, p1Coin, cardCache, p1BenchCount),
                 toPublicPlayerStateDTO(sanitized.getPlayer2State(),
-                        p2Name, p2CardBack, p2Coin, cardCache)
+                        p2Name, p2CardBack, p2Coin, cardCache, p2BenchCount)
         );
     }
 
     private PublicPlayerStateDTO toPublicPlayerStateDTO(
             PlayerState state, String playerName,
             String cardBack, String coin,
-            Map<String, Card> cardCache) {
+            Map<String, Card> cardCache,
+            int benchCount) {
         if (state == null) return null;
         return new PublicPlayerStateDTO(
                 state.getPlayerId(),
@@ -248,7 +251,8 @@ public class GameStateMapper {
                 state.getPrizeCount(),
                 state.getTotalMulligans(),
                 state.getMulliganBonusDraws(),
-                state.isSetupConfirmed()
+                state.isSetupConfirmed(),
+                benchCount
         );
     }
 

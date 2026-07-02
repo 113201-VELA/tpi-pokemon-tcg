@@ -115,6 +115,7 @@ export interface PublicPlayerStateDTO {
   totalMulligans?: number;
   mulliganBonusDraws?: number;
   setupConfirmed?: boolean;
+  benchCount: number;
 }
 
 export interface PublicBoardStateDTO {
@@ -129,6 +130,8 @@ export interface PublicBoardStateDTO {
   pendingBenchChoicePlayerId: string | null;
   firstPlayerId: string | null;
   pendingBonusPlacement: string[];
+  pendingPrizeTakePlayerId: string | null;
+  pendingPrizeTakeCount: number;
   player1State: PublicPlayerStateDTO;
   player2State: PublicPlayerStateDTO;
 }
@@ -157,7 +160,8 @@ export type GameActionType =
   | 'DECLARE_ATTACK'
   | 'END_TURN'
   // Post-KO
-  | 'CHOOSE_BENCH_POKEMON';
+  | 'CHOOSE_BENCH_POKEMON'
+  | 'TAKE_PRIZE';
 
 /** Generic action payload sent over WebSocket. */
 export interface GameAction {

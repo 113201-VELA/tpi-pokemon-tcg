@@ -950,3 +950,86 @@
 }
 .btn--accent:hover:not(:disabled) { opacity: 0.88; }
 .btn--accent:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ── Prize selection modal ────────────────────────────────────────────── */
+.modal-prize {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 1.5rem;
+  max-width: 520px;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.modal-prize__title {
+  color: var(--accent);
+  font-size: 1.1rem;
+  font-weight: 700;
+  margin: 0;
+}
+
+.modal-prize__subtitle {
+  color: var(--text-secondary);
+  font-size: 0.85rem;
+  margin: 0;
+}
+
+.prize-selection-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  justify-content: center;
+}
+
+.prize-selection-card {
+  position: relative;
+  background: none;
+  border: 2px solid var(--border);
+  border-radius: 6px;
+  padding: 0;
+  cursor: pointer;
+  transition: border-color 0.15s, transform 0.15s;
+  overflow: hidden;
+  width: clamp(56px, 7vw, 80px);
+  aspect-ratio: 5 / 7;
+}
+
+.prize-selection-card:hover {
+  border-color: var(--accent);
+  transform: translateY(-4px);
+}
+
+.prize-selection-card--selected {
+  border-color: var(--accent);
+  box-shadow: 0 0 8px var(--accent-glow);
+}
+
+.prize-selection-card__img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  border-radius: 4px;
+}
+
+.prize-selection-card__check {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 1.5rem;
+  font-weight: 900;
+  color: var(--accent);
+  text-shadow: 0 0 6px rgba(0,0,0,0.8);
+  pointer-events: none;
+}
+
+.modal-prize__actions {
+  display: flex;
+  justify-content: center;
+  margin-top: 0.25rem;
+}

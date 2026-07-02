@@ -29,6 +29,21 @@ public class RuleValidator {
 
     public ValidationResult validate(BoardState state, GameAction action) {
 
+        // Durante pendingPrizeTake, solo el jugador que debe tomar premios puede
+        // enviar TAKE_PRIZE. El oponente (que debe elegir banca) puede seguir
+        // con CHOOSE_BENCH_POKEMON.
+        if (state.getPendingPrizeTakePlayerId() != null) {
+            if (state.getPendingPrizeTakePlayerId().equals(action.getPlayerId())) {
+                if (action.getType() != GameActionType.TAKE_PRIZE) {
+                    return ValidationResult.fail(
+                            "You must take your prize cards first.");
+                }
+                return validateTakePrize(state, action);
+            }
+            // El que no es prizeTaker puede seguir a los checks siguientes
+            // (pendingBenchChoice, etc.)
+        }
+
         // During pendingBenchChoice, only the defending player may send CHOOSE_BENCH_POKEMON.
         // The attacker is blocked until the replacement is chosen.
         if (state.isPendingBenchChoice()) {
@@ -158,6 +173,7 @@ public class RuleValidator {
             case SELECT_FROM_DECK      -> validateSelectFromDeck(state, action);
             case FORCED_SWITCH         -> validateForcedSwitch(state, action);
             case DISCARD_FROM_HAND     -> validateDiscardFromHand(state, action);
+            case TAKE_PRIZE            -> validateTakePrize(state, action);
             default                    -> ValidationResult.ok();
         };
     }
@@ -758,6 +774,42 @@ public class RuleValidator {
         for (String cardId : chosenCardIds) {
             if (!handCopy.remove(cardId)) {
                 return ValidationResult.fail("Card " + cardId + " is not in your hand.");
+            }
+        }
+
+        return ValidationResult.ok();
+    }
+
+    /**
+     * Valida TAKE_PRIZE: el jugador debe ser el prizeTaker, los índices deben
+     * ser exactamente pendingPrizeTakeCount y no deben exceder el tamaño de premios.
+     */
+    @SuppressWarnings("unchecked")
+    private ValidationResult validateTakePrize(BoardState state, GameAction action) {
+        String playerId = action.getPlayerId();
+        if (!playerId.equals(state.getPendingPrizeTakePlayerId())) {
+            return ValidationResult.fail("It is not your turn to take prize cards.");
+        }
+
+        List<Integer> selectedIndices = (List<Integer>) action.getPayload()
+                .getOrDefault("prizeIndices", List.of());
+        int expectedCount = state.getPendingPrizeTakeCount();
+
+        if (selectedIndices.size() != expectedCount) {
+            return ValidationResult.fail(
+                    "You must select exactly " + expectedCount + " prize card(s).");
+        }
+
+        long distinctCount = selectedIndices.stream().distinct().count();
+        if (distinctCount != expectedCount) {
+            return ValidationResult.fail("Duplicate indices are not allowed.");
+        }
+
+        PlayerState ps = state.getStateFor(playerId);
+        int prizeSize = ps.getPrizes() != null ? ps.getPrizes().size() : 0;
+        for (int idx : selectedIndices) {
+            if (idx < 0 || idx >= prizeSize) {
+                return ValidationResult.fail("Invalid prize index: " + idx);
             }
         }
 

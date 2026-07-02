@@ -157,6 +157,14 @@
                     [pokemon]="slot"
                     (cardClick)="openCardDetail($event)"
                   />
+                } @else if (isSetupPhase()
+                    && boardState()!.opponentState.setupConfirmed
+                    && $index < getOpponentBenchCount()) {
+                  <img
+                    class="card-img-full"
+                    [src]="getCardBackUrl(boardState()!.opponentState.cardBack)"
+                    alt="Hidden Pokémon"
+                  />
                 } @else {
                   <span class="slot-empty">B{{ $index + 1 }}</span>
                 }
@@ -170,6 +178,12 @@
                 <app-active-pokemon-slot
                   [pokemon]="boardState()!.opponentState.active!"
                   (cardClick)="openCardDetail($event)"
+                />
+              } @else if (isSetupPhase() && boardState()!.opponentState.setupConfirmed) {
+                <img
+                  class="card-img-full"
+                  [src]="getCardBackUrl(boardState()!.opponentState.cardBack)"
+                  alt="Hidden Pokémon"
                 />
               } @else {
                 <span class="slot-empty">Active</span>
@@ -233,17 +247,15 @@
           <div class="prizes-col">
             <span class="zone-label">Prizes</span>
             @for (slot of getPrizeSlots(boardState()!.ownState.prizes); track $index) {
-              <div class="prize-slot" (click)="openCardDetail(slot)">
-                @if (slot) {
-                  <img [src]="slot.imageSmall" alt="Prize" class="card-img-full" />
-                } @else {
-                  <img
-                    [src]="getCardBackUrl(boardState()!.ownState.cardBack)"
-                    alt="Prize"
-                    class="card-img-full"
-                  />
-                }
-              </div>
+            <div class="prize-slot prize-slot--face-down">
+              @if (slot) {
+              <img
+                [src]="getCardBackUrl(boardState()!.ownState.cardBack)"
+                alt="Prize"
+                class="card-img-full"
+              />
+              }
+            </div>
             }
           </div>
 
@@ -537,6 +549,48 @@
         <button class="btn btn--ghost modal-attacks__cancel" (click)="closeAttackModal()">
           Cancel
         </button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Prize selection modal (after KO) ──────────────────────────── -->
+  @if (showPrizeModal() && mustTakePrize()) {
+    <div class="modal-overlay">
+      <div class="modal-prize">
+        <h2 class="modal-prize__title">Take Prize Cards</h2>
+        <p class="modal-prize__subtitle">
+          Select {{ prizesToTake() }} prize card(s).
+          ({{ selectedPrizeIndices().length }}/{{ prizesToTake() }} selected)
+        </p>
+
+        <div class="prize-selection-grid">
+          @for (prize of availablePrizes(); track $index) {
+            <button
+              class="prize-selection-card"
+              [class.prize-selection-card--selected]="selectedPrizeIndices().includes($index)"
+              (click)="togglePrizeSelection($index)"
+            >
+              <img
+                class="prize-selection-card__img"
+                [src]="getCardBackUrl(boardState()!.ownState.cardBack)"
+                alt="Prize card"
+              />
+              @if (selectedPrizeIndices().includes($index)) {
+                <div class="prize-selection-card__check">✓</div>
+              }
+            </button>
+          }
+        </div>
+
+        <div class="modal-prize__actions">
+          <button
+            class="btn btn--accent"
+            [disabled]="!canConfirmPrize()"
+            (click)="confirmTakePrize()"
+          >
+            Take {{ prizesToTake() }} Prize(s)
+          </button>
+        </div>
       </div>
     </div>
   }
