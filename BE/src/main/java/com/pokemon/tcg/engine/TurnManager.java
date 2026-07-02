@@ -70,6 +70,7 @@ public class TurnManager {
             case SELECT_FROM_DECK      -> handleSelectFromDeck(state, action);
             case CONFIRM_BONUS_PLACEMENT -> setupManager.handleConfirmBonusPlacement(state, action);
             case FORCED_SWITCH         -> handleForcedSwitch(state, action);
+            case DISCARD_FROM_HAND     -> handleDiscardFromHand(state, action);
             default                    -> state;
         };
     }
@@ -97,6 +98,11 @@ public class TurnManager {
 
         if (state.isPendingDeckSelection()) {
             actions.add(GameActionType.SELECT_FROM_DECK);
+            return actions;
+        }
+
+        if (state.isPendingHandDiscard()) {
+            actions.add(GameActionType.DISCARD_FROM_HAND);
             return actions;
         }
 
@@ -569,21 +575,17 @@ public class TurnManager {
                     .build();
         }
 
-        // If a KO occurred and the defender has bench Pokémon, suspend the turn.
-        // Between-turn effects and turn switch will happen after CHOOSE_BENCH_POKEMON.
-        if (ctx.getBoardState().isPendingBenchChoice()) {
+        // If a KO occurred and the defender has bench Pokémon, OR a hand discard
+        // is pending (e.g. Mental Trash), suspend the turn. Between-turn effects
+        // and turn switch happen only after the pending action is resolved.
+        if (ctx.getBoardState().isPendingBenchChoice() || ctx.getBoardState().isPendingHandDiscard()) {
             List<GameEvent> pending = new ArrayList<>();
-
-            // Coin flip events goes first
             if (ctx.getEvents() != null) {
                 pending.addAll(ctx.getEvents());
             }
-
-            // Merge with existing pending events from the boardState
             if (ctx.getBoardState().getPendingEvents() != null) {
                 pending.addAll(ctx.getBoardState().getPendingEvents());
             }
-
             return ctx.getBoardState().toBuilder()
                     .pendingEvents(pending)
                     .build();
@@ -810,6 +812,50 @@ public class TurnManager {
         // Clear the pending bench choice flag
         state = state.toBuilder()
                 .pendingBenchChoicePlayerId(null)
+                .build();
+
+        state = processBetweenTurns(state);
+
+        String opponentId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
+                ? state.getPlayer2State().getPlayerId()
+                : state.getPlayer1State().getPlayerId();
+
+        return state.toBuilder()
+                .currentPlayerId(opponentId)
+                .turnPhase(TurnPhase.DRAW)
+                .turnNumber(state.getTurnNumber() + 1)
+                .turnFlags(TurnFlags.fresh())
+                .build();
+    }
+
+    /**
+     * Resolves a pending hand discard (e.g. Malamar's Mental Trash). Moves the
+     * chosen cards from the player's hand to their discard pile, clears the
+     * pending flag, then resumes the turn switch that DECLARE_ATTACK suspended.
+     */
+    private BoardState handleDiscardFromHand(BoardState state, GameAction action) {
+        if (!state.isPendingHandDiscard()) return state;
+        if (!state.getPendingHandDiscardPlayerId().equals(action.getPlayerId())) return state;
+
+        List<String> chosenCardIds = getChosenCardIds(action);
+        if (chosenCardIds.size() != state.getPendingHandDiscardCount()) return state;
+
+        PlayerState ps = state.getStateFor(action.getPlayerId());
+        List<String> hand = new ArrayList<>(
+                ps.getHand() != null ? ps.getHand() : new ArrayList<>());
+        List<String> discard = new ArrayList<>(
+                ps.getDiscard() != null ? ps.getDiscard() : new ArrayList<>());
+
+        for (String cardId : chosenCardIds) {
+            if (!hand.remove(cardId)) return state; // invalid card — abort, nothing applied
+        }
+        discard.addAll(chosenCardIds);
+        ps.setHand(hand);
+        ps.setDiscard(discard);
+
+        state = state.toBuilder()
+                .pendingHandDiscardPlayerId(null)
+                .pendingHandDiscardCount(0)
                 .build();
 
         state = processBetweenTurns(state);

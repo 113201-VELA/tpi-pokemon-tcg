@@ -73,6 +73,12 @@ public class BoardState {
     private String pendingForcedSwitchPlayerId = null;
 
     @Builder.Default
+    private String pendingHandDiscardPlayerId = null;
+
+    @Builder.Default
+    private int pendingHandDiscardCount = 0;
+
+    @Builder.Default
     private String pendingAttackSelectionKey = null;
 
     @Builder.Default
@@ -123,6 +129,16 @@ public class BoardState {
 
     public boolean isPendingForcedSwitch() {
         return pendingForcedSwitchPlayerId != null;
+    }
+
+    /**
+     * Returns true when a card effect (e.g. Malamar's Mental Trash) requires the
+     * given player to choose which cards to discard from their own hand.
+     * All actions are blocked for both players until DISCARD_FROM_HAND is sent
+     * by pendingHandDiscardPlayerId.
+     */
+    public boolean isPendingHandDiscard() {
+        return pendingHandDiscardPlayerId != null;
     }
 
     public boolean isPendingAttackSelection() {
