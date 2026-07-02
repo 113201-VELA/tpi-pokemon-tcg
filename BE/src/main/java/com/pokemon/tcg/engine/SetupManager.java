@@ -152,8 +152,13 @@ public class SetupManager {
         return checkBonusResolution(state, pendingPlacement);
     }
 
-    public BoardState checkBonusResolution(BoardState state,
-                                            Set<String> pendingPlacement) {
+    public BoardState checkBonusResolution(BoardState state, Set<String> pendingPlacement) {
+
+        System.out.println("CHECK BONUS RESOLUTION - pendingPlacement: " + pendingPlacement);
+        System.out.println("CHECK BONUS RESOLUTION - hasAnyPendingBonus: " + state.hasAnyPendingBonus());
+        System.out.println("CHECK BONUS RESOLUTION - p1 mulliganBonusDraws: " + state.getPlayer1State().getMulliganBonusDraws());
+        System.out.println("CHECK BONUS RESOLUTION - p2 mulliganBonusDraws: " + state.getPlayer2State().getMulliganBonusDraws());
+
         if (!pendingPlacement.isEmpty()) {
             return state.toBuilder()
                     .pendingBonusPlacement(pendingPlacement)
