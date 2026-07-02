@@ -57,6 +57,16 @@ public class ActivePokemon {
     @Builder.Default
     private int pendingAttackDamageBoostAmount = 0;
 
+    /**
+     * Set on the Defending Pokémon by an attack like Malamar's Mental Panic:
+     * the next time THIS Pokémon attempts to attack, a coin is flipped before
+     * the attack resolves — tails cancels it. Consumed (cleared) on that first
+     * attempt regardless of the coin result. Not reset between turns like
+     * activeEffects, since it must survive through the opponent's turn.
+     */
+    @Builder.Default
+    private boolean pendingAttackFailChance = false;
+
     public int getCurrentHp(int maxHp) {
         return Math.max(0, maxHp - damageCounters * 10);
     }

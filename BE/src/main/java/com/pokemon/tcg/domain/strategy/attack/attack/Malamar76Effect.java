@@ -6,11 +6,10 @@ import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import com.pokemon.tcg.engine.CoinFlipService;
 import org.springframework.stereotype.Component;
 
-import java.util.ArrayList;
 import java.util.List;
 
 @Component
-public class MalamarEffect implements AttackEffect {
+public class Malamar76Effect implements AttackEffect {
 
     private static final String MENTAL_TRASH    = "mental trash";
     private static final String DISTORTION_BEAM = "distortion beam";
@@ -18,7 +17,7 @@ public class MalamarEffect implements AttackEffect {
 
     private final CoinFlipService coinFlipService;
 
-    public MalamarEffect(CoinFlipService coinFlipService) {
+    public Malamar76Effect(CoinFlipService coinFlipService) {
         this.coinFlipService = coinFlipService;
     }
 

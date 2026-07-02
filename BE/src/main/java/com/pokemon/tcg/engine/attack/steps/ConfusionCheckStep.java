@@ -18,6 +18,12 @@ import java.util.Map;
  * Step 2 — If the attacking Pokémon is Confused, flips a coin.
  * Tails: attack fails and 3 damage counters are placed on the attacker.
  * Heads: attack proceeds normally.
+ *
+ * <p>Independently, if the attacking Pokémon has a pending attack-fail
+ * chance set by a previous opponent's attack (e.g. Malamar's Mental Panic),
+ * flips a coin. Tails: attack fails, no extra damage. The flag is consumed
+ * either way. This check is independent from Confusion — a Pokémon could
+ * be affected by both in the same turn.
  */
 @Component
 public class ConfusionCheckStep implements AttackStep {
@@ -50,6 +56,26 @@ public class ConfusionCheckStep implements AttackStep {
                 // Attack fails — 3 damage counters on attacker
                 attacker.setDamageCounters(attacker.getDamageCounters() + 3);
                 ctx.cancel("Confused — attack failed (tails)");
+                return;
+            }
+        }
+
+        if (attacker != null && attacker.isPendingAttackFailChance()) {
+            attacker.setPendingAttackFailChance(false); // consumed regardless of outcome
+
+            CoinResult flip = coinFlipService.flip();
+
+            ctx.addEvent(GameEvent.builder()
+                    .type(GameEventType.COIN_FLIP)
+                    .gameId(ctx.getBoardState().getGameId())
+                    .playerId(ctx.getAction().getPlayerId())
+                    .turnNumber(ctx.getBoardState().getTurnNumber())
+                    .data(Map.of("source", "mental-panic", "coinResult", flip.name()))
+                    .occurredAt(Instant.now())
+                    .build());
+
+            if (flip == CoinResult.TAILS) {
+                ctx.cancel("Mental Panic — attack failed (tails)");
                 return;
             }
         }
