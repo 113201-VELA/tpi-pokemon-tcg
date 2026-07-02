@@ -37,7 +37,8 @@ public class ActiveState implements GameStateHandler {
                  RETREAT,
                  DECLARE_ATTACK,
                  END_TURN,
-                 CHOOSE_BENCH_POKEMON -> {
+                 CHOOSE_BENCH_POKEMON,
+                 TAKE_PRIZE -> {
                 BoardState newState = turnManager.advancePhase(state, action);
                 yield EngineResult.of(newState, List.of());
             }

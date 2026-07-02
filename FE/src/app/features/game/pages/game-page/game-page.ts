@@ -69,6 +69,10 @@ export class GamePage implements OnInit, OnDestroy {
   // Bench choice modal (after KO)
   readonly showBenchChoiceModal = signal(false);
 
+  // Prize selection modal (after KO)
+  readonly showPrizeModal       = signal(false);
+  readonly selectedPrizeIndices = signal<number[]>([]);
+
   // Retreat modal state
   readonly showRetreatModal            = signal(false);
   readonly retreatReplacement          = signal<string | null>(null);
@@ -303,6 +307,33 @@ export class GamePage implements OnInit, OnDestroy {
     return this.boardState()?.ownState.bench ?? [];
   });
 
+  /**
+   * True when this player must take prize cards.
+   * Blocks all other actions until resolved.
+   */
+  readonly mustTakePrize = computed(() => {
+    const pub = this.gameActionService.boardState();
+    const me  = this.authService.currentUser();
+    if (!pub || !me) return false;
+    return pub.pendingPrizeTakePlayerId === me.id;
+  });
+
+  /** Number of prize cards this player must take. */
+  readonly prizesToTake = computed(() => {
+    const pub = this.gameActionService.boardState();
+    return pub?.pendingPrizeTakeCount ?? 0;
+  });
+
+  /** Prize cards available to choose from. */
+  readonly availablePrizes = computed(() => {
+    return this.boardState()?.ownState.prizes ?? [];
+  });
+
+  /** True when the player has selected the correct number of prizes. */
+  readonly canConfirmPrize = computed(() => {
+    return this.selectedPrizeIndices().length === this.prizesToTake();
+  });
+
   /** True when the player can place a Basic Pokémon on the bench. */
   readonly canPlaceBasic = computed(() => {
     const state = this.boardState();
@@ -365,6 +396,21 @@ export class GamePage implements OnInit, OnDestroy {
     effect(() => {
       if (!this.mustChooseBench()) {
         this.showBenchChoiceModal.set(false);
+      }
+    });
+
+    // Open prize modal automatically when mustTakePrize becomes true
+    effect(() => {
+      if (this.mustTakePrize()) {
+        this.selectedPrizeIndices.set([]);
+        this.showPrizeModal.set(true);
+      }
+    });
+
+    // Close prize modal when no longer needed
+    effect(() => {
+      if (!this.mustTakePrize()) {
+        this.showPrizeModal.set(false);
       }
     });
 
@@ -602,6 +648,27 @@ export class GamePage implements OnInit, OnDestroy {
   chooseBenchPokemon(instanceId: string): void {
     this.gameActionService.sendAction('CHOOSE_BENCH_POKEMON', { instanceId });
     this.showBenchChoiceModal.set(false);
+  }
+
+  /** Toggles a prize card selection by index. */
+  togglePrizeSelection(index: number): void {
+    const current = this.selectedPrizeIndices();
+    if (current.includes(index)) {
+      this.selectedPrizeIndices.set(current.filter(i => i !== index));
+    } else {
+      if (current.length >= this.prizesToTake()) return;
+      this.selectedPrizeIndices.set([...current, index]);
+    }
+  }
+
+  /** Sends TAKE_PRIZE with the selected prize indices. */
+  confirmTakePrize(): void {
+    if (!this.canConfirmPrize()) return;
+    this.gameActionService.sendAction('TAKE_PRIZE', {
+      prizeIndices: this.selectedPrizeIndices(),
+    });
+    this.showPrizeModal.set(false);
+    this.selectedPrizeIndices.set([]);
   }
 
   /**

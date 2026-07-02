@@ -112,20 +112,11 @@ public class PostDamageEffectStep implements AttackStep {
         defenderState.setDiscard(discard);
         defenderState.setActivePokemon(null);
 
-        // Attacker takes prize cards — 2 for EX/MEGA, 1 for normal Pokémon
+        // The number of prizes the attacker must take is calculated
+        // (2 for EX/MEGA, 1 for a normal Pokémon). They are no longer
+        // transferred automatically — a flag is set so the player sends
+        // a TAKE_PRIZE action.
         int prizesToTake = resolvePrizeCount(knockedOut.getCardId());
-        List<String> prizes = new ArrayList<>(
-                attackerState.getPrizes() != null
-                        ? attackerState.getPrizes() : new ArrayList<>());
-        List<String> hand = new ArrayList<>(
-                attackerState.getHand() != null
-                        ? attackerState.getHand() : new ArrayList<>());
-
-        for (int i = 0; i < prizesToTake && !prizes.isEmpty(); i++) {
-            hand.add(prizes.remove(0));
-        }
-        attackerState.setPrizes(prizes);
-        attackerState.setHand(hand);
 
         ctx.addEvent(GameEvent.builder()
                 .type(GameEventType.POKEMON_KNOCKED_OUT)
@@ -136,25 +127,20 @@ public class PostDamageEffectStep implements AttackStep {
                 .occurredAt(Instant.now())
                 .build());
 
-        ctx.addEvent(GameEvent.builder()
-                .type(GameEventType.PRIZE_TAKEN)
-                .gameId(ctx.getBoardState().getGameId())
-                .playerId(ctx.getAction().getPlayerId())
-                .turnNumber(ctx.getBoardState().getTurnNumber())
-                .data(Map.of("prizesRemaining", attackerState.getPrizes().size()))
-                .occurredAt(Instant.now())
-                .build());
-
-        // If the defender still has bench Pokémon, flag a pending bench choice.
-        // The turn will not advance until they send CHOOSE_BENCH_POKEMON.
-        // If the bench is empty, VictoryConditionChecker will detect the win condition.
         boolean defenderHasBench = defenderState.getBench() != null
                 && !defenderState.getBench().isEmpty();
-        if (defenderHasBench) {
-            ctx.setBoardState(ctx.getBoardState().toBuilder()
-                    .pendingBenchChoicePlayerId(defenderState.getPlayerId())
-                    .build());
-        }
+
+        int currentPending = ctx.getBoardState().getPendingPrizeTakeCount();
+
+        BoardState newState = ctx.getBoardState().toBuilder()
+                .pendingPrizeTakePlayerId(ctx.getAction().getPlayerId())
+                .pendingPrizeTakeCount(currentPending + prizesToTake)
+                .pendingBenchChoicePlayerId(defenderHasBench
+                        ? defenderState.getPlayerId()
+                        : ctx.getBoardState().getPendingBenchChoicePlayerId())
+                .build();
+
+        ctx.setBoardState(newState);
     }
 
     private int resolvePrizeCount(String cardId) {

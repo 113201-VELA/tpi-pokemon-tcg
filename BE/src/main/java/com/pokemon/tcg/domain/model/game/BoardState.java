@@ -90,6 +90,19 @@ public class BoardState {
     @Builder.Default
     private AttackSelectionType pendingAttackSelectionType = AttackSelectionType.PICK;
 
+    /**
+     * ID del jugador que debe seleccionar cartas de Premio después de un KO.
+     * Se setea en PostDamageEffectStep.handleKnockout, se limpia en handleTakePrize.
+     */
+    @Builder.Default
+    private String pendingPrizeTakePlayerId = null;
+
+    /**
+     * Cantidad de premios que el jugador debe tomar (1 para Pokémon normal, 2 para EX/MEGA).
+     */
+    @Builder.Default
+    private int pendingPrizeTakeCount = 0;
+
     public PlayerState getStateFor(String playerId) {
         if (playerId.equals(player1State.getPlayerId())) return player1State;
         if (playerId.equals(player2State.getPlayerId())) return player2State;
