@@ -43,6 +43,10 @@ class Aegislash86EffectTest {
 
         ActivePokemon aegislash = ctx.getBoardState().getStateFor(PLAYER_1).getActivePokemon();
         assertThat(aegislash.getBlockedAttackName()).isEqualTo("king's shield");
+        // boardState() defaults turnNumber to 1. The block must survive the
+        // opponent's turn and cover Aegislash's own next turn, expiring only
+        // once turnNumber reaches turnNumber(1) + 2 = 3.
+        assertThat(aegislash.getBlockedAttackUntilTurn()).isEqualTo(3);
     }
 
     @Test
@@ -67,6 +71,8 @@ class Aegislash86EffectTest {
         ActivePokemon aegislash = ctx.getBoardState().getStateFor(PLAYER_1).getActivePokemon();
         assertThat(aegislash.getActiveEffects()).isEmpty();
         assertThat(aegislash.getBlockedAttackName()).isNull();
+        // Default value from ActivePokemon.builder() — no block was ever set
+        assertThat(aegislash.getBlockedAttackUntilTurn()).isEqualTo(-1);
     }
 
     private AttackContext buildContext(String attackName) {

@@ -817,6 +817,7 @@ class RuleValidatorTest {
     void validate_attack_shouldFail_whenAttackBlockedByTorment() {
         BoardState state = buildActiveState("p1", TurnPhase.MAIN, 2);
         state.getPlayer1State().getActivePokemon().setBlockedAttackName("Tackle");
+        state.getPlayer1State().getActivePokemon().setBlockedAttackUntilTurn(3);
 
         GameAction action = buildAction("p1", GameActionType.DECLARE_ATTACK,
                 Map.of("attackName", "Tackle"));
@@ -1048,6 +1049,68 @@ class RuleValidatorTest {
 
         GameAction action = buildAction("p2", GameActionType.SELECT_FROM_DECK,
                 Map.of("chosenCardIds", List.of("xy1-1")));
+        assertThat(validator.validate(state, action).isValid()).isFalse();
+    }
+
+    // ─── PENDING_HAND_DISCARD ─────────────────────────────────────────────────
+
+    @Test
+    void validate_shouldBlockNonDiscardActions_whenPendingHandDiscard() {
+        BoardState state = buildActiveState("p1");
+        state.setPendingHandDiscardPlayerId("p2");
+        state.setPendingHandDiscardCount(1);
+
+        GameAction action = buildAction("p1", GameActionType.END_TURN, Map.of());
+        assertThat(validator.validate(state, action).isValid()).isFalse();
+    }
+
+    @Test
+    void validate_discardFromHand_shouldFail_whenWrongPlayer() {
+        BoardState state = buildActiveState("p1");
+        state.setPendingHandDiscardPlayerId("p2");
+        state.setPendingHandDiscardCount(1);
+        state.getPlayer2State().setHand(new ArrayList<>(List.of("xy1-1")));
+
+        // p1 tries to discard but it's p2's obligation
+        GameAction action = buildAction("p1", GameActionType.DISCARD_FROM_HAND,
+                Map.of("chosenCardIds", List.of("xy1-1")));
+        assertThat(validator.validate(state, action).isValid()).isFalse();
+    }
+
+    @Test
+    void validate_discardFromHand_shouldSucceed_whenExactCountAndCardsInHand() {
+        BoardState state = buildActiveState("p1");
+        state.setPendingHandDiscardPlayerId("p2");
+        state.setPendingHandDiscardCount(2);
+        state.getPlayer2State().setHand(new ArrayList<>(List.of("xy1-1", "xy1-2", "xy1-3")));
+
+        GameAction action = buildAction("p2", GameActionType.DISCARD_FROM_HAND,
+                Map.of("chosenCardIds", List.of("xy1-1", "xy1-2")));
+        assertThat(validator.validate(state, action).isValid()).isTrue();
+    }
+
+    @Test
+    void validate_discardFromHand_shouldFail_whenCountMismatch() {
+        BoardState state = buildActiveState("p1");
+        state.setPendingHandDiscardPlayerId("p2");
+        state.setPendingHandDiscardCount(2);
+        state.getPlayer2State().setHand(new ArrayList<>(List.of("xy1-1", "xy1-2", "xy1-3")));
+
+        // pendingHandDiscardCount is 2 but only 1 chosen
+        GameAction action = buildAction("p2", GameActionType.DISCARD_FROM_HAND,
+                Map.of("chosenCardIds", List.of("xy1-1")));
+        assertThat(validator.validate(state, action).isValid()).isFalse();
+    }
+
+    @Test
+    void validate_discardFromHand_shouldFail_whenCardNotInHand() {
+        BoardState state = buildActiveState("p1");
+        state.setPendingHandDiscardPlayerId("p2");
+        state.setPendingHandDiscardCount(1);
+        state.getPlayer2State().setHand(new ArrayList<>(List.of("xy1-1")));
+
+        GameAction action = buildAction("p2", GameActionType.DISCARD_FROM_HAND,
+                Map.of("chosenCardIds", List.of("xy1-99"))); // not in hand
         assertThat(validator.validate(state, action).isValid()).isFalse();
     }
 }

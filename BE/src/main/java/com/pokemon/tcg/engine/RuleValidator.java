@@ -548,7 +548,9 @@ public class RuleValidator {
      * - The player who goes first cannot attack on turn 1.
      * - Only during MAIN phase.
      * - Active Pokémon must not be Asleep or Paralyzed.
-     * - The declared attack must not be blocked by Torment.
+     * - The declared attack must not be currently blocked (e.g. Rock Wrecker,
+     *   King's Shield, Darkness Blade) — blocks expire based on turn number,
+     *   not on the owner's next DRAW_CARD (see blockedAttackUntilTurn).
      * Energy sufficiency is checked inside EnergyCheckStep in the pipeline,
      * not here, to keep the pipeline as the single source of truth for energy logic.
      */
@@ -579,13 +581,18 @@ public class RuleValidator {
             }
         }
 
-        // Check if the declared attack is blocked by Torment
+        // Check if the declared attack is currently blocked (e.g. Rock Wrecker,
+        // King's Shield, Darkness Blade). The block expires once the turn number
+        // reaches blockedAttackUntilTurn — blockedAttackName alone is not enough,
+        // since it's no longer cleared by clearActiveEffects on DRAW_CARD (that
+        // used to clear it one turn too early — see TurnManager bugfix notes).
         String attackName = action.getPayloadString("attackName");
         if (attackName != null
                 && active.getBlockedAttackName() != null
-                && attackName.equalsIgnoreCase(active.getBlockedAttackName())) {
+                && attackName.equalsIgnoreCase(active.getBlockedAttackName())
+                && state.getTurnNumber() < active.getBlockedAttackUntilTurn()) {
             return ValidationResult.fail(
-                    "That attack is blocked by Torment and cannot be used this turn.");
+                    "That attack is blocked and cannot be used this turn.");
         }
 
         return ValidationResult.ok();
