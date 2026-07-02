@@ -115,6 +115,7 @@ export interface PublicPlayerStateDTO {
   totalMulligans?: number;
   mulliganBonusDraws?: number;
   setupConfirmed?: boolean;
+  benchCount: number;
 }
 
 export interface PublicBoardStateDTO {

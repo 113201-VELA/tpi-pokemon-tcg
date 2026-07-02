@@ -694,6 +694,20 @@ export class GamePage implements OnInit, OnDestroy {
     return Array.from({ length: 5 }, (_, i) => bench[i] ?? null);
   }
 
+  /**
+   * Returns the opponent's bench count from the public board state.
+   * Used during SETUP to show the correct number of hidden card backs.
+   */
+  getOpponentBenchCount(): number {
+    const pub  = this.gameActionService.boardState();
+    const me   = this.authService.currentUser();
+    if (!pub || !me) return 0;
+    const opponentPublic = pub.player1State.playerId === me.id
+      ? pub.player2State
+      : pub.player1State;
+    return opponentPublic.benchCount ?? 0;
+  }
+
   /** Returns the top card of a discard pile, or null if empty. */
   getDiscardTop(pile: CardResponse[]): CardResponse | null {
     return pile.length > 0 ? pile[pile.length - 1] : null;

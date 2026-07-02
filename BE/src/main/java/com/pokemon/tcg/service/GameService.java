@@ -374,13 +374,20 @@ public class GameService {
             Map<String, Card> cardCache = cardLookupPort.findAllById(
                     collectCardIds(result.newState()));
 
+            int p1BenchCount = result.newState().getPlayer1State().getBench() != null
+                    ? result.newState().getPlayer1State().getBench().size() : 0;
+            int p2BenchCount = result.newState().getPlayer2State().getBench() != null
+                    ? result.newState().getPlayer2State().getBench().size() : 0;
+
             BoardState sanitized = sanitizeForPublic(result.newState());
 
             PublicBoardStateDTO publicDto = gameStateMapper.toPublicBoardStateDTO(
                     sanitized,
                     p1Name, p1CardBack, p1Coin,
                     p2Name, p2CardBack, p2Coin,
-                    cardCache);
+                    cardCache,
+                    p1BenchCount,
+                    p2BenchCount);
             eventPublisher.publishBoardStateDTO(gameId.toString(), publicDto);
 
             OwnPlayerStateResponseDTO p1Dto = gameStateMapper.toOwnPlayerStateDTO(
@@ -737,10 +744,12 @@ public class GameService {
     }
 
     private BoardState sanitizeForPublic(BoardState state) {
+        boolean isSetup = state.getGameState() == GameState.SETUP;
+
         PlayerState p1 = PlayerState.builder()
                 .playerId(state.getPlayer1State().getPlayerId())
-                .activePokemon(state.getPlayer1State().getActivePokemon())
-                .bench(state.getPlayer1State().getBench())
+                .activePokemon(isSetup ? null : state.getPlayer1State().getActivePokemon())
+                .bench(isSetup ? List.of() : state.getPlayer1State().getBench())
                 .discard(state.getPlayer1State().getDiscard())
                 .hand(List.of())
                 .deck(List.of())
@@ -752,8 +761,8 @@ public class GameService {
 
         PlayerState p2 = PlayerState.builder()
                 .playerId(state.getPlayer2State().getPlayerId())
-                .activePokemon(state.getPlayer2State().getActivePokemon())
-                .bench(state.getPlayer2State().getBench())
+                .activePokemon(isSetup ? null : state.getPlayer2State().getActivePokemon())
+                .bench(isSetup ? List.of() : state.getPlayer2State().getBench())
                 .discard(state.getPlayer2State().getDiscard())
                 .hand(List.of())
                 .deck(List.of())
@@ -780,7 +789,6 @@ public class GameService {
                 .pendingDeckSelectionPlayerId(state.getPendingDeckSelectionPlayerId())
                 .pendingDeckSelectionCardIds(state.getPendingDeckSelectionCardIds())
                 .pendingBonusPlacement(state.getPendingBonusPlacement())
-                .firstPlayerId(state.getFirstPlayerId())
                 .build();
     }
 }

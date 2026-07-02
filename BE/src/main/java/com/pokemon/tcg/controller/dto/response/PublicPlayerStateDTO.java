@@ -15,5 +15,6 @@ public record PublicPlayerStateDTO(
         int prizesCount,
         int totalMulligans,
         int mulliganBonusDraws,
-        boolean setupConfirmed
+        boolean setupConfirmed,
+        int benchCount
 ) {}
