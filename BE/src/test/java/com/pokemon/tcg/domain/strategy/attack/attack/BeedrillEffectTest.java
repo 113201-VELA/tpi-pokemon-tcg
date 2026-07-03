@@ -36,6 +36,15 @@ class BeedrillEffectTest {
     @BeforeEach
     void setUp() {
         effect = new BeedrillEffect(coinFlipService, statusEffectManager);
+        // NOTE: the statusEffectManager.applyCondition stub used to live here,
+        // but only the poisonJab_* tests actually trigger it (Poison Jab
+        // applies POISONED). MockitoExtension runs in strict-stubs mode, so
+        // a stub configured here that flashNeedle_* tests never touch throws
+        // UnnecessaryStubbingException. Moved into stubApplyCondition(),
+        // called only from the tests that actually need it.
+    }
+
+    private void stubApplyCondition() {
         doAnswer(invocation -> {
             ActivePokemon pokemon = invocation.getArgument(0);
             SpecialCondition condition = invocation.getArgument(1);
@@ -56,6 +65,7 @@ class BeedrillEffectTest {
 
     @Test
     void poisonJab_shouldPoisonDefender() {
+        stubApplyCondition();
         AttackContext ctx = buildContext("Poison Jab");
 
         effect.apply(ctx);
@@ -67,6 +77,7 @@ class BeedrillEffectTest {
 
     @Test
     void poisonJab_shouldNotAddDamageModifiers() {
+        stubApplyCondition();
         AttackContext ctx = buildContext("Poison Jab");
 
         effect.apply(ctx);
@@ -76,6 +87,7 @@ class BeedrillEffectTest {
 
     @Test
     void poisonJab_shouldNotAffectAttacker() {
+        stubApplyCondition();
         AttackContext ctx = buildContext("Poison Jab");
 
         effect.apply(ctx);

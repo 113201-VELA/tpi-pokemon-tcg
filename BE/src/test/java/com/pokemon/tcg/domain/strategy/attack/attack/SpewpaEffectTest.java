@@ -36,6 +36,15 @@ class SpewpaEffectTest {
     @BeforeEach
     void setUp() {
         effect = new SpewpaEffect(coinFlipService, statusEffectManager);
+        // NOTE: the statusEffectManager.applyCondition stub used to live here,
+        // but apply_shouldNotParalyzeDefender_whenTails never triggers it
+        // (tails = no condition applied). MockitoExtension runs in
+        // strict-stubs mode, so an unused stub there throws
+        // UnnecessaryStubbingException. Moved into stubApplyCondition(),
+        // called only from the tests that actually need it.
+    }
+
+    private void stubApplyCondition() {
         doAnswer(invocation -> {
             ActivePokemon pokemon = invocation.getArgument(0);
             SpecialCondition condition = invocation.getArgument(1);
@@ -56,6 +65,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldParalyzeDefender_whenHeads() {
+        stubApplyCondition();
         when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
 
@@ -68,6 +78,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldNotParalyzeDefender_whenTails() {
+        // No stubApplyCondition() here: tails never calls it.
         when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildContext();
 
@@ -80,6 +91,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldReplaceAsleep_withParalyzed_whenHeads() {
+        stubApplyCondition();
         when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
         ctx.getBoardState().getStateFor(PLAYER_2)
@@ -95,6 +107,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldReplaceConfused_withParalyzed_whenHeads() {
+        stubApplyCondition();
         when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
         ctx.getBoardState().getStateFor(PLAYER_2)
@@ -110,6 +123,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldNotAffectAttacker_whenHeads() {
+        stubApplyCondition();
         when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
 
@@ -121,6 +135,7 @@ class SpewpaEffectTest {
 
     @Test
     void apply_shouldNotAddModifiers() {
+        stubApplyCondition();
         when(coinFlipService.flipAndEmit(any(AttackContext.class), anyString())).thenReturn(CoinResult.HEADS);
         AttackContext ctx = buildContext();
 

@@ -129,20 +129,36 @@ class PostDamageEffectStepTest {
                 .getActivePokemon()).isNull();
     }
 
+    /**
+     * UPDATED: prizes are no longer transferred automatically on KO — only a
+     * pending prize-take flag is set (pendingPrizeTakePlayerId/Count). The
+     * actual move from prizes to hand happens later, in
+     * TurnManager.handleTakePrize, once the player sends TAKE_PRIZE choosing
+     * which card(s) to take. See the comment in
+     * PostDamageEffectStep.handleKnockout.
+     */
     @Test
-    void knockedOut_shouldMovePrizeToAttackerHand() {
+    void knockedOut_shouldSetPendingPrizeTake_withoutMovingPrizesYet() {
         AttackContext ctx = buildCtx(10, 100, new ArrayList<>(), List.of("xy1-99", "xy1-98"));
 
         step.execute(ctx, chain);
 
+        assertThat(ctx.getBoardState().getPendingPrizeTakePlayerId())
+                .isEqualTo(TestDataBuilder.PLAYER_1);
+        assertThat(ctx.getBoardState().getPendingPrizeTakeCount()).isEqualTo(1);
+
         PlayerState attacker = ctx.getBoardState().getStateFor(TestDataBuilder.PLAYER_1);
-        assertThat(attacker.getHand()).contains("xy1-99");
-        assertThat(attacker.getPrizes()).doesNotContain("xy1-99");
-        assertThat(attacker.getPrizes()).hasSize(1);
+        assertThat(attacker.getHand()).doesNotContain("xy1-99", "xy1-98");
+        assertThat(attacker.getPrizes()).hasSize(2); // untouched
     }
 
+    /**
+     * UPDATED: only POKEMON_KNOCKED_OUT is emitted here. PRIZE_TAKEN is
+     * emitted later by TurnManager.handleTakePrize once the player actually
+     * picks their prize card(s) — not as part of the KO step itself.
+     */
     @Test
-    void knockedOut_shouldEmitKOAndPrizeEvents() {
+    void knockedOut_shouldEmitKOEvent_notPrizeTakenYet() {
         AttackContext ctx = buildCtx(10, 100, new ArrayList<>(), List.of("xy1-99"));
 
         step.execute(ctx, chain);
@@ -150,7 +166,7 @@ class PostDamageEffectStepTest {
         assertThat(ctx.getEvents())
                 .anyMatch(e -> e.getType() == GameEventType.POKEMON_KNOCKED_OUT);
         assertThat(ctx.getEvents())
-                .anyMatch(e -> e.getType() == GameEventType.PRIZE_TAKEN);
+                .noneMatch(e -> e.getType() == GameEventType.PRIZE_TAKEN);
     }
 
     @Test
