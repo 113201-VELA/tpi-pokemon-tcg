@@ -666,10 +666,15 @@ public class TurnManager {
     }
 
     private BoardState checkConditionKnockouts(BoardState state) {
-        List<GameEvent> allEvents = new ArrayList<>();
+        KOResult r1 = checkSingleConditionKO(state,
+                state.getPlayer1State(), state.getPlayer2State());
+        KOResult r2 = checkSingleConditionKO(state,
+                state.getPlayer2State(), state.getPlayer1State());
 
-        allEvents.addAll(checkSingleConditionKO(state, state.getPlayer1State(), state.getPlayer2State()));
-        allEvents.addAll(checkSingleConditionKO(state, state.getPlayer2State(), state.getPlayer1State()));
+        // Accumulate events
+        List<GameEvent> allEvents = new ArrayList<>();
+        allEvents.addAll(r1.events());
+        allEvents.addAll(r2.events());
 
         if (!allEvents.isEmpty()) {
             List<GameEvent> pending = new ArrayList<>(
@@ -678,6 +683,7 @@ public class TurnManager {
             state = state.toBuilder().pendingEvents(pending).build();
         }
 
+        // Flag bench choice
         if (state.getPlayer1State().getActivePokemon() == null
                 && state.getPlayer1State().getBench() != null
                 && !state.getPlayer1State().getBench().isEmpty()) {
@@ -693,19 +699,41 @@ public class TurnManager {
                     .build();
         }
 
+        // Flag prize take — accumulate in case both players KO'd each other
+        int totalPrizes = 0;
+        String prizeWinnerId = null;
+        if (r1.prizesToTake() > 0) {
+            totalPrizes += r1.prizesToTake();
+            prizeWinnerId = r1.prizeWinnerId();
+        }
+        if (r2.prizesToTake() > 0) {
+            totalPrizes += r2.prizesToTake();
+            // If both players KO'd each other simultaneously, handle separately
+            // For now, last writer wins — edge case for future handling
+            prizeWinnerId = r2.prizeWinnerId();
+        }
+        if (totalPrizes > 0) {
+            int currentPending = state.getPendingPrizeTakeCount();
+            state = state.toBuilder()
+                    .pendingPrizeTakePlayerId(prizeWinnerId)
+                    .pendingPrizeTakeCount(currentPending + totalPrizes)
+                    .build();
+        }
+
         return state;
     }
 
-    private List<GameEvent> checkSingleConditionKO(BoardState state,
-                                                    PlayerState owner,
-                                                    PlayerState prizeWinner) {
+    private KOResult checkSingleConditionKO(BoardState state,
+                                            PlayerState owner,
+                                            PlayerState prizeWinner) {
         ActivePokemon active = owner.getActivePokemon();
-        if (active == null) return List.of();
+        if (active == null) return KOResult.none();
 
         int maxHp = cardLookupPort.getMaxHp(active.getCardId());
-        if (maxHp <= 0) return List.of();
-        if (active.getDamageCounters() * 10 < maxHp) return List.of();
+        if (maxHp <= 0) return KOResult.none();
+        if (active.getDamageCounters() * 10 < maxHp) return KOResult.none();
 
+        // Move KO'd Pokémon to discard
         List<String> discard = new ArrayList<>(
                 owner.getDiscard() != null ? owner.getDiscard() : new ArrayList<>());
         discard.add(active.getCardId());
@@ -719,19 +747,9 @@ public class TurnManager {
         owner.setActivePokemon(null);
 
         int prizesToTake = resolvePrizeCountForCard(active.getCardId());
-        List<String> prizes = new ArrayList<>(
-                prizeWinner.getPrizes() != null ? prizeWinner.getPrizes() : new ArrayList<>());
-        List<String> hand = new ArrayList<>(
-                prizeWinner.getHand() != null ? prizeWinner.getHand() : new ArrayList<>());
-
-        for (int i = 0; i < prizesToTake && !prizes.isEmpty(); i++) {
-            hand.add(prizes.remove(0));
-        }
-        prizeWinner.setPrizes(prizes);
-        prizeWinner.setHand(hand);
+        int available = prizeWinner.getPrizes() != null ? prizeWinner.getPrizes().size() : 0;
 
         List<GameEvent> events = new ArrayList<>();
-
         events.add(GameEvent.builder()
                 .type(GameEventType.POKEMON_KNOCKED_OUT)
                 .gameId(state.getGameId())
@@ -741,16 +759,8 @@ public class TurnManager {
                 .occurredAt(Instant.now())
                 .build());
 
-        events.add(GameEvent.builder()
-                .type(GameEventType.PRIZE_TAKEN)
-                .gameId(state.getGameId())
-                .playerId(prizeWinner.getPlayerId())
-                .turnNumber(state.getTurnNumber())
-                .data(Map.of("prizesRemaining", prizeWinner.getPrizes().size()))
-                .occurredAt(Instant.now())
-                .build());
-
-        return events;
+        return new KOResult(events, prizeWinner.getPlayerId(),
+                Math.min(prizesToTake, available));
     }
 
     private int resolvePrizeCountForCard(String cardId) {
@@ -1382,5 +1392,11 @@ public class TurnManager {
                 pokemon.setTypes(energyTypes);
             }
         });
+    }
+
+    private record KOResult(List<GameEvent> events, String prizeWinnerId, int prizesToTake) {
+        static KOResult none() {
+            return new KOResult(List.of(), null, 0);
+        }
     }
 }

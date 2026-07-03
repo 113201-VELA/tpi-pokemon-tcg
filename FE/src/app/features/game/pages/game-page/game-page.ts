@@ -314,6 +314,11 @@ export class GamePage implements OnInit, OnDestroy {
   readonly mustTakePrize = computed(() => {
     const pub = this.gameActionService.boardState();
     const me  = this.authService.currentUser();
+    console.log('MUST TAKE PRIZE check:', {
+      pendingPrizeTakePlayerId: pub?.pendingPrizeTakePlayerId,
+      myId: me?.id,
+      match: pub?.pendingPrizeTakePlayerId === me?.id
+    });
     if (!pub || !me) return false;
     return pub.pendingPrizeTakePlayerId === me.id;
   });
@@ -401,6 +406,7 @@ export class GamePage implements OnInit, OnDestroy {
 
     // Open prize modal automatically when mustTakePrize becomes true
     effect(() => {
+      console.log('PRIZE MODAL EFFECT - mustTakePrize:', this.mustTakePrize());
       if (this.mustTakePrize()) {
         this.selectedPrizeIndices.set([]);
         this.showPrizeModal.set(true);

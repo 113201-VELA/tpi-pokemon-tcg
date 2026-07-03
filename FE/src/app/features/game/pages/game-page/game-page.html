@@ -138,14 +138,14 @@
 
           <div class="prizes-col">
             <span class="zone-label">Prizes</span>
-            @for (slot of [0,1,2,3,4,5]; track slot) {
-              <div class="prize-slot prize-slot--face-down">
-                <img
-                  [src]="getCardBackUrl(boardState()!.opponentState.cardBack)"
-                  alt="Prize"
-                  class="card-img-full"
-                />
-              </div>
+            @for (slot of getOpponentHandSlots(boardState()!.opponentState.prizesCount); track $index) {
+            <div class="prize-slot prize-slot--face-down">
+              <img
+                [src]="getCardBackUrl(boardState()!.opponentState.cardBack)"
+                alt="Prize"
+                class="card-img-full"
+              />
+            </div>
             }
           </div>
 
