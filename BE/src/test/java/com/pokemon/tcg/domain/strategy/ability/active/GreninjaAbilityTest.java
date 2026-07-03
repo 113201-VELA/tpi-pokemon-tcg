@@ -13,7 +13,7 @@ import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
 
-class GrenijaWaterShurikenAbilityTest {
+class GreninjaWaterShurikenAbilityTest {
 
     private CardLookupPort cardLookupPort;
     private GreninjaAbility ability;
