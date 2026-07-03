@@ -44,6 +44,24 @@ public class PostDamageEffectStep implements AttackStep {
         PlayerState attackerState = ctx.getBoardState().getStateFor(attackerId);
         PlayerState defenderState = ctx.getBoardState().getStateFor(defenderId);
 
+        // Confusion self-damage: check KO on attacker instead of defender
+        if (ctx.isConfusionSelfDamage()) {
+            ActivePokemon attacker = attackerState.getActivePokemon();
+            if (attacker != null) {
+                int maxHp = cardLookupPort.getMaxHp(attacker.getCardId());
+                if (maxHp > 0 && attacker.getDamageCounters() * 10 >= maxHp) {
+                    // Attacker KO'd themselves — defender takes prizes.
+                    // Params are swapped intentionally:
+                    //   attackerState(param) = defenderState(reality) = prize taker
+                    //   defenderState(param) = attackerState(reality) = KO'd player
+                    handleKnockout(ctx, defenderState, attackerState, attacker);
+                }
+            }
+            chain.next(ctx);
+            return;
+        }
+
+        // Normal flow
         ActivePokemon defender = defenderState.getActivePokemon();
 
         // Skip all post-damage effects if the defender is invulnerable
@@ -121,7 +139,7 @@ public class PostDamageEffectStep implements AttackStep {
         ctx.addEvent(GameEvent.builder()
                 .type(GameEventType.POKEMON_KNOCKED_OUT)
                 .gameId(ctx.getBoardState().getGameId())
-                .playerId(ctx.getAction().getPlayerId())
+                .playerId(defenderState.getPlayerId())
                 .turnNumber(ctx.getBoardState().getTurnNumber())
                 .data(Map.of("knockedOutCardId", knockedOut.getCardId()))
                 .occurredAt(Instant.now())
@@ -133,7 +151,7 @@ public class PostDamageEffectStep implements AttackStep {
         int currentPending = ctx.getBoardState().getPendingPrizeTakeCount();
 
         BoardState newState = ctx.getBoardState().toBuilder()
-                .pendingPrizeTakePlayerId(ctx.getAction().getPlayerId())
+                .pendingPrizeTakePlayerId(attackerState.getPlayerId())
                 .pendingPrizeTakeCount(currentPending + prizesToTake)
                 .pendingBenchChoicePlayerId(defenderHasBench
                         ? defenderState.getPlayerId()

@@ -31,6 +31,9 @@ public class AttackContext {
     private boolean ignoreDefenderEffects = false;
 
     @Builder.Default
+    private boolean confusionSelfDamage = false;
+
+    @Builder.Default
     private boolean ignoreResistance = false;
 
     public void cancel(String reason) {

@@ -44,18 +44,22 @@ public class ConfusionCheckStep implements AttackStep {
             CoinResult flip = coinFlipService.flip();
 
             ctx.addEvent(GameEvent.builder()
-                    .type(GameEventType.SPECIAL_CONDITION_APPLIED)
+                    .type(GameEventType.COIN_FLIP)
                     .gameId(ctx.getBoardState().getGameId())
                     .playerId(ctx.getAction().getPlayerId())
                     .turnNumber(ctx.getBoardState().getTurnNumber())
-                    .data(Map.of("condition", "CONFUSED", "coinResult", flip.name()))
+                    .data(Map.of("result", flip.name()))
                     .occurredAt(Instant.now())
                     .build());
 
             if (flip == CoinResult.TAILS) {
-                // Attack fails — 3 damage counters on attacker
+                // Apply 3 damage counters to attacker (30 damage)
                 attacker.setDamageCounters(attacker.getDamageCounters() + 3);
-                ctx.cancel("Confused — attack failed (tails)");
+                ctx.setConfusionSelfDamage(true);
+                ctx.setDamageToApply(30);
+                // Do NOT cancel — continue pipeline so PostDamageEffectStep
+                // can check if the attacker KO'd themselves
+                chain.next(ctx);
                 return;
             }
         }

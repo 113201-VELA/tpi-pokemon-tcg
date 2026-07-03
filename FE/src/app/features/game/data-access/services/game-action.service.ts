@@ -179,7 +179,9 @@ export class GameActionService {
       (message: IMessage) => {
         try {
           const state: PublicBoardStateDTO = JSON.parse(message.body);
-          console.log('PUBLIC STATE pendingPrizeTake:', state.pendingPrizeTakePlayerId, state.pendingPrizeTakeCount);
+          console.log('OPPONENT CONDITIONS:',
+            state.player1State.active?.conditions,
+            state.player2State.active?.conditions);
           this.boardState.set(state);
         } catch {
           // Ignore malformed messages
