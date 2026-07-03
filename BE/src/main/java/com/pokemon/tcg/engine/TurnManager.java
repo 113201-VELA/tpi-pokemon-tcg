@@ -804,7 +804,29 @@ public class TurnManager {
         return cardLookupPort.getMaxHp(defender.getCardId());
     }
 
-    /** Chooses a Bench Pokémon to become Active after a KO, then resumes the turn switch. */
+    /**
+     * Chooses a Bench Pokémon to become Active after a KO, then resumes the
+     * turn switch.
+     * <p>
+     * Two distinct scenarios reach this handler, and they resolve the next
+     * player differently:
+     * <ul>
+     *   <li><b>Defender was KO'd by the attacker's attack</b> — currentPlayerId
+     *       is still the attacker (handleDeclareAttack never switched it while
+     *       the bench choice was pending). The defender (the one sending this
+     *       action) picks their replacement, and it's now correctly their
+     *       turn — nextPlayerId = the chooser.</li>
+     *   <li><b>Attacker KO'd their own Pokémon</b> (e.g. Confusion self-damage,
+     *       now that ConfusionCheckStep continues the pipeline on tails
+     *       instead of cancelling) — currentPlayerId is STILL the attacker,
+     *       and the attacker is also the one sending this action (they own
+     *       the KO'd Pokémon). Since the attacker already used their turn by
+     *       attacking, nextPlayerId = the OPPONENT of the chooser.</li>
+     * </ul>
+     * These two cases are told apart by comparing action.getPlayerId() against
+     * state.getCurrentPlayerId() BEFORE this handler mutates it: equal means
+     * self-KO, different means opponent-KO.
+     */
     private BoardState handleChooseBenchPokemon(BoardState state, GameAction action) {
         String instanceId = action.getPayloadString("instanceId");
         PlayerState ps    = state.getStateFor(action.getPlayerId());
@@ -816,6 +838,9 @@ public class TurnManager {
                 .findFirst().orElse(null);
 
         if (chosen == null) return state;
+
+        // Capture BEFORE mutating state — this is the disambiguation signal.
+        boolean isSelfKo = action.getPlayerId().equals(state.getCurrentPlayerId());
 
         ActivePokemon newActive = ActivePokemon.builder()
                 .instanceId(chosen.getInstanceId())
@@ -842,10 +867,15 @@ public class TurnManager {
         state = processBetweenTurns(state);
 
         // If pendingNextPlayerId is set (e.g. from handleEndTurn condition KO),
-        // use it. Otherwise the player who just chose bench continues their turn.
-        String nextPlayerId = state.getPendingNextPlayerId() != null
-                ? state.getPendingNextPlayerId()
-                : action.getPlayerId();
+        // use it. Otherwise resolve based on whether this was a self-KO.
+        String nextPlayerId;
+        if (state.getPendingNextPlayerId() != null) {
+            nextPlayerId = state.getPendingNextPlayerId();
+        } else if (isSelfKo) {
+            nextPlayerId = getOpponentId(state, action.getPlayerId());
+        } else {
+            nextPlayerId = action.getPlayerId();
+        }
 
         return state.toBuilder()
                 .currentPlayerId(nextPlayerId)

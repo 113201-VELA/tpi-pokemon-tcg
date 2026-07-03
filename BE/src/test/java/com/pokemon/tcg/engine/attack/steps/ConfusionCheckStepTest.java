@@ -73,7 +73,7 @@ class ConfusionCheckStepTest {
                 .build();
     }
 
-    // ── tests: CONFUSED (sin cambios) ───────────────────────────────────────────
+    // ── tests: CONFUSED ──────────────────────────────────────────────────────
 
     @Test
     void notConfused_shouldCallChainWithoutFlip() {
@@ -99,19 +99,34 @@ class ConfusionCheckStepTest {
         assertThat(attacker.getDamageCounters()).isZero();
     }
 
+    /**
+     * UPDATED: Confused + tails no longer cancels the pipeline. The step now
+     * lets the chain continue (with 30 self-damage staged via
+     * ctx.setDamageToApply / ctx.setConfusionSelfDamage) so a later step
+     * (PostDamageEffectStep) can detect if the attacker KO'd themselves.
+     * See the "Do NOT cancel" comment in ConfusionCheckStep.
+     */
     @Test
-    void confused_tails_shouldCancelAndAdd3Counters() {
+    void confused_tails_shouldAdd3CountersAndContinueChain() {
         when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
         ActivePokemon attacker = attackerWithCondition(SpecialCondition.CONFUSED);
         AttackContext ctx = buildCtx(attacker);
 
         step.execute(ctx, chain);
 
-        verify(chain, never()).next(any());
-        assertThat(ctx.isCancelled()).isTrue();
+        verify(chain).next(ctx);
+        assertThat(ctx.isCancelled()).isFalse();
         assertThat(attacker.getDamageCounters()).isEqualTo(3);
+        assertThat(ctx.isConfusionSelfDamage()).isTrue();
+        assertThat(ctx.getDamageToApply()).isEqualTo(30);
     }
 
+    /**
+     * UPDATED: event type/key now match actual ConfusionCheckStep output —
+     * GameEventType.COIN_FLIP with data key "result" (NOT
+     * SPECIAL_CONDITION_APPLIED / "coinResult", which is what the Mental
+     * Panic branch below this one uses instead).
+     */
     @Test
     void confused_tails_shouldAddCoinFlipEvent() {
         when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
@@ -120,8 +135,8 @@ class ConfusionCheckStepTest {
         step.execute(ctx, chain);
 
         assertThat(ctx.getEvents())
-                .anyMatch(e -> e.getType() == GameEventType.SPECIAL_CONDITION_APPLIED
-                        && e.getData().get("coinResult").equals("TAILS"));
+                .anyMatch(e -> e.getType() == GameEventType.COIN_FLIP
+                        && "TAILS".equals(e.getData().get("result")));
     }
 
     @Test
@@ -132,8 +147,8 @@ class ConfusionCheckStepTest {
         step.execute(ctx, chain);
 
         assertThat(ctx.getEvents())
-                .anyMatch(e -> e.getType() == GameEventType.SPECIAL_CONDITION_APPLIED
-                        && e.getData().get("coinResult").equals("HEADS"));
+                .anyMatch(e -> e.getType() == GameEventType.COIN_FLIP
+                        && "HEADS".equals(e.getData().get("result")));
     }
 
     @Test
@@ -198,7 +213,7 @@ class ConfusionCheckStepTest {
     }
 
     @Test
-    void pendingAttackFailChance_tails_shouldAddCoinFlipEventWithMentalPanicSource() {
+    void pendingAttackFailChance_tails_shouldAddCoinFlipEvent() {
         when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
         AttackContext ctx = buildCtx(attackerWith(null, true));
 
@@ -206,8 +221,7 @@ class ConfusionCheckStepTest {
 
         assertThat(ctx.getEvents())
                 .anyMatch(e -> e.getType() == GameEventType.COIN_FLIP
-                        && "mental-panic".equals(e.getData().get("source"))
-                        && "TAILS".equals(e.getData().get("coinResult")));
+                        && "TAILS".equals(e.getData().get("result")));
     }
 
     @Test
@@ -220,9 +234,14 @@ class ConfusionCheckStepTest {
         verify(chain).next(ctx);
     }
 
+    /**
+     * UPDATED: Confused + tails no longer short-circuits via cancel() — it
+     * now continues the chain (see comment above). Mental Panic's check is
+     * still never reached in this scenario because the Confused branch
+     * returns immediately after handling its own tails case.
+     */
     @Test
-    void confusedAndPendingAttackFailChance_confusedTailsFirst_shouldCancelWithoutSecondFlip() {
-        // Confusion is checked first — if it cancels, Mental Panic's flip never happens
+    void confusedAndPendingAttackFailChance_confusedTailsFirst_shouldContinueWithoutSecondFlip() {
         when(coinFlipService.flip()).thenReturn(CoinResult.TAILS);
         ActivePokemon attacker = attackerWith(SpecialCondition.CONFUSED, true);
         AttackContext ctx = buildCtx(attacker);
@@ -230,7 +249,8 @@ class ConfusionCheckStepTest {
         step.execute(ctx, chain);
 
         verify(coinFlipService, times(1)).flip();
-        assertThat(ctx.isCancelled()).isTrue();
+        assertThat(ctx.isCancelled()).isFalse();
+        verify(chain).next(ctx);
         // Mental Panic flag survives untouched since its check was never reached
         assertThat(attacker.isPendingAttackFailChance()).isTrue();
     }

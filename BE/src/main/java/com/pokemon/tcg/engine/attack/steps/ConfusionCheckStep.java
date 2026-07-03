@@ -74,7 +74,7 @@ public class ConfusionCheckStep implements AttackStep {
                     .gameId(ctx.getBoardState().getGameId())
                     .playerId(ctx.getAction().getPlayerId())
                     .turnNumber(ctx.getBoardState().getTurnNumber())
-                    .data(Map.of("source", "mental-panic", "coinResult", flip.name()))
+                    .data(Map.of("result", flip.name()))
                     .occurredAt(Instant.now())
                     .build());
 

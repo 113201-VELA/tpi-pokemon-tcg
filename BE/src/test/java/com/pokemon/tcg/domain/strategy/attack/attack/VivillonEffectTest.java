@@ -38,6 +38,15 @@ class VivillonEffectTest {
     @BeforeEach
     void setUp() {
         effect = new VivillonEffect(cardLookupPort, statusEffectManager);
+        // NOTE: the statusEffectManager.applyCondition stub used to live here,
+        // but it's only exercised by the conversionPowder_* tests below.
+        // MockitoExtension runs in strict-stubs mode, so a stub configured
+        // here that isn't touched by a colorfulWind_* test throws
+        // UnnecessaryStubbingException. Moved into stubApplyCondition(),
+        // called only from the tests that actually need it.
+    }
+
+    private void stubApplyCondition() {
         doAnswer(invocation -> {
             ActivePokemon pokemon = invocation.getArgument(0);
             SpecialCondition condition = invocation.getArgument(1);
@@ -58,6 +67,7 @@ class VivillonEffectTest {
 
     @Test
     void conversionPowder_shouldApplyAsleep_whenChosenConditionIsAsleep() {
+        stubApplyCondition();
         AttackContext ctx = buildContext("Conversion Powder", List.of(), "ASLEEP");
 
         effect.apply(ctx);
@@ -69,6 +79,7 @@ class VivillonEffectTest {
 
     @Test
     void conversionPowder_shouldApplyPoisoned_whenChosenConditionIsPoisoned() {
+        stubApplyCondition();
         AttackContext ctx = buildContext("Conversion Powder", List.of(), "POISONED");
 
         effect.apply(ctx);
@@ -80,6 +91,7 @@ class VivillonEffectTest {
 
     @Test
     void conversionPowder_shouldReplaceConfused_whenApplyingAsleep() {
+        stubApplyCondition();
         AttackContext ctx = buildContext("Conversion Powder", List.of(), "ASLEEP");
         ctx.getBoardState().getStateFor(PLAYER_2)
                 .getActivePokemon().getConditions().add(SpecialCondition.CONFUSED);
@@ -94,6 +106,7 @@ class VivillonEffectTest {
 
     @Test
     void conversionPowder_shouldReplaceParalyzed_whenApplyingAsleep() {
+        stubApplyCondition();
         AttackContext ctx = buildContext("Conversion Powder", List.of(), "ASLEEP");
         ctx.getBoardState().getStateFor(PLAYER_2)
                 .getActivePokemon().getConditions().add(SpecialCondition.PARALYZED);
@@ -108,6 +121,7 @@ class VivillonEffectTest {
 
     @Test
     void conversionPowder_shouldCoexistWithBurned_whenApplyingPoisoned() {
+        stubApplyCondition();
         AttackContext ctx = buildContext("Conversion Powder", List.of(), "POISONED");
         ctx.getBoardState().getStateFor(PLAYER_2)
                 .getActivePokemon().getConditions().add(SpecialCondition.BURNED);
@@ -122,6 +136,7 @@ class VivillonEffectTest {
 
     @Test
     void conversionPowder_shouldDoNothing_whenChosenConditionIsNull() {
+        // No stub needed: chosenCondition == null returns before touching statusEffectManager
         AttackContext ctx = buildContext("Conversion Powder", List.of(), null);
 
         effect.apply(ctx);
@@ -132,6 +147,8 @@ class VivillonEffectTest {
 
     @Test
     void conversionPowder_shouldDoNothing_whenChosenConditionIsInvalid() {
+        // No stub needed: "PARALYZED" falls into the default branch, never
+        // reaches statusEffectManager.applyCondition
         AttackContext ctx = buildContext("Conversion Powder", List.of(), "PARALYZED");
 
         effect.apply(ctx);
@@ -220,8 +237,8 @@ class VivillonEffectTest {
     }
 
     private AttackContext buildContext(String attackName,
-                                      List<String> attachedEnergyIds,
-                                      String chosenCondition) {
+                                       List<String> attachedEnergyIds,
+                                       String chosenCondition) {
         ActivePokemon vivillon = ActivePokemon.builder()
                 .instanceId("vivillon-1")
                 .cardId("xy1-17")
