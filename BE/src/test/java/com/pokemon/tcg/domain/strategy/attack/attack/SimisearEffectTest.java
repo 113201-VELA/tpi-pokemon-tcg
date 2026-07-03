@@ -5,6 +5,7 @@ import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.engine.CardLookupPort;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
@@ -12,12 +13,14 @@ import java.util.*;
 
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 class SimisearEffectTest {
 
-    private CardLookupPort  cardLookupPort;
-    private SimisearEffect  effect;
+    private CardLookupPort      cardLookupPort;
+    private StatusEffectManager statusEffectManager;
+    private SimisearEffect      effect;
 
     private static final String FIRE_ENERGY_1 = "xy1-133";
     private static final String FIRE_ENERGY_2 = "xy1-138";
@@ -26,7 +29,8 @@ class SimisearEffectTest {
     @BeforeEach
     void setUp() {
         cardLookupPort = mock(CardLookupPort.class);
-        effect = new SimisearEffect(cardLookupPort);
+        statusEffectManager = mock(StatusEffectManager.class);
+        effect = new SimisearEffect(cardLookupPort, statusEffectManager);
 
         Card fireCard1 = mock(Card.class);
         when(fireCard1.getTypes()).thenReturn(List.of(EnergyType.FIRE.name()));
@@ -39,6 +43,23 @@ class SimisearEffectTest {
         Card otherCard = mock(Card.class);
         when(otherCard.getTypes()).thenReturn(List.of(EnergyType.WATER.name()));
         when(cardLookupPort.findCardById(OTHER_ENERGY)).thenReturn(Optional.of(otherCard));
+
+        doAnswer(invocation -> {
+            ActivePokemon pokemon = invocation.getArgument(0);
+            SpecialCondition condition = invocation.getArgument(1);
+            Set<SpecialCondition> conditions = new HashSet<>(
+                    pokemon.getConditions() != null ? pokemon.getConditions() : new HashSet<>());
+            if (condition == SpecialCondition.ASLEEP
+                    || condition == SpecialCondition.CONFUSED
+                    || condition == SpecialCondition.PARALYZED) {
+                conditions.remove(SpecialCondition.ASLEEP);
+                conditions.remove(SpecialCondition.CONFUSED);
+                conditions.remove(SpecialCondition.PARALYZED);
+            }
+            conditions.add(condition);
+            pokemon.setConditions(conditions);
+            return null;
+        }).when(statusEffectManager).applyCondition(any(), any());
     }
 
     @Test

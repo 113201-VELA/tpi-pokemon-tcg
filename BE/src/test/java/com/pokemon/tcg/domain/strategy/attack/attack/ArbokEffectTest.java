@@ -2,6 +2,7 @@ package com.pokemon.tcg.domain.strategy.attack.attack;
 
 import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.game.*;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -10,14 +11,35 @@ import java.util.*;
 
 import static com.pokemon.tcg.fixtures.TestDataBuilder.*;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 
 class ArbokEffectTest {
 
+    private StatusEffectManager statusEffectManager;
     private ArbokEffect effect;
 
     @BeforeEach
     void setUp() {
-        effect = new ArbokEffect();
+        statusEffectManager = mock(StatusEffectManager.class);
+        effect = new ArbokEffect(statusEffectManager);
+        doAnswer(invocation -> {
+            ActivePokemon pokemon = invocation.getArgument(0);
+            SpecialCondition condition = invocation.getArgument(1);
+            Set<SpecialCondition> conditions = new HashSet<>(
+                    pokemon.getConditions() != null ? pokemon.getConditions() : new HashSet<>());
+            if (condition == SpecialCondition.ASLEEP
+                    || condition == SpecialCondition.CONFUSED
+                    || condition == SpecialCondition.PARALYZED) {
+                conditions.remove(SpecialCondition.ASLEEP);
+                conditions.remove(SpecialCondition.CONFUSED);
+                conditions.remove(SpecialCondition.PARALYZED);
+            }
+            conditions.add(condition);
+            pokemon.setConditions(conditions);
+            return null;
+        }).when(statusEffectManager).applyCondition(any(), any());
     }
 
     @Test

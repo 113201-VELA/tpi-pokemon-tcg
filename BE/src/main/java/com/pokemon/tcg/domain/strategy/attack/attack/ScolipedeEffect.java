@@ -5,6 +5,7 @@ import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import com.pokemon.tcg.domain.strategy.attack.DamageModifier;
 import com.pokemon.tcg.engine.CoinFlipService;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -19,9 +20,11 @@ public class ScolipedeEffect implements AttackEffect {
     private static final int    DAMAGE_PER_HEAD = 20;
 
     private final CoinFlipService coinFlipService;
+    private final StatusEffectManager statusEffectManager;
 
-    public ScolipedeEffect(CoinFlipService coinFlipService) {
+    public ScolipedeEffect(CoinFlipService coinFlipService, StatusEffectManager statusEffectManager) {
         this.coinFlipService = coinFlipService;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -69,7 +72,7 @@ public class ScolipedeEffect implements AttackEffect {
 
         if (defender == null) return;
 
-        defender.getConditions().add(SpecialCondition.POISONED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.POISONED);
 
         List<PokemonEffect> effects = new ArrayList<>(
                 defender.getActiveEffects() != null

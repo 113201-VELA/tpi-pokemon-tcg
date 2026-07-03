@@ -5,6 +5,7 @@ import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import com.pokemon.tcg.domain.strategy.attack.DamageModifier;
 import com.pokemon.tcg.engine.CoinFlipService;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -18,9 +19,11 @@ public class PikachuEffect implements AttackEffect {
     private static final int    HEADS_BONUS  = 10;
 
     private final CoinFlipService coinFlipService;
+    private final StatusEffectManager statusEffectManager;
 
-    public PikachuEffect(CoinFlipService coinFlipService) {
+    public PikachuEffect(CoinFlipService coinFlipService, StatusEffectManager statusEffectManager) {
         this.coinFlipService = coinFlipService;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -51,9 +54,7 @@ public class PikachuEffect implements AttackEffect {
 
         if (defender == null) return;
 
-        defender.getConditions().remove(SpecialCondition.ASLEEP);
-        defender.getConditions().remove(SpecialCondition.CONFUSED);
-        defender.getConditions().add(SpecialCondition.PARALYZED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.PARALYZED);
     }
 
     /** Quick Attack: flip a coin. On heads, do 10 more damage. */

@@ -5,6 +5,7 @@ import com.pokemon.tcg.domain.model.game.PlayerState;
 import com.pokemon.tcg.domain.model.game.SpecialCondition;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -15,6 +16,12 @@ import java.util.List;
  */
 @Component
 public class PumpkabooEffect implements AttackEffect {
+
+    private final StatusEffectManager statusEffectManager;
+
+    public PumpkabooEffect(StatusEffectManager statusEffectManager) {
+        this.statusEffectManager = statusEffectManager;
+    }
 
     @Override
     public List<String> getSupportedAttacks() {
@@ -29,6 +36,6 @@ public class PumpkabooEffect implements AttackEffect {
 
         if (defender == null) return;
 
-        defender.getConditions().add(SpecialCondition.CONFUSED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.CONFUSED);
     }
 }

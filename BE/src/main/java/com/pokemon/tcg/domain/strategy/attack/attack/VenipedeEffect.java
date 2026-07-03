@@ -3,6 +3,7 @@ package com.pokemon.tcg.domain.strategy.attack.attack;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -11,6 +12,12 @@ import java.util.List;
 public class VenipedeEffect implements AttackEffect {
 
     private static final String POISON_STING = "poison sting";
+
+    private final StatusEffectManager statusEffectManager;
+
+    public VenipedeEffect(StatusEffectManager statusEffectManager) {
+        this.statusEffectManager = statusEffectManager;
+    }
 
     @Override
     public List<String> getSupportedAttacks() {
@@ -28,6 +35,6 @@ public class VenipedeEffect implements AttackEffect {
 
         if (defender == null) return;
 
-        defender.getConditions().add(SpecialCondition.POISONED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.POISONED);
     }
 }

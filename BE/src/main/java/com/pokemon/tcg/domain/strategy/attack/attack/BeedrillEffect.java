@@ -2,6 +2,7 @@ package com.pokemon.tcg.domain.strategy.attack.attack;
 
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.engine.CoinFlipService;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import com.pokemon.tcg.domain.strategy.attack.DamageModifier;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
@@ -19,9 +20,11 @@ public class BeedrillEffect implements AttackEffect {
     private static final int    COIN_FLIPS   = 3;
 
     private final CoinFlipService coinFlipService;
+    private final StatusEffectManager statusEffectManager;
 
-    public BeedrillEffect(CoinFlipService coinFlipService) {
+    public BeedrillEffect(CoinFlipService coinFlipService, StatusEffectManager statusEffectManager) {
         this.coinFlipService = coinFlipService;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -49,7 +52,7 @@ public class BeedrillEffect implements AttackEffect {
 
         if (defender == null) return;
 
-        defender.getConditions().add(SpecialCondition.POISONED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.POISONED);
     }
 
     private void applyFlashNeedle(AttackContext ctx) {

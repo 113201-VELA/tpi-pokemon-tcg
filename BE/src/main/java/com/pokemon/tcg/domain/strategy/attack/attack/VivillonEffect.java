@@ -4,6 +4,7 @@ import com.pokemon.tcg.domain.model.card.Card;
 import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.engine.CardLookupPort;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import com.pokemon.tcg.domain.strategy.attack.DamageModifier;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
@@ -27,9 +28,11 @@ public class VivillonEffect implements AttackEffect {
     );
 
     private final CardLookupPort cardLookupPort;
+    private final StatusEffectManager statusEffectManager;
 
-    public VivillonEffect(CardLookupPort cardLookupPort) {
+    public VivillonEffect(CardLookupPort cardLookupPort, StatusEffectManager statusEffectManager) {
         this.cardLookupPort = cardLookupPort;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -60,12 +63,8 @@ public class VivillonEffect implements AttackEffect {
         if (defender == null) return;
 
         switch (chosen.toUpperCase()) {
-            case "ASLEEP" -> {
-                defender.getConditions().remove(SpecialCondition.CONFUSED);
-                defender.getConditions().remove(SpecialCondition.PARALYZED);
-                defender.getConditions().add(SpecialCondition.ASLEEP);
-            }
-            case "POISONED" -> defender.getConditions().add(SpecialCondition.POISONED);
+            case "ASLEEP" -> statusEffectManager.applyCondition(defender, SpecialCondition.ASLEEP);
+            case "POISONED" -> statusEffectManager.applyCondition(defender, SpecialCondition.POISONED);
             default -> { }
         }
     }

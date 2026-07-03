@@ -4,6 +4,7 @@ import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import com.pokemon.tcg.engine.CoinFlipService;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -14,9 +15,11 @@ public class FrogadierEffect implements AttackEffect {
     private static final String LICK = "lick";
 
     private final CoinFlipService coinFlipService;
+    private final StatusEffectManager statusEffectManager;
 
-    public FrogadierEffect(CoinFlipService coinFlipService) {
+    public FrogadierEffect(CoinFlipService coinFlipService, StatusEffectManager statusEffectManager) {
         this.coinFlipService = coinFlipService;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -37,8 +40,6 @@ public class FrogadierEffect implements AttackEffect {
 
         if (defender == null) return;
 
-        defender.getConditions().remove(SpecialCondition.ASLEEP);
-        defender.getConditions().remove(SpecialCondition.CONFUSED);
-        defender.getConditions().add(SpecialCondition.PARALYZED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.PARALYZED);
     }
 }

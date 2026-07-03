@@ -5,6 +5,7 @@ import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import com.pokemon.tcg.domain.strategy.attack.DamageModifier;
 import com.pokemon.tcg.engine.CoinFlipService;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -20,9 +21,11 @@ public class CloysterEffect implements AttackEffect {
     private static final int SPIKE_CANNON_DAMAGE_PER_HEAD = 30;
 
     private final CoinFlipService coinFlipService;
+    private final StatusEffectManager statusEffectManager;
 
-    public CloysterEffect(CoinFlipService coinFlipService) {
+    public CloysterEffect(CoinFlipService coinFlipService, StatusEffectManager statusEffectManager) {
         this.coinFlipService = coinFlipService;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -62,9 +65,7 @@ public class CloysterEffect implements AttackEffect {
         if (defender == null) return;
 
         // Apply Paralyzed — replaces Asleep and Confused per rulebook
-        defender.getConditions().remove(SpecialCondition.ASLEEP);
-        defender.getConditions().remove(SpecialCondition.CONFUSED);
-        defender.getConditions().add(SpecialCondition.PARALYZED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.PARALYZED);
 
         // Discard one Energy attached to the defender
         List<String> energies = defender.getAttachedEnergyIds();

@@ -3,6 +3,7 @@ package com.pokemon.tcg.domain.strategy.attack.attack;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -11,6 +12,12 @@ import java.util.List;
 public class MVenusaurExEffect implements AttackEffect {
 
     private static final String CRISIS_VINE = "crisis vine";
+
+    private final StatusEffectManager statusEffectManager;
+
+    public MVenusaurExEffect(StatusEffectManager statusEffectManager) {
+        this.statusEffectManager = statusEffectManager;
+    }
 
     @Override
     public List<String> getSupportedAttacks() {
@@ -28,10 +35,7 @@ public class MVenusaurExEffect implements AttackEffect {
 
         if (defender == null) return;
 
-        defender.getConditions().remove(SpecialCondition.ASLEEP);
-        defender.getConditions().remove(SpecialCondition.CONFUSED);
-        defender.getConditions().add(SpecialCondition.PARALYZED);
-
-        defender.getConditions().add(SpecialCondition.POISONED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.PARALYZED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.POISONED);
     }
 }

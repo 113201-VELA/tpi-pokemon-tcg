@@ -4,6 +4,7 @@ import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import com.pokemon.tcg.engine.CoinFlipService;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.springframework.stereotype.Component;
 
 import java.util.List;
@@ -16,9 +17,11 @@ public class Malamar76Effect implements AttackEffect {
     private static final int    MENTAL_TRASH_FLIPS = 4;
 
     private final CoinFlipService coinFlipService;
+    private final StatusEffectManager statusEffectManager;
 
-    public Malamar76Effect(CoinFlipService coinFlipService) {
+    public Malamar76Effect(CoinFlipService coinFlipService, StatusEffectManager statusEffectManager) {
         this.coinFlipService = coinFlipService;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -89,9 +92,6 @@ public class Malamar76Effect implements AttackEffect {
                 ? SpecialCondition.ASLEEP
                 : SpecialCondition.CONFUSED;
 
-        defender.getConditions().remove(SpecialCondition.ASLEEP);
-        defender.getConditions().remove(SpecialCondition.CONFUSED);
-        defender.getConditions().remove(SpecialCondition.PARALYZED);
-        defender.getConditions().add(condition);
+        statusEffectManager.applyCondition(defender, condition);
     }
 }

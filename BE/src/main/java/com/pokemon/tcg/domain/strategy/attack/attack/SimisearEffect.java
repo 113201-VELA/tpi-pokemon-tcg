@@ -3,6 +3,7 @@ package com.pokemon.tcg.domain.strategy.attack.attack;
 import com.pokemon.tcg.domain.model.card.EnergyType;
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.engine.CardLookupPort;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import org.springframework.stereotype.Component;
@@ -26,9 +27,11 @@ public class SimisearEffect implements AttackEffect {
     private static final String FIRE_TYPE    = EnergyType.FIRE.name();
 
     private final CardLookupPort cardLookupPort;
+    private final StatusEffectManager statusEffectManager;
 
-    public SimisearEffect(CardLookupPort cardLookupPort) {
+    public SimisearEffect(CardLookupPort cardLookupPort, StatusEffectManager statusEffectManager) {
         this.cardLookupPort = cardLookupPort;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -56,9 +59,7 @@ public class SimisearEffect implements AttackEffect {
 
         if (defender == null) return;
 
-        defender.getConditions().remove(SpecialCondition.CONFUSED);
-        defender.getConditions().remove(SpecialCondition.PARALYZED);
-        defender.getConditions().add(SpecialCondition.ASLEEP);
+        statusEffectManager.applyCondition(defender, SpecialCondition.ASLEEP);
     }
 
     /**

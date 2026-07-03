@@ -2,6 +2,7 @@ package com.pokemon.tcg.domain.strategy.attack.attack;
 
 import com.pokemon.tcg.domain.model.game.*;
 import com.pokemon.tcg.engine.CoinFlipService;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import org.springframework.stereotype.Component;
@@ -13,8 +14,11 @@ public class SpewpaEffect implements AttackEffect {
 
     private final CoinFlipService coinFlipService;
 
-    public SpewpaEffect(CoinFlipService coinFlipService) {
+    private final StatusEffectManager statusEffectManager;
+
+    public SpewpaEffect(CoinFlipService coinFlipService, StatusEffectManager statusEffectManager) {
         this.coinFlipService = coinFlipService;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -32,8 +36,6 @@ public class SpewpaEffect implements AttackEffect {
 
         if (defender == null) return;
 
-        defender.getConditions().remove(SpecialCondition.ASLEEP);
-        defender.getConditions().remove(SpecialCondition.CONFUSED);
-        defender.getConditions().add(SpecialCondition.PARALYZED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.PARALYZED);
     }
 }

@@ -5,6 +5,7 @@ import com.pokemon.tcg.domain.strategy.attack.AttackContext;
 import com.pokemon.tcg.domain.strategy.attack.AttackEffect;
 import com.pokemon.tcg.domain.strategy.attack.DamageModifier;
 import com.pokemon.tcg.engine.CoinFlipService;
+import com.pokemon.tcg.engine.StatusEffectManager;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
@@ -26,9 +27,11 @@ public class ConkeldurrEffect implements AttackEffect {
     private static final String DYNAMIC_PUNCH  = "dynamic punch";
 
     private final CoinFlipService coinFlipService;
+    private final StatusEffectManager statusEffectManager;
 
-    public ConkeldurrEffect(CoinFlipService coinFlipService) {
+    public ConkeldurrEffect(CoinFlipService coinFlipService, StatusEffectManager statusEffectManager) {
         this.coinFlipService = coinFlipService;
+        this.statusEffectManager = statusEffectManager;
     }
 
     @Override
@@ -91,6 +94,6 @@ public class ConkeldurrEffect implements AttackEffect {
         modifiers.add(new DamageModifier("dynamic-punch-heads", 40, true));
         ctx.setModifiers(modifiers);
 
-        defender.getConditions().add(SpecialCondition.CONFUSED);
+        statusEffectManager.applyCondition(defender, SpecialCondition.CONFUSED);
     }
 }
