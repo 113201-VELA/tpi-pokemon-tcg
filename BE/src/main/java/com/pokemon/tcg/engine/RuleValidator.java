@@ -585,9 +585,6 @@ public class RuleValidator {
 
         PlayerState ps = state.getStateFor(action.getPlayerId());
         ActivePokemon active = ps.getActivePokemon();
-        if (active == null) {
-            return ValidationResult.fail("You have no Active Pokémon to attack with.");
-        }
         if (active.getConditions() != null) {
             if (active.getConditions().contains(SpecialCondition.ASLEEP)) {
                 return ValidationResult.fail("Your Active Pokémon is Asleep and cannot attack.");
@@ -595,6 +592,14 @@ public class RuleValidator {
             if (active.getConditions().contains(SpecialCondition.PARALYZED)) {
                 return ValidationResult.fail("Your Active Pokémon is Paralyzed and cannot attack.");
             }
+        }
+
+        // Hocus Pinkus (Wigglytuff) and similar effects prevent attacking
+        // entirely during the affected player's next turn. Cleared on
+        // handleDrawCard, same lifecycle as CANT_RETREAT.
+        if (active.getActiveEffects() != null
+                && active.getActiveEffects().contains(PokemonEffect.CANT_ATTACK)) {
+            return ValidationResult.fail("Your Active Pokémon cannot attack this turn.");
         }
 
         // Check if the declared attack is currently blocked (e.g. Rock Wrecker,

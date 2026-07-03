@@ -5,6 +5,7 @@ public enum PokemonEffect {
     INVULNERABLE,
     NO_ABILITIES,
     CANT_RETREAT,
+    CANT_ATTACK,
     DAMAGE_REDUCED_20,
     NO_SUPPORTER
 }
