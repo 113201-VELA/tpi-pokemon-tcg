@@ -22,6 +22,9 @@ import java.util.Map;
  *
  * <p>Healing is represented as reducing damage counters (each counter = 10 damage).
  * 60 damage = 6 counters removed, minimum 0.
+ *
+ * <p>The target may be the Active Pokémon or a Benched Pokémon — both are
+ * checked in {@link #canApply} and handled in {@link #apply}.
  */
 @Component
 public class SuperPotionEffect implements TrainerEffect {
@@ -47,16 +50,30 @@ public class SuperPotionEffect implements TrainerEffect {
             return ValidationResult.fail("No energy specified to discard for Super Potion.");
         }
 
-        // Find the target and verify it has the specified energy
-        var target = findTarget(ps, targetId);
-        if (target == null) {
+        Integer damageCounters = null;
+        List<String> attachedEnergies = null;
+
+        if (ps.getActivePokemon() != null
+                && ps.getActivePokemon().getInstanceId().equals(targetId)) {
+            damageCounters   = ps.getActivePokemon().getDamageCounters();
+            attachedEnergies = ps.getActivePokemon().getAttachedEnergyIds();
+        } else if (ps.getBench() != null) {
+            BenchPokemon benchTarget = ps.getBench().stream()
+                    .filter(b -> b.getInstanceId().equals(targetId))
+                    .findFirst().orElse(null);
+            if (benchTarget != null) {
+                damageCounters   = benchTarget.getDamageCounters();
+                attachedEnergies = benchTarget.getAttachedEnergyIds();
+            }
+        }
+
+        if (damageCounters == null) {
             return ValidationResult.fail("Target Pokémon is not in play.");
         }
-        if (target.getDamageCounters() == 0) {
+        if (damageCounters == 0) {
             return ValidationResult.fail("That Pokémon has no damage to heal.");
         }
-        if (target.getAttachedEnergyIds() == null ||
-                !target.getAttachedEnergyIds().contains(energyId)) {
+        if (attachedEnergies == null || !attachedEnergies.contains(energyId)) {
             return ValidationResult.fail("The specified energy is not attached to that Pokémon.");
         }
 
@@ -123,17 +140,5 @@ public class SuperPotionEffect implements TrainerEffect {
                 ps.getDiscard() != null ? ps.getDiscard() : new ArrayList<>());
         discard.add(energyId);
         ps.setDiscard(discard);
-    }
-
-    /** Returns the target Pokémon (Active or Bench) by instanceId, or null if not found. */
-    private com.pokemon.tcg.domain.model.game.ActivePokemon findTarget(
-            PlayerState ps, String targetId) {
-        if (ps.getActivePokemon() != null &&
-                ps.getActivePokemon().getInstanceId().equals(targetId)) {
-            return ps.getActivePokemon();
-        }
-        // Bench Pokémon share the same damage counter structure
-        // but are BenchPokemon type — handled directly in applyHeal
-        return null;
     }
 }
