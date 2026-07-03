@@ -17,6 +17,16 @@
 
   @if (!loading() && !errorMessage() && boardState()) {
 
+    <!-- ── Phase banner ──────────────────────────────────────────────── -->
+    @if (phaseBannerText()) {
+      <div
+        class="phase-banner"
+        [class.phase-banner--visible]="phaseBannerVisible()"
+      >
+        <span class="phase-banner__text">{{ phaseBannerText() }}</span>
+      </div>
+    }
+
     <!-- ── Header ───────────────────────────────────────────────────── -->
     <header class="game-header">
 
@@ -188,6 +198,11 @@
               } @else {
                 <span class="slot-empty">Active</span>
               }
+
+              <!-- Damage float -->
+              @if (damageFloat() !== null && !damageFloatOwn()) {
+                <div class="damage-float">-{{ damageFloat() }}</div>
+              }
             </div>
             <div class="tool-slot">
               @if (boardState()!.opponentState.active?.attachedTool) {
@@ -214,7 +229,7 @@
             </div>
             <div
               class="zone-slot discard-slot"
-              (click)="openCardDetail(getDiscardTop(boardState()!.opponentState.discardPile))"
+              (click)="openDiscardModal(boardState()!.opponentState.discardPile, 'Opponent Discard')"
             >
               @if (boardState()!.opponentState.discardPile.length > 0) {
                 <img
@@ -335,6 +350,11 @@
                   {{ isSetupPhase() ? 'Drop Basic here' : 'Active' }}
                 </span>
               }
+
+              <!-- Damage float -->
+              @if (damageFloat() !== null && damageFloatOwn()) {
+                <div class="damage-float">-{{ damageFloat() }}</div>
+              }
             </div>
             <div class="tool-slot">
               @if (boardState()!.ownState.active?.attachedTool) {
@@ -365,7 +385,7 @@
             </div>
             <div
               class="zone-slot discard-slot"
-              (click)="openCardDetail(getDiscardTop(boardState()!.ownState.discardPile))"
+              (click)="openDiscardModal(boardState()!.ownState.discardPile, 'Your Discard')"
             >
               @if (boardState()!.ownState.discardPile.length > 0) {
                 <img
@@ -413,6 +433,55 @@
           [alt]="selectedCard()!.name"
         />
         <button class="modal-close" (click)="closeCardDetail()">✕</button>
+      </div>
+    </div>
+  }
+
+  <!-- ── Discard pile modal ─────────────────────────────────────────── -->
+  @if (showDiscardModal()) {
+    <div class="modal-overlay" (click)="closeDiscardModal()">
+      <div class="modal-discard" (click)="$event.stopPropagation()">
+
+        <div class="modal-discard__header">
+          <h2 class="modal-discard__title">{{ discardModalTitle() }}</h2>
+          <span class="modal-discard__count">
+            {{ discardModalCards().length }} card(s)
+          </span>
+          <button class="modal-close" (click)="closeDiscardModal()">✕</button>
+        </div>
+
+        <div class="modal-discard__body">
+
+          <!-- Card list -->
+          <div class="discard-list">
+            @for (card of discardModalCards(); track card.id + $index) {
+              <button
+                class="discard-list-item"
+                [class.discard-list-item--selected]="selectedDiscardCard()?.id === card.id"
+                (click)="selectDiscardCard(card)"
+              >
+                <img
+                  class="discard-list-item__thumb"
+                  [src]="card.imageSmall"
+                  [alt]="card.name"
+                />
+                <span class="discard-list-item__name">{{ card.name }}</span>
+              </button>
+            }
+          </div>
+
+          <!-- Large preview -->
+          <div class="discard-preview">
+            @if (selectedDiscardCard()) {
+              <img
+                class="discard-preview__img"
+                [src]="selectedDiscardCard()!.imageLarge"
+                [alt]="selectedDiscardCard()!.name"
+              />
+            }
+          </div>
+
+        </div>
       </div>
     </div>
   }
@@ -601,6 +670,28 @@
       <div class="coin-result">
         <img class="coin-img" [src]="coinImageSrc()" [alt]="coinResult()!" />
         <p class="coin-label">{{ coinResult() }}</p>
+      </div>
+    </div>
+  }
+
+  <!-- ── Game over overlay ─────────────────────────────────────────── -->
+  @if (gameOverVisible()) {
+    <div class="game-over-overlay">
+      <div class="game-over-card">
+        @if (gameOverResult() === 'victory') {
+          <h1 class="game-over-card__title game-over-card__title--victory">
+            Victory!
+          </h1>
+          <p class="game-over-card__subtitle">You won the battle!</p>
+        } @else {
+          <h1 class="game-over-card__title game-over-card__title--defeat">
+            Defeat
+          </h1>
+          <p class="game-over-card__subtitle">Better luck next time.</p>
+        }
+        <button class="btn-game-over" (click)="goBackToLobby()">
+          Return to Lobby
+        </button>
       </div>
     </div>
   }

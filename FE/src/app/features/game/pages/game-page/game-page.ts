@@ -44,6 +44,10 @@ export class GamePage implements OnInit, OnDestroy {
 
   private gameId = '';
 
+  // Phase banner queue
+  private bannerQueue: string[] = [];
+  private bannerRunning = false;
+
   // ── Local UI state ──────────────────────────────────────────────────────
   readonly loading      = signal(true);
   readonly errorMessage = signal<string | null>(null);
@@ -72,6 +76,24 @@ export class GamePage implements OnInit, OnDestroy {
   // Prize selection modal (after KO)
   readonly showPrizeModal       = signal(false);
   readonly selectedPrizeIndices = signal<number[]>([]);
+
+  // Discard pile modal
+  readonly showDiscardModal    = signal(false);
+  readonly discardModalCards   = signal<CardResponse[]>([]);
+  readonly discardModalTitle   = signal<string>('Discard Pile');
+  readonly selectedDiscardCard = signal<CardResponse | null>(null);
+
+  // Damage float effect
+  readonly damageFloat      = signal<number | null>(null);
+  readonly damageFloatOwn   = signal(false);
+
+  // Phase banner
+  readonly phaseBannerText    = signal<string | null>(null);
+  readonly phaseBannerVisible = signal(false);
+
+  // Game over overlay
+  readonly gameOverVisible = signal(false);
+  readonly gameOverResult  = signal<'victory' | 'defeat' | null>(null);
 
   // Retreat modal state
   readonly showRetreatModal            = signal(false);
@@ -439,6 +461,23 @@ export class GamePage implements OnInit, OnDestroy {
         this.gameActionService.sendAction('DRAW_CARD', {});
       }
     });
+
+    // Phase change banners
+    effect(() => {
+      const state = this.boardState();
+      if (!state) return;
+
+      if (state.gameState === 'SETUP' && state.turnNumber === 0) {
+        this.showPhaseBanner('Set Up');
+        return;
+      }
+
+      if (state.gameState === 'ACTIVE' && state.turnPhase === 'DRAW'
+          && state.turnNumber === 0) {
+        this.showPhaseBanner('Main Phase');
+        return;
+      }
+    });
   }
 
   ngOnInit(): void {
@@ -471,9 +510,14 @@ export class GamePage implements OnInit, OnDestroy {
   ): void {
     console.log('GAME EVENT:', event.type, event.data);
     switch (event.type) {
-      case 'GAME_OVER':
-        this.router.navigate(['/lobby']);
+      case 'GAME_OVER': {
+        const winnerId = event.data['winnerId'] as string;
+        const me       = this.authService.currentUser();
+        const isWinner = me?.id === winnerId;
+        this.gameOverResult.set(isWinner ? 'victory' : 'defeat');
+        this.gameOverVisible.set(true);
         break;
+      }
       case 'COIN_FLIP':
         this.coinResult.set(event.data['result'] as 'HEADS' | 'TAILS');
         this.showCoinFlip.set(true);
@@ -490,7 +534,54 @@ export class GamePage implements OnInit, OnDestroy {
           setTimeout(() => this.actionError.set(null), 3000);
         }
         break;
+      case 'DAMAGE_APPLIED': {
+        this.showPhaseBanner('Attack!');
+
+        const damage     = event.data['damage'] as number;
+        const defenderId = event.data['defenderId'] as string;
+        const me         = this.authService.currentUser();
+        const state      = this.boardState();
+
+        if (!damage || !state || !me) break;
+
+        const ownActive      = state.ownState.active?.instanceId;
+        const opponentActive = state.opponentState.active?.instanceId;
+        const isOwnDefender  = defenderId === ownActive;
+        const isOppDefender  = defenderId === opponentActive;
+
+        if (isOwnDefender || isOppDefender) {
+          setTimeout(() => {
+            this.damageFloat.set(damage);
+            this.damageFloatOwn.set(isOwnDefender);
+            setTimeout(() => this.damageFloat.set(null), 1200);
+          }, 600);
+        }
+        break;
+      }
     }
+  }
+
+  // ── Phase banner ───────────────────────────────────────────────────────────
+  private showPhaseBanner(text: string): void {
+    this.bannerQueue.push(text);
+    if (!this.bannerRunning) {
+      this.runNextBanner();
+    }
+  }
+
+  private runNextBanner(): void {
+    if (this.bannerQueue.length === 0) {
+      this.bannerRunning = false;
+      return;
+    }
+    this.bannerRunning = true;
+    const text = this.bannerQueue.shift()!;
+    this.phaseBannerText.set(text);
+    this.phaseBannerVisible.set(true);
+    setTimeout(() => {
+      this.phaseBannerVisible.set(false);
+      setTimeout(() => this.runNextBanner(), 450);
+    }, 1800);
   }
 
   // ── Setup actions ─────────────────────────────────────────────────────────
@@ -756,6 +847,25 @@ export class GamePage implements OnInit, OnDestroy {
     this.selectedCard.set(null);
   }
 
+  // ── Discard pile modal ─────────────────────────────────────────────────────
+  openDiscardModal(pile: CardResponse[], title: string): void {
+    if (!pile || pile.length === 0) return;
+    this.discardModalCards.set([...pile].reverse()); // más reciente arriba
+    this.discardModalTitle.set(title);
+    this.selectedDiscardCard.set(pile[pile.length - 1]); // selecciona la superior
+    this.showDiscardModal.set(true);
+  }
+
+  closeDiscardModal(): void {
+    this.showDiscardModal.set(false);
+    this.discardModalCards.set([]);
+    this.selectedDiscardCard.set(null);
+  }
+
+  selectDiscardCard(card: CardResponse): void {
+    this.selectedDiscardCard.set(card);
+  }
+
   // ── Helpers ───────────────────────────────────────────────────────────────
   isMyTurn(): boolean {
     const me = this.authService.currentUser();
@@ -792,6 +902,9 @@ export class GamePage implements OnInit, OnDestroy {
   }
 
   coinImageSrc(): string {
+    const result = this.coinResult();
+    if (result !== 'HEADS') return 'assets/coin/defaultCoin.png';
+
     const event  = this.gameActionService.lastEvent();
     const state  = this.boardState();
     const me     = this.authService.currentUser();
@@ -848,6 +961,11 @@ export class GamePage implements OnInit, OnDestroy {
     if (card.supertype !== 'POKEMON') return false;
     const subtypes = card.subtypes ?? [];
     return !subtypes.includes('Basic');
+  }
+
+  /** Navigates back to the lobby (used by game over overlay). */
+  goBackToLobby(): void {
+    this.router.navigate(['/lobby']);
   }
 
   /** Resolves the asset path for a card back skin. */
