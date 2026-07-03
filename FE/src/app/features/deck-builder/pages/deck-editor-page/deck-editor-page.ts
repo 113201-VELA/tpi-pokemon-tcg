@@ -171,6 +171,30 @@ export class DeckEditorPage implements OnInit {
     this.loadCards();
   }
 
+  setNameFilter(value: string): void {
+    this.applyFilters({ ...this.filters(), name: value || undefined });
+  }
+
+  setTypeFilter(value: string): void {
+    this.applyFilters({
+      ...this.filters(),
+      type: (value as CardSupertype) || undefined,
+      energyType: undefined,
+      pokemonSubtype: undefined
+    });
+  }
+
+  setEnergyTypeFilter(value: string): void {
+    this.applyFilters({ ...this.filters(), energyType: (value as EnergyType) || undefined });
+  }
+
+  setPokemonSubtypeFilter(value: string): void {
+    this.applyFilters({
+      ...this.filters(),
+      pokemonSubtype: (value as 'Basic' | 'EX' | 'MEGA') || undefined
+    });
+  }
+
   getQuantityInDeck(cardId: string): number {
     const entry = this.deck()?.cards.find(c => c.card.id === cardId);
     return entry?.quantity ?? 0;

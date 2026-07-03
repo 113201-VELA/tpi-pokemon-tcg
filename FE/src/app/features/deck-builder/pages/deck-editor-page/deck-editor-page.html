@@ -169,14 +169,14 @@
           type="text"
           placeholder="Buscar por nombre..."
           [ngModel]="filters().name ?? ''"
-          (ngModelChange)="applyFilters({ ...filters(), name: $event || undefined })"
+          (ngModelChange)="setNameFilter($event)"
         />
 
         <div class="filter-row">
           <select
             class="filter-select"
             [ngModel]="filters().type ?? ''"
-            (ngModelChange)="applyFilters({ ...filters(), type: $event || undefined, energyType: undefined, pokemonSubtype: undefined })"
+            (ngModelChange)="setTypeFilter($event)"
           >
             <option value="">Todos los tipos</option>
             @for (st of supertypes; track st) {
@@ -188,7 +188,7 @@
             <select
               class="filter-select"
               [ngModel]="filters().energyType ?? ''"
-              (ngModelChange)="applyFilters({ ...filters(), energyType: $event || undefined })"
+              (ngModelChange)="setEnergyTypeFilter($event)"
             >
               <option value="">Todos los elementos</option>
               @for (et of energyTypes; track et) {
@@ -199,7 +199,7 @@
             <select
               class="filter-select"
               [ngModel]="filters().pokemonSubtype ?? ''"
-              (ngModelChange)="applyFilters({ ...filters(), pokemonSubtype: $event || undefined })"
+              (ngModelChange)="setPokemonSubtypeFilter($event)"
             >
               <option value="">Básico / EX / Mega</option>
               @for (sub of pokemonSubtypes; track sub) {

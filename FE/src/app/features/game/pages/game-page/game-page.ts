@@ -23,13 +23,12 @@ import { CardResponse } from '../../../deck-builder/domain/models/card.models';
 import { ActivePokemonSlot } from '../../components/active-pokemon-slot/active-pokemon-slot';
 import { BenchPokemonSlot } from '../../components/bench-pokemon-slot/bench-pokemon-slot';
 import { DraggableCardDirective } from '../../../../shared/directives/draggable-card.directive';
-import { DraggablePokemonDirective } from '../../../../shared/directives/draggable-pokemon.directive';
 import { DropZoneDirective } from '../../../../shared/directives/drop-zone.directive';
 import { DragStateService } from '../../../../shared/services/drag-state.service';
 
 @Component({
   selector: 'app-game-page',
-  imports: [ActivePokemonSlot, BenchPokemonSlot, DraggableCardDirective, DraggablePokemonDirective, DropZoneDirective],
+  imports: [ActivePokemonSlot, BenchPokemonSlot, DraggableCardDirective, DropZoneDirective],
   templateUrl: './game-page.html',
   styleUrl: './game-page.css',
   changeDetection: ChangeDetectionStrategy.OnPush,
