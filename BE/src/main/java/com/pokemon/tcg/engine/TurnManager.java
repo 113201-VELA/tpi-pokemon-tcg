@@ -633,12 +633,22 @@ public class TurnManager {
     private BoardState handleEndTurn(BoardState state, GameAction action) {
         state = processBetweenTurns(state);
 
-        String nextId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
-                ? state.getPlayer2State().getPlayerId()
-                : state.getPlayer1State().getPlayerId();
+        // If processBetweenTurns caused a KO, a bench choice may be pending.
+        // Suspend the turn transition and store who should play next so
+        // handleChooseBenchPokemon can use it after bench choice is resolved.
+        if (state.getPendingBenchChoicePlayerId() != null) {
+            String opponentId = getOpponentId(state, action.getPlayerId());
+            return state.toBuilder()
+                    .turnFlags(TurnFlags.fresh())
+                    .pendingNextPlayerId(opponentId)
+                    .build();
+        }
+
+        // Normal turn transition
+        String opponentId = getOpponentId(state, action.getPlayerId());
 
         return state.toBuilder()
-                .currentPlayerId(nextId)
+                .currentPlayerId(opponentId)
                 .turnPhase(TurnPhase.DRAW)
                 .turnNumber(state.getTurnNumber() + 1)
                 .turnFlags(TurnFlags.fresh())
@@ -824,22 +834,25 @@ public class TurnManager {
         populatePokemonModifiers(newActive, chosen.getCardId());
         ps.setActivePokemon(newActive);
 
-        // Clear the pending bench choice flag
+        // Clear pending bench choice flag
         state = state.toBuilder()
                 .pendingBenchChoicePlayerId(null)
                 .build();
 
         state = processBetweenTurns(state);
 
-        String opponentId = action.getPlayerId().equals(state.getPlayer1State().getPlayerId())
-                ? state.getPlayer2State().getPlayerId()
-                : state.getPlayer1State().getPlayerId();
+        // If pendingNextPlayerId is set (e.g. from handleEndTurn condition KO),
+        // use it. Otherwise the player who just chose bench continues their turn.
+        String nextPlayerId = state.getPendingNextPlayerId() != null
+                ? state.getPendingNextPlayerId()
+                : action.getPlayerId();
 
         return state.toBuilder()
-                .currentPlayerId(opponentId)
+                .currentPlayerId(nextPlayerId)
                 .turnPhase(TurnPhase.DRAW)
                 .turnNumber(state.getTurnNumber() + 1)
                 .turnFlags(TurnFlags.fresh())
+                .pendingNextPlayerId(null)
                 .build();
     }
 
@@ -1363,6 +1376,12 @@ public class TurnManager {
             return (List<String>) list;
         }
         return List.of();
+    }
+
+    private String getOpponentId(BoardState state, String playerId) {
+        return playerId.equals(state.getPlayer1State().getPlayerId())
+                ? state.getPlayer2State().getPlayerId()
+                : state.getPlayer1State().getPlayerId();
     }
 
     /**

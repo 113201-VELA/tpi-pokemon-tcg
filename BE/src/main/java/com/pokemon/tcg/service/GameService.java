@@ -791,6 +791,7 @@ public class GameService {
                 .pendingBonusPlacement(state.getPendingBonusPlacement())
                 .pendingPrizeTakePlayerId(state.getPendingPrizeTakePlayerId())
                 .pendingPrizeTakeCount(state.getPendingPrizeTakeCount())
+                .pendingNextPlayerId(state.getPendingNextPlayerId())
                 .build();
     }
 }

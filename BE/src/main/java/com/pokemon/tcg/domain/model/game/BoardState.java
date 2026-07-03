@@ -103,6 +103,15 @@ public class BoardState {
     @Builder.Default
     private int pendingPrizeTakeCount = 0;
 
+    /**
+     * When set, handleChooseBenchPokemon will use this playerId as the next
+     * player instead of action.getPlayerId(). Used by handleEndTurn to preserve
+     * the correct turn order when a condition KO occurs after END_TURN.
+     * Null in all other cases — handleChooseBenchPokemon defaults to action.getPlayerId().
+     */
+    @Builder.Default
+    private String pendingNextPlayerId = null;
+
     public PlayerState getStateFor(String playerId) {
         if (playerId.equals(player1State.getPlayerId())) return player1State;
         if (playerId.equals(player2State.getPlayerId())) return player2State;
