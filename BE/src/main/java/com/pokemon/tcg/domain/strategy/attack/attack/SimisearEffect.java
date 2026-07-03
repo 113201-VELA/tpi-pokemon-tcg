@@ -10,6 +10,14 @@ import org.springframework.stereotype.Component;
 import java.util.ArrayList;
 import java.util.List;
 
+/**
+ * xy1-23 Simisear
+ *
+ * Yawn: opponent's Active Pokémon is now Asleep.
+ * Flamethrower: 90 damage. Discard a Fire Energy attached to this Pokémon
+ *               (mandatory cost — always discards, defaulting to the first
+ *               attached Fire Energy if none is explicitly specified).
+ */
 @Component
 public class SimisearEffect implements AttackEffect {
 
@@ -42,8 +50,8 @@ public class SimisearEffect implements AttackEffect {
     }
 
     private void applyYawn(AttackContext ctx) {
-        String attackerId     = ctx.getAction().getPlayerId();
-        PlayerState opponent  = ctx.getBoardState().getOpponentState(attackerId);
+        String attackerId      = ctx.getAction().getPlayerId();
+        PlayerState opponent   = ctx.getBoardState().getOpponentState(attackerId);
         ActivePokemon defender = opponent.getActivePokemon();
 
         if (defender == null) return;
@@ -53,28 +61,46 @@ public class SimisearEffect implements AttackEffect {
         defender.getConditions().add(SpecialCondition.ASLEEP);
     }
 
+    /**
+     * Mandatory cost: discard a Fire Energy attached to Simisear. If the
+     * attacker specifies which Energy via {@code energyToDiscardId} and it
+     * is actually a Fire Energy attached to Simisear, that one is
+     * discarded; otherwise falls back to the first attached Fire Energy
+     * found, since this discard is not optional per the card text.
+     */
     private void applyFlamethrower(AttackContext ctx) {
-        String energyToDiscardId = ctx.getAction().getPayloadString("energyToDiscardId");
-        if (energyToDiscardId == null) return;
-
         String attackerId         = ctx.getAction().getPlayerId();
         PlayerState attackerState = ctx.getBoardState().getStateFor(attackerId);
         ActivePokemon simisear    = attackerState.getActivePokemon();
 
-        if (simisear == null) return;
-        if (simisear.getAttachedEnergyIds() == null
-                || !simisear.getAttachedEnergyIds().contains(energyToDiscardId)) return;
-
-        if (!isFireEnergy(energyToDiscardId)) return;
+        if (simisear == null
+                || simisear.getAttachedEnergyIds() == null
+                || simisear.getAttachedEnergyIds().isEmpty()) return;
 
         List<String> energies = new ArrayList<>(simisear.getAttachedEnergyIds());
-        energies.remove(energyToDiscardId);
+        String requestedEnergyId = ctx.getAction().getPayloadString("energyToDiscardId");
+
+        String chosen;
+        if (requestedEnergyId != null
+                && energies.contains(requestedEnergyId)
+                && isFireEnergy(requestedEnergyId)) {
+            chosen = requestedEnergyId;
+        } else {
+            chosen = energies.stream()
+                    .filter(this::isFireEnergy)
+                    .findFirst()
+                    .orElse(null);
+        }
+
+        if (chosen == null) return; // no Fire Energy attached — shouldn't normally happen
+
+        energies.remove(chosen);
         simisear.setAttachedEnergyIds(energies);
 
         List<String> discard = new ArrayList<>(
                 attackerState.getDiscard() != null
                         ? attackerState.getDiscard() : new ArrayList<>());
-        discard.add(energyToDiscardId);
+        discard.add(chosen);
         attackerState.setDiscard(discard);
     }
 
